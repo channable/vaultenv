@@ -143,6 +143,7 @@ as `PRODUCTION_THIRD_PARTY_API_KEY`.
 
  - Support DNS `SRV` record lookups, so users only need to specify the host
    Vault runs on. This integrates `vaultenv` nicely with Vaults HA setup.
+ - Certificate pinning/validation
 
 ## License
 

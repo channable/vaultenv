@@ -8,6 +8,22 @@ Run processes with secrets from [HashiCorp Vault]. It:
 
 There is nothing else going on.
 
+## Comparison to alternatives
+
+The only alternative to this tool that we are aware of is [envconsul], also by
+HashiCorp. Unlike envconsul, `vaultenv` does not:
+
+ - daemonize
+ - spawn any child processes
+ - manage the lifecycle of the process it provides the secrets for
+
+`vaultenv` calls a syscall from the `exec` family after fetching secrets for
+you. This means that `vaultenv` replaces it's own process with whatever you want.
+After your service has started, `vaultenv` is not running anymore.
+
+This approach does mean that we cannot automatically restart services if
+secrets in Vault have changed.
+
 ## Terminology
 
 A brief summary of Vault terminology:
@@ -130,4 +146,4 @@ as `PRODUCTION_THIRD_PARTY_API_KEY`.
 3-clause BSD. See `LICENSE` for details.
 
   [HashiCorp Vault]: https://www.vaultproject.io/
-  [generic secret backend]:https://www.vaultproject.io/docs/secrets/generic/index.html
+  [envconsul]: https://github.com/hashicorp/envconsul

@@ -17,6 +17,9 @@ HashiCorp. Unlike envconsul, `vaultenv` does not:
  - spawn any child processes
  - manage the lifecycle of the process it provides the secrets for
 
+All of the above should not be done by a secret fetching tool. This should be
+left to a service manager, like systemd.
+
 `vaultenv` calls a syscall from the `exec` family after fetching secrets for
 you. This means that `vaultenv` replaces it's own process with whatever you want.
 After your service has started, `vaultenv` is not running anymore.

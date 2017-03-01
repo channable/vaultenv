@@ -73,11 +73,12 @@ of `tutorial.sh`.
 ```
 vaultenv - run programs with secrets from HashiCorp Vault
 
-Usage: vaultenv --host HOST [--port PORT] --token TOKEN --secrets-file FILENAME
-                CMD [ARGS...]
+Usage: vaultenv [--host HOST] [--port PORT] --token TOKEN
+                --secrets-file FILENAME CMD [ARGS...]
 
 Available options:
-  --host HOST              Vault host, either an IP address or DNS name
+  --host HOST              Vault host, either an IP address or DNS name,
+                           defaults to localhost
   --port PORT              Vault port, defaults to 8200
   --token TOKEN            token to authenticate to Vault with
   --secrets-file FILENAME  config file specifying which secrets to request

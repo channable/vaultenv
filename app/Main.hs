@@ -49,7 +49,7 @@ options = Options
            (  long "host"
            <> metavar "HOST"
            <> value "localhost"
-           <> help "Vault host, either an IP address or DNS name" )
+           <> help "Vault host, either an IP address or DNS name, defaults to localhost" )
        <*> option auto
            (  long "port"
            <> metavar "PORT"

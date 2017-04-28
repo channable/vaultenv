@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Data.Char
+import           Data.List (findIndex)
 import qualified Data.ByteString.Char8 as SBS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.JsonStream.Parser hiding (value)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as E
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Semigroup ((<>))
 import           Network.HTTP.Simple
 import           Options.Applicative hiding (Parser, command)
 import qualified Options.Applicative as O
 import           System.Environment
-import           System.Exit
 import           System.Posix.Process
 
 --
@@ -28,8 +28,9 @@ data Options = Options
   } deriving (Eq, Show)
 
 data Secret = Secret
-  { sPath :: SBS.ByteString
-  , sKey  :: SBS.ByteString
+  { sPath    :: String
+  , sKey     :: String
+  , sVarName :: String
   } deriving (Eq, Show)
 
 type EnvVar = (String, String)
@@ -83,23 +84,49 @@ main = do
   env <- getEnvironment
   opts <- execParser optionsInfo
 
-  secrets <- readSecretList (oSecretFile opts)
+  secretsOrError <- readSecretList (oSecretFile opts)
+  let
+    secrets = case secretsOrError of
+      Right ss -> ss
+      Left err -> errorWithoutStackTrace err
+
   responses <- mapM (requestSecret opts) secrets
 
   let newEnv = mapM (uncurry parseResponse) responses
 
   case newEnv of
     Right e -> runCommand opts (e ++ env)
-    Left err -> exitWithError err
+    Left err -> errorWithoutStackTrace err
 
+-- Like splitAt, but also removes the character at the split position.
+cutAt :: Int -> [a] -> ([a], [a])
+cutAt index xs =
+  let
+    (first, second) = splitAt index xs
+  in
+    (first, drop 1 second)
 
-readSecretList :: FilePath -> IO [Secret]
-readSecretList f = fmap ((map toSecret) . SBS.lines) (SBS.readFile f)
-  where
-    toSecret bs =
-      let (p:k:[]) = SBS.split '#' bs
-      in  Secret { sPath = p, sKey = k }
+parseSecret :: String -> Either String Secret
+parseSecret line =
+  let
+    (name, pathAndKey) = case findIndex (== '=') line of
+      Just index -> cutAt index line
+      Nothing -> ("", line)
+  in do
+    (path, key) <- case findIndex (== '#') pathAndKey of
+      Just index -> Right (cutAt index pathAndKey)
+      Nothing -> Left $ "Secret path '" ++ pathAndKey ++ "' does not contain '#' separator."
+    let
+      varName = if name == ""
+        then varNameFromKey path key
+        else name
+    pure Secret { sPath = path
+                , sKey = key
+                , sVarName = varName
+                }
 
+readSecretList :: FilePath -> IO (Either String [Secret])
+readSecretList fname = fmap (sequence . fmap parseSecret . lines) (readFile fname)
 
 runCommand :: Options -> [EnvVar] -> IO a
 runCommand options env =
@@ -127,7 +154,7 @@ requestSecret opts secret = do
 
   where
     requestPath :: Secret -> SBS.ByteString
-    requestPath s = "/v1/secret/" `SBS.append` (sPath s)
+    requestPath s = "/v1/secret/" `SBS.append` (SBS.pack (sPath s))
 
 --
 -- HTTP response handling
@@ -138,20 +165,21 @@ parseResponse secret response =
   case (getResponseStatusCode response) of
     403 -> Left $ "[ERROR] Vault token is invalid"
     404 -> Left $ "[ERROR] Secret not found: " ++ path
-    _   -> fmap (\c -> (envVarName secret, T.unpack c)) content
+    _   -> fmap (\c -> (sVarName secret, Text.unpack c)) content
   where
     body = getResponseBody response
-    key = E.decodeUtf8 (sKey secret)
-    path = SBS.unpack (sPath secret)
-    getContent json = parseLazyByteString ("data" .:? key .: string) json :: [Maybe T.Text]
+    key = sKey secret
+    path = sPath secret
+    at = "data" .:? (Text.pack key) .: string
+    getContent json = parseLazyByteString at json :: [Maybe Text]
     -- This call to head should never fail: we will always get a response with
     -- a "data" key from Vault
-    content = maybeToEither ("[ERROR] Key '" ++ T.unpack key ++ "' not found in: " ++ path) $ head (getContent body)
+    content = maybeToEither ("[ERROR] Key '" ++ key ++ "' not found in: " ++ path) $ head (getContent body)
 
 
 -- Converts a secret into the name of the environment variable
-envVarName :: Secret -> String
-envVarName s = SBS.unpack $ SBS.intercalate "_" [SBS.map format (sPath s), SBS.map format (sKey s)]
+varNameFromKey :: String -> String -> String
+varNameFromKey path key = fmap format (path ++ "_" ++ key)
   where underscore '/' = '_'
         underscore '-' = '_'
         underscore c   = c
@@ -164,9 +192,3 @@ envVarName s = SBS.unpack $ SBS.intercalate "_" [SBS.map format (sPath s), SBS.m
 maybeToEither :: e -> Maybe a -> Either e a
 maybeToEither _ (Just a) = Right a
 maybeToEither e Nothing  = Left e
-
-
-exitWithError :: String -> IO a
-exitWithError err = do
-  putStrLn err
-  exitWith (ExitFailure 1)

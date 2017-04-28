@@ -1,23 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Control.Monad
 import           Data.Char
-import           Data.Maybe
 import qualified Data.ByteString.Char8 as SBS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.HashMap.Strict as HM
 import           Data.JsonStream.Parser hiding (value)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as E
 import           Data.Semigroup ((<>))
-import           Data.String
 import           Network.HTTP.Simple
 import           Options.Applicative hiding (Parser)
 import qualified Options.Applicative as O
 import           System.Environment
 import           System.Exit
 import           System.Posix.Process
-import           System.Posix.Unistd
 
 --
 -- Datatypes

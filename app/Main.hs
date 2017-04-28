@@ -8,7 +8,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as E
 import           Data.Semigroup ((<>))
 import           Network.HTTP.Simple
-import           Options.Applicative hiding (Parser)
+import           Options.Applicative hiding (Parser, command)
 import qualified Options.Applicative as O
 import           System.Environment
 import           System.Exit
@@ -38,8 +38,8 @@ type EnvVar = (String, String)
 -- Argument parsing
 --
 
-options :: O.Parser Options
-options = Options
+optionsParser :: O.Parser Options
+optionsParser = Options
        <$> strOption
            (  long "host"
            <> metavar "HOST"
@@ -71,7 +71,7 @@ options = Options
 optionsInfo :: ParserInfo Options
 optionsInfo =
   info
-    (options <**> helper)
+    (optionsParser <**> helper)
     (fullDesc <> header "vaultenv - run programs with secrets from HashiCorp Vault")
 
 --

@@ -112,7 +112,8 @@ EBNF of the `--secrets-file` format:
 
 ```
 file = line, { line } ;
-line = path , "#" , key , "\n" ;
+line = [ var, "=" ] , path , "#" , key , "\n" ;
+var = char , { char } ;
 path = char , { char } ;
 key = char , { char } ;
 
@@ -124,6 +125,7 @@ Example:
 ```
 production/third-party#api-key
 production/another-third-party#refresh-token
+FOOBAR=production/third-party#foobar
 ```
 
 A `file` consists of multiple `line`s, each specifying a secret to fetch. A

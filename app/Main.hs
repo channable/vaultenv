@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import qualified Control.Concurrent.Async as Async
 import           Data.Char
 import           Data.List (findIndex)
 import qualified Data.ByteString.Char8 as SBS
@@ -90,7 +91,7 @@ main = do
       Right ss -> ss
       Left err -> errorWithoutStackTrace err
 
-  responses <- mapM (requestSecret opts) secrets
+  responses <- Async.mapConcurrently (requestSecret opts) secrets
 
   let newEnv = mapM (uncurry parseResponse) responses
 

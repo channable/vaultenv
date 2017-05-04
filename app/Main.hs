@@ -93,8 +93,8 @@ main = do
 
   responses <- Async.mapConcurrently (requestSecret opts) secrets
 
-  let newEnvOrError = mapM (uncurry parseResponse) responses
   let
+    newEnvOrError = mapM (uncurry parseResponse) responses
     newEnv = case newEnvOrError of
       -- We need to eliminate duplicates in the environment and keep
       -- the first occurrence. `nubBy` (from Data.List) runs in O(n^2),

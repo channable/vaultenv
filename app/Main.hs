@@ -2,7 +2,7 @@
 
 import qualified Control.Concurrent.Async as Async
 import           Data.Char
-import           Data.List (findIndex)
+import           Data.List (findIndex, nubBy)
 import qualified Data.ByteString.Char8 as SBS
 import qualified Data.ByteString.Lazy as LBS
 import           Data.JsonStream.Parser hiding (value)
@@ -93,11 +93,19 @@ main = do
 
   responses <- Async.mapConcurrently (requestSecret opts) secrets
 
-  let newEnv = mapM (uncurry parseResponse) responses
+  let newEnvOrError = mapM (uncurry parseResponse) responses
+  let
+    newEnv = case newEnvOrError of
+      -- We need to eliminate duplicates in the environment and keep
+      -- the first occurrence. `nubBy` (from Data.List) runs in O(n^2),
+      -- but this shouldn't matter for our small lists.
+      --
+      -- Equality is determined on the first element of the env var
+      -- tuples.
+      Right e -> nubBy (\(a,_) (b,_) -> a == b) (e ++ env)
+      Left err -> errorWithoutStackTrace err
 
-  case newEnv of
-    Right e -> runCommand opts (e ++ env)
-    Left err -> errorWithoutStackTrace err
+  runCommand opts newEnv
 
 -- Like splitAt, but also removes the character at the split position.
 cutAt :: Int -> [a] -> ([a], [a])

@@ -1,17 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import qualified Control.Concurrent.Async as Async
+import qualified Control.Concurrent.Async   as Async
+import           Control.Lens               ((^?))
+import qualified Data.Aeson.Lens            as Lens (key, _String)
+import qualified Data.ByteString.Char8      as SBS
+import qualified Data.ByteString.Lazy       as LBS hiding (unpack)
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import           Data.Char
-import           Data.List (findIndex, nubBy)
-import qualified Data.ByteString.Char8 as SBS
-import qualified Data.ByteString.Lazy as LBS
-import           Data.JsonStream.Parser hiding (value)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import           Data.Semigroup ((<>))
+import           Data.List                  (findIndex, nubBy)
+import           Data.Semigroup             ((<>))
+import           Data.Text                  (Text)
+import qualified Data.Text                  as Text
 import           Network.HTTP.Simple
-import           Options.Applicative hiding (Parser, command)
-import qualified Options.Applicative as O
+import           Options.Applicative        hiding (Parser, command)
+import qualified Options.Applicative        as O
 import           System.Environment
 import           System.Posix.Process
 
@@ -112,7 +114,7 @@ main = do
       -- Equality is determined on the first element of the env var
       -- tuples.
       Right e -> nubBy (\(a,_) (b,_) -> a == b) (e ++ env)
-      Left err -> errorWithoutStackTrace err
+      Left err -> errorWithoutStackTrace (vaultErrorLogMessage err)
 
   runCommand opts newEnv
 
@@ -173,21 +175,28 @@ requestSecret opts secret = do
 -- HTTP response handling
 --
 
-parseResponse :: Secret -> Response LBS.ByteString -> Either String EnvVar
+parseResponse :: Secret -> Response LBS.ByteString -> Either VaultError EnvVar
 parseResponse secret response =
-  case (getResponseStatusCode response) of
-    403 -> Left $ "[ERROR] Vault token is invalid"
-    404 -> Left $ "[ERROR] Secret not found: " ++ path
-    _   -> fmap (\c -> (sVarName secret, Text.unpack c)) content
-  where
-    body = getResponseBody response
-    key = sKey secret
-    path = sPath secret
-    at = "data" .:? (Text.pack key) .: string
-    getContent json = parseLazyByteString at json :: [Maybe Text]
-    -- This call to head should never fail: we will always get a response with
-    -- a "data" key from Vault
-    content = maybeToEither ("[ERROR] Key '" ++ key ++ "' not found in: " ++ path) $ head (getContent body)
+  let
+    responseBody = getResponseBody response
+    statusCode = getResponseStatusCode response
+  in case statusCode of
+    200 -> parseSuccessResponse secret responseBody
+    403 -> Left Forbidden
+    404 -> Left $ SecretNotFound secret
+    500 -> Left $ Internal responseBody
+    503 -> Left $ Maintenance responseBody
+    _   -> Left $ Unspecified responseBody
+
+
+parseSuccessResponse :: Secret -> LBS.ByteString -> Either VaultError EnvVar
+parseSuccessResponse secret responseBody =
+  let
+    secretKey = Text.pack (sKey secret)
+    getter = Lens.key "data" . Lens.key secretKey . Lens._String
+    toEnvVar secretValue = (sVarName secret, Text.unpack secretValue)
+  in
+    maybeToEither (KeyNotFound secret) $ fmap toEnvVar (responseBody ^? getter :: Maybe Text)
 
 --
 -- Utility functions

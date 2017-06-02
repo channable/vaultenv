@@ -189,8 +189,34 @@ parseResponse secret response =
     -- a "data" key from Vault
     content = maybeToEither ("[ERROR] Key '" ++ key ++ "' not found in: " ++ path) $ head (getContent body)
 
+--
+-- Utility functions
+--
 
--- Converts a secret into the name of the environment variable
+vaultErrorLogMessage :: VaultError -> String
+vaultErrorLogMessage vaultError =
+  let
+    description = case vaultError of
+      (SecretNotFound secret) ->
+        "Secret not found: " <> sPath secret
+      (KeyNotFound secret) ->
+        "Key " <> (sKey secret) <> " not found for path " <> (sPath secret)
+      (BadRequest resp) ->
+        "Made a bad request: " <> (LBS.unpack resp)
+      (Forbidden) ->
+        "Invalid Vault token"
+      (Internal resp) ->
+        "Internal Vault error: " <> (LBS.unpack resp)
+      (Maintenance resp) ->
+        "Vault is down for maintenance" <> (LBS.unpack resp)
+      (Unspecified resp) ->
+        "Received an error that I don't know about: " <> (LBS.unpack resp)
+  in
+    "[ERROR] " <> description
+
+
+-- Converts a secret name into the name of the environment variable that it
+-- will be available under.
 varNameFromKey :: String -> String -> String
 varNameFromKey path key = fmap format (path ++ "_" ++ key)
   where underscore '/' = '_'
@@ -198,9 +224,6 @@ varNameFromKey path key = fmap format (path ++ "_" ++ key)
         underscore c   = c
         format         = toUpper . underscore
 
---
--- Utilitiy functions
---
 
 maybeToEither :: e -> Maybe a -> Either e a
 maybeToEither _ (Just a) = Right a

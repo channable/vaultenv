@@ -36,6 +36,15 @@ data Secret = Secret
 
 type EnvVar = (String, String)
 
+data VaultError
+  = SecretNotFound Secret
+  | KeyNotFound    Secret
+  | BadRequest     LBS.ByteString
+  | Forbidden
+  | Internal       LBS.ByteString
+  | Maintenance    LBS.ByteString
+  | Unspecified    LBS.ByteString
+
 --
 -- Argument parsing
 --

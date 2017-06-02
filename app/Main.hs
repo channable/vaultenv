@@ -116,13 +116,6 @@ main = do
 
   runCommand opts newEnv
 
--- Like splitAt, but also removes the character at the split position.
-cutAt :: Int -> [a] -> ([a], [a])
-cutAt index xs =
-  let
-    (first, second) = splitAt index xs
-  in
-    (first, drop 1 second)
 
 parseSecret :: String -> Either String Secret
 parseSecret line =
@@ -143,8 +136,10 @@ parseSecret line =
                 , sVarName = varName
                 }
 
+
 readSecretList :: FilePath -> IO (Either String [Secret])
 readSecretList fname = fmap (sequence . fmap parseSecret . lines) (readFile fname)
+
 
 runCommand :: Options -> [EnvVar] -> IO a
 runCommand options env =
@@ -210,3 +205,12 @@ varNameFromKey path key = fmap format (path ++ "_" ++ key)
 maybeToEither :: e -> Maybe a -> Either e a
 maybeToEither _ (Just a) = Right a
 maybeToEither e Nothing  = Left e
+
+
+-- Like splitAt, but also removes the character at the split position.
+cutAt :: Int -> [a] -> ([a], [a])
+cutAt index xs =
+  let
+    (first, second) = splitAt index xs
+  in
+    (first, drop 1 second)

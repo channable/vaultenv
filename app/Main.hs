@@ -1,11 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Control.Concurrent   (threadDelay)
-import Control.Lens         ((^?))
+import Control.Lens         (preview)
 import Data.Char
 import Data.List            (findIndex, nubBy)
 import Data.Semigroup       ((<>))
-import Data.Text            (Text)
 import Network.HTTP.Simple
 import Options.Applicative  hiding (Parser, command)
 import System.Environment
@@ -42,13 +41,13 @@ data Secret = Secret
 type EnvVar = (String, String)
 
 data VaultError
-  = SecretNotFound Secret
-  | KeyNotFound    Secret
-  | BadRequest     LBS.ByteString
+  = SecretNotFound    Secret
+  | KeyNotFound       Secret
+  | BadRequest        LBS.ByteString
   | Forbidden
-  | Internal       LBS.ByteString
-  | Maintenance    LBS.ByteString
-  | Unspecified    LBS.ByteString
+  | ServerError       LBS.ByteString
+  | ServerUnavailable LBS.ByteString
+  | Unspecified       Int LBS.ByteString
 
 --
 -- Argument parsing
@@ -211,9 +210,9 @@ parseResponse secret response =
     200 -> parseSuccessResponse secret responseBody
     403 -> Left Forbidden
     404 -> Left $ SecretNotFound secret
-    500 -> Left $ Internal responseBody
-    503 -> Left $ Maintenance responseBody
-    _   -> Left $ Unspecified responseBody
+    500 -> Left $ ServerError responseBody
+    503 -> Left $ ServerUnavailable responseBody
+    _   -> Left $ Unspecified statusCode responseBody
 
 
 parseSuccessResponse :: Secret -> LBS.ByteString -> Either VaultError EnvVar
@@ -223,7 +222,7 @@ parseSuccessResponse secret responseBody =
     getter = Lens.key "data" . Lens.key secretKey . Lens._String
     toEnvVar secretValue = (sVarName secret, Text.unpack secretValue)
   in
-    maybeToEither (KeyNotFound secret) $ fmap toEnvVar (responseBody ^? getter :: Maybe Text)
+    maybeToEither (KeyNotFound secret) $ fmap toEnvVar (preview getter responseBody)
 
 --
 -- Utility functions
@@ -241,12 +240,14 @@ vaultErrorLogMessage vaultError =
         "Made a bad request: " <> (LBS.unpack resp)
       (Forbidden) ->
         "Invalid Vault token"
-      (Internal resp) ->
+      (ServerError resp) ->
         "Internal Vault error: " <> (LBS.unpack resp)
-      (Maintenance resp) ->
-        "Vault is down for maintenance or currently sealed" <> (LBS.unpack resp)
-      (Unspecified resp) ->
-        "Received an error that I don't know about: " <> (LBS.unpack resp)
+      (ServerUnavailable resp) ->
+        "Vault is unavailable. It can be sealed, under maintenance " <>
+        "or enduring heavy load: " <> (LBS.unpack resp)
+      (Unspecified status resp) ->
+        "Received an error that I don't know about (" <> show status
+        <> "): " <> (LBS.unpack resp)
   in
     "[ERROR] " <> description
 

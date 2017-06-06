@@ -1,19 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import Control.Concurrent (threadDelay)
+import Data.Char
+import Data.JsonStream.Parser hiding (value)
+import Data.List (findIndex, nubBy)
+import Data.Semigroup ((<>))
+import Data.Text (Text)
+import Network.HTTP.Simple
+import Options.Applicative hiding (Parser, command)
+import System.Environment
+import System.Posix.Process
+import System.Random (getStdRandom, randomR)
+
 import qualified Control.Concurrent.Async as Async
-import           Data.Char
-import           Data.List (findIndex, nubBy)
 import qualified Data.ByteString.Char8 as SBS
 import qualified Data.ByteString.Lazy as LBS
-import           Data.JsonStream.Parser hiding (value)
-import           Data.Text (Text)
+import qualified Data.ByteString.Lazy.UTF8 as Utf8
 import qualified Data.Text as Text
-import           Data.Semigroup ((<>))
-import           Network.HTTP.Simple
-import           Options.Applicative hiding (Parser, command)
 import qualified Options.Applicative as O
-import           System.Environment
-import           System.Posix.Process
 
 --
 -- Datatypes
@@ -149,21 +153,41 @@ runCommand options env =
     -- replaces the current process with `command`. It does not return.
     executeFile command searchPath args env'
 
+httpWithRetry :: Int -> Request -> IO (Response LBS.ByteString)
+httpWithRetry 1 request = httpLBS request
+httpWithRetry triesLeft request =
+  let
+    retry = do
+      -- Get a random jitter between 0 and 100 ms (inclusive).
+      jitter <- getStdRandom (randomR (0, 100))
+      let
+        delayMilliseconds = 50 + jitter
+        delayMicroseconds = 1000 * delayMilliseconds
+      -- Wait a bit before retrying, at least 50 ms, at most 150 ms.
+      -- TODO: Exponential backoff.
+      threadDelay delayMicroseconds
+      httpWithRetry (triesLeft - 1) request
+  in do
+    response <- httpLBS request
+    case (getResponseStatusCode response) of
+      500 -> retry -- Internal Server Error
+      503 -> retry -- Service Unavailable
+      504 -> retry -- Gateway Timeout
+      _   -> pure response
 
 requestSecret :: Options -> Secret -> IO (Secret, Response LBS.ByteString)
-requestSecret opts secret = do
-  let request = setRequestHeader "x-vault-token" [SBS.pack (oVaultToken opts)]
-              $ setRequestPath (requestPath secret)
-              $ setRequestPort (oVaultPort opts)
-              $ setRequestHost (SBS.pack (oVaultHost opts))
-              $ defaultRequest
-
-  response <- httpLBS request
-  pure (secret, response)
-
-  where
-    requestPath :: Secret -> SBS.ByteString
-    requestPath s = "/v1/secret/" `SBS.append` (SBS.pack (sPath s))
+requestSecret opts secret =
+  let
+    requestPath = "/v1/secret/" `SBS.append` (SBS.pack (sPath secret))
+    request = setRequestHeader "x-vault-token" [SBS.pack (oVaultToken opts)]
+            $ setRequestPath requestPath
+            $ setRequestPort (oVaultPort opts)
+            $ setRequestHost (SBS.pack (oVaultHost opts))
+            $ defaultRequest
+  in do
+    -- Do the request, at most 3 times if the first two return 5xx codes.
+    response <- httpWithRetry 3 request
+    pure (secret, response)
 
 --
 -- HTTP response handling
@@ -172,9 +196,11 @@ requestSecret opts secret = do
 parseResponse :: Secret -> Response LBS.ByteString -> Either String EnvVar
 parseResponse secret response =
   case (getResponseStatusCode response) of
+    200 -> fmap (\c -> (sVarName secret, Text.unpack c)) content
     403 -> Left $ "[ERROR] Vault token is invalid"
     404 -> Left $ "[ERROR] Secret not found: " ++ path
-    _   -> fmap (\c -> (sVarName secret, Text.unpack c)) content
+    sts -> Left $ "[ERROR] Vault returned non-200 status code " ++ (show sts) ++
+                  ": " ++ (Utf8.toString body)
   where
     body = getResponseBody response
     key = sKey secret
@@ -184,7 +210,6 @@ parseResponse secret response =
     -- This call to head should never fail: we will always get a response with
     -- a "data" key from Vault
     content = maybeToEither ("[ERROR] Key '" ++ key ++ "' not found in: " ++ path) $ head (getContent body)
-
 
 -- Converts a secret into the name of the environment variable
 varNameFromKey :: String -> String -> String

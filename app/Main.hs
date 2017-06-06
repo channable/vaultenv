@@ -1,21 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import Control.Lens         ((^?))
+import Data.Char
+import Data.List            (findIndex, nubBy)
+import Data.Semigroup       ((<>))
+import Data.Text            (Text)
+import Network.HTTP.Simple
+import Options.Applicative  hiding (Parser, command)
+import System.Environment
+import System.Posix.Process
+
 import qualified Control.Concurrent.Async   as Async
-import           Control.Lens               ((^?))
 import qualified Data.Aeson.Lens            as Lens (key, _String)
 import qualified Data.ByteString.Char8      as SBS
 import qualified Data.ByteString.Lazy       as LBS hiding (unpack)
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import           Data.Char
-import           Data.List                  (findIndex, nubBy)
-import           Data.Semigroup             ((<>))
-import           Data.Text                  (Text)
 import qualified Data.Text                  as Text
-import           Network.HTTP.Simple
-import           Options.Applicative        hiding (Parser, command)
 import qualified Options.Applicative        as O
-import           System.Environment
-import           System.Posix.Process
 
 --
 -- Datatypes

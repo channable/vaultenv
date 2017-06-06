@@ -244,7 +244,7 @@ vaultErrorLogMessage vaultError =
       (Internal resp) ->
         "Internal Vault error: " <> (LBS.unpack resp)
       (Maintenance resp) ->
-        "Vault is down for maintenance" <> (LBS.unpack resp)
+        "Vault is down for maintenance or currently sealed" <> (LBS.unpack resp)
       (Unspecified resp) ->
         "Received an error that I don't know about: " <> (LBS.unpack resp)
   in

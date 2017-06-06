@@ -201,7 +201,7 @@ httpWithRetry triesLeft request =
           504 -> retry -- Gateway Timeout
           _   -> pure responseOrError
       Left (HttpExceptionRequest _ _) -> retry
-      Left (InvalidUrlException  _ _) -> retry
+      Left a -> Exception.throw a
 
 
 --

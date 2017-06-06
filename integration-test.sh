@@ -14,6 +14,7 @@ stack build
 echo "Starting vault..."
 vault server -dev -dev-root-token-id=${VAULT_TOKEN} &> /dev/null &
 
+echo "Writing test secrets..."
 # Write a secrets file to use:
 cat > integration.secrets << EOF
 testing#key
@@ -30,8 +31,9 @@ EOF
 
 sleep 1
 
-echo "Writing test secrets..."
-vault write secret/testing key=testing42 otherkey=testing8
+vault write secret/testing key=testing42 otherkey=testing8 &> /dev/null
+
+echo ""
 
 echo "[TEST] Happy path"
 stack exec -- vaultenv \
@@ -41,6 +43,7 @@ stack exec -- vaultenv \
   --secrets-file ./integration.secrets \
   /usr/bin/env \
   | grep "TESTING_KEY"
+echo ""
 
 echo "[TEST] Unknown secret, passes if vaultenv errors with secret not found"
 stack exec -- vaultenv \
@@ -49,6 +52,7 @@ stack exec -- vaultenv \
   --port ${VAULT_PORT} \
   --secrets-file ./not-found.secrets \
   echo "[FAIL] This should never print"
+echo ""
 
 echo "[TEST] Unknown secret key, passes if vaultenv errors with key not found in secret"
 stack exec -- vaultenv \
@@ -57,6 +61,7 @@ stack exec -- vaultenv \
   --port ${VAULT_PORT} \
   --secrets-file ./bad-key.secrets \
   echo "[FAIL] This should never print"
+echo ""
 
 echo "[TEST] Bad token, vaultenv should fail with forbidden"
 stack exec -- vaultenv \
@@ -65,6 +70,7 @@ stack exec -- vaultenv \
   --port ${VAULT_PORT} \
   --secrets-file ./integration.secrets \
   echo "[FAIL] This should never print"
+echo ""
 
 # Kill the vault dev server so we can test the "unavailable" error messages
 # that we get when vault is e.g. sealed. We now start up vault in normal mode,
@@ -83,7 +89,7 @@ listener "tcp" {
 }
 EOF
 
-vault server -config integration-config.hcl &
+vault server -config integration-config.hcl &> /dev/null &
 
 echo "[TEST] Vault unavailable. Should error with a corresponding message"
 stack exec -- vaultenv \
@@ -92,10 +98,20 @@ stack exec -- vaultenv \
   --port ${VAULT_PORT} \
   --secrets-file ./integration.secrets \
   echo "[FAIL] This should never print"
+echo ""
 
-
-# Cleanup: kill background vault process and remove integration test secrets
-# file.
+# Kill vault again and make sure we don't give exceptions when encountering
+# network timeouts and unreachable hosts.
 kill %%
+
+echo "[TEST] Vault not running. Should error with a corresponding message"
+stack exec -- vaultenv \
+  --token notthevaulttoken \
+  --host ${VAULT_HOST} \
+  --port ${VAULT_PORT} \
+  --secrets-file ./integration.secrets \
+  echo "[FAIL] This should never print"
+echo ""
+
 echo "Cleaning up..."
 rm integration.secrets bad-key.secrets not-found.secrets integration-config.hcl

@@ -12,6 +12,7 @@ import System.Posix.Process
 import System.Random        (getStdRandom, randomR)
 
 import qualified Control.Concurrent.Async   as Async
+import qualified Control.Exception          as Exception
 import qualified Data.Aeson.Lens            as Lens (key, _String)
 import qualified Data.ByteString.Char8      as SBS
 import qualified Data.ByteString.Lazy       as LBS hiding (unpack)
@@ -47,6 +48,7 @@ data VaultError
   | Forbidden
   | ServerError       LBS.ByteString
   | ServerUnavailable LBS.ByteString
+  | ServerUnreachable
   | Unspecified       Int LBS.ByteString
 
 --
@@ -104,11 +106,10 @@ main = do
       Right ss -> ss
       Left err -> errorWithoutStackTrace err
 
-  responses <- Async.mapConcurrently (requestSecret opts) secrets
+  newEnvOrErrors <- Async.mapConcurrently (requestSecret opts) secrets
 
   let
-    newEnvOrError = mapM (uncurry parseResponse) responses
-    newEnv = case newEnvOrError of
+    newEnv = case sequence newEnvOrErrors of
       -- We need to eliminate duplicates in the environment and keep
       -- the first occurrence. `nubBy` (from Data.List) runs in O(n^2),
       -- but this shouldn't matter for our small lists.
@@ -158,7 +159,7 @@ runCommand options env =
     executeFile command searchPath args env'
 
 
-requestSecret :: Options -> Secret -> IO (Secret, Response LBS.ByteString)
+requestSecret :: Options -> Secret -> IO (Either VaultError EnvVar)
 requestSecret opts secret =
   let
     requestPath = "/v1/secret/" <> (sPath secret)
@@ -169,12 +170,14 @@ requestSecret opts secret =
             $ defaultRequest
 
   in do
-    response <- httpWithRetry 3 request
-    pure (secret, response)
+    responseOrErr <- httpWithRetry 3 request
+    case responseOrErr of
+      (Left _) -> pure $ Left ServerUnreachable
+      (Right response) -> pure $ parseResponse secret response
 
 
-httpWithRetry :: Int -> Request -> IO (Response LBS.ByteString)
-httpWithRetry 1 request = httpLBS request
+httpWithRetry :: Int -> Request -> IO (Either (HttpException) (Response LBS.ByteString))
+httpWithRetry 1 request = Exception.try $ httpLBS request
 httpWithRetry triesLeft request =
   let
     retry = do
@@ -189,12 +192,16 @@ httpWithRetry triesLeft request =
       httpWithRetry (triesLeft - 1) request
 
   in do
-    response <- httpLBS request
-    case (getResponseStatusCode response) of
-      500 -> retry -- Internal Server Error
-      503 -> retry -- Service Unavailable
-      504 -> retry -- Gateway Timeout
-      _   -> pure response
+    responseOrError <- Exception.try $ httpLBS request
+    case responseOrError of
+      Right response ->
+        case (getResponseStatusCode response) of
+          500 -> retry -- Internal Server Error
+          503 -> retry -- Service Unavailable
+          504 -> retry -- Gateway Timeout
+          _   -> pure responseOrError
+      Left (HttpExceptionRequest _ _) -> retry
+      Left (InvalidUrlException  _ _) -> retry
 
 
 --
@@ -243,8 +250,11 @@ vaultErrorLogMessage vaultError =
       (ServerError resp) ->
         "Internal Vault error: " <> (LBS.unpack resp)
       (ServerUnavailable resp) ->
-        "Vault is unavailable. It can be sealed, under maintenance " <>
-        "or enduring heavy load: " <> (LBS.unpack resp)
+        "Vault is unavailable for requests. It can be sealed, " <>
+        "under maintenance or enduring heavy load: " <> (LBS.unpack resp)
+      (ServerUnreachable) ->
+        "Network trouble. Host can be unreachable, requests may be " <>
+        "timing out or DNS not working."
       (Unspecified status resp) ->
         "Received an error that I don't know about (" <> show status
         <> "): " <> (LBS.unpack resp)

@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import Control.Concurrent   (threadDelay)
 import Control.Lens         ((^?))
 import Data.Char
 import Data.List            (findIndex, nubBy)
@@ -9,6 +10,7 @@ import Network.HTTP.Simple
 import Options.Applicative  hiding (Parser, command)
 import System.Environment
 import System.Posix.Process
+import System.Random        (getStdRandom, randomR)
 
 import qualified Control.Concurrent.Async   as Async
 import qualified Data.Aeson.Lens            as Lens (key, _String)
@@ -158,19 +160,43 @@ runCommand options env =
 
 
 requestSecret :: Options -> Secret -> IO (Secret, Response LBS.ByteString)
-requestSecret opts secret = do
-  let request = setRequestHeader "x-vault-token" [SBS.pack (oVaultToken opts)]
-              $ setRequestPath (requestPath secret)
-              $ setRequestPort (oVaultPort opts)
-              $ setRequestHost (SBS.pack (oVaultHost opts))
-              $ defaultRequest
+requestSecret opts secret =
+  let
+    requestPath = "/v1/secret/" <> (sPath secret)
+    request = setRequestHeader "x-vault-token" [SBS.pack (oVaultToken opts)]
+            $ setRequestPath (SBS.pack requestPath)
+            $ setRequestPort (oVaultPort opts)
+            $ setRequestHost (SBS.pack (oVaultHost opts))
+            $ defaultRequest
 
-  response <- httpLBS request
-  pure (secret, response)
+  in do
+    response <- httpWithRetry 3 request
+    pure (secret, response)
 
-  where
-    requestPath :: Secret -> SBS.ByteString
-    requestPath s = "/v1/secret/" `SBS.append` (SBS.pack (sPath s))
+
+httpWithRetry :: Int -> Request -> IO (Response LBS.ByteString)
+httpWithRetry 1 request = httpLBS request
+httpWithRetry triesLeft request =
+  let
+    retry = do
+      -- Get a random jitter between 0 and 100 ms (inclusive).
+      jitter <- getStdRandom (randomR (0, 100))
+      let
+        delayMilliseconds = 50 + jitter
+        delayMicroseconds = 1000 * delayMilliseconds
+      -- Wait a bit before retrying, at least 50 ms, at most 150 ms.
+      -- TODO: Exponential backoff.
+      threadDelay delayMicroseconds
+      httpWithRetry (triesLeft - 1) request
+
+  in do
+    response <- httpLBS request
+    case (getResponseStatusCode response) of
+      500 -> retry -- Internal Server Error
+      503 -> retry -- Service Unavailable
+      504 -> retry -- Gateway Timeout
+      _   -> pure response
+
 
 --
 -- HTTP response handling

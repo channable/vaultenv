@@ -20,6 +20,8 @@ executable vaultenv
                      , lens                 < 4.16
                      , lens-aeson           < 1.1
                      , optparse-applicative < 0.14
+                     , random               < 1.2
                      , text                 < 1.3
                      , unordered-containers < 0.3
                      , unix                 < 2.8
+                     , utf8-string          < 1.1

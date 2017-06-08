@@ -1,19 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import Control.Concurrent   (threadDelay)
-import Control.Lens         (preview)
+import Control.Lens           (preview)
+import Control.Monad.IO.Class (MonadIO)
 import Data.Char
-import Data.List            (findIndex, nubBy)
-import Data.Semigroup       ((<>))
+import Data.Either            (isLeft)
+import Data.List              (findIndex, nubBy)
+import Data.Monoid            ((<>))
 import Network.HTTP.Simple
-import Options.Applicative  hiding (Parser, command)
+import Options.Applicative    hiding (Parser, command)
 import System.Environment
 import System.Posix.Process
-import System.Random        (getStdRandom, randomR)
 
 import qualified Control.Concurrent.Async   as Async
 import qualified Control.Exception          as Exception
+import qualified Control.Retry              as Retry
 import qualified Data.Aeson.Lens            as Lens (key, _String)
+import qualified Data.Bifunctor             as Bifunctor
 import qualified Data.ByteString.Char8      as SBS
 import qualified Data.ByteString.Lazy       as LBS hiding (unpack)
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -49,6 +51,7 @@ data VaultError
   | ServerError       LBS.ByteString
   | ServerUnavailable LBS.ByteString
   | ServerUnreachable
+  | InvalidUrl        Secret
   | Unspecified       Int LBS.ByteString
 
 --
@@ -90,6 +93,21 @@ optionsInfo =
   info
     (optionsParser <**> helper)
     (fullDesc <> header "vaultenv - run programs with secrets from HashiCorp Vault")
+
+-- | Retry configuration to use for network requests to Vault.
+-- We use a limited exponential backoff with the policy
+-- fullJitterBackoff that comes with the Retry package.
+vaultRetryPolicy :: (MonadIO m) => Retry.RetryPolicyM m
+vaultRetryPolicy =
+  let
+    -- Try at most 10 times in total
+    maxRetries = 9
+    -- The base delay is 40 milliseconds because, in testing,
+    -- we found out that fetching 50 secrets takes roughly
+    -- 200 milliseconds.
+    baseDelayMicroSeconds = 40000
+  in Retry.fullJitterBackoff baseDelayMicroSeconds
+  <> Retry.limitRetries maxRetries
 
 --
 -- IO
@@ -169,40 +187,22 @@ requestSecret opts secret =
             $ setRequestHost (SBS.pack (oVaultHost opts))
             $ defaultRequest
 
-  in do
-    responseOrErr <- httpWithRetry 3 request
-    case responseOrErr of
-      (Left _) -> pure $ Left ServerUnreachable
-      (Right response) -> pure $ parseResponse secret response
+    shouldRetry = const $ return . isLeft
+    retryAction _retryStatus = doRequest secret request
+  in
+    Retry.retrying vaultRetryPolicy shouldRetry retryAction
 
 
-httpWithRetry :: Int -> Request -> IO (Either (HttpException) (Response LBS.ByteString))
-httpWithRetry 1 request = Exception.try $ httpLBS request
-httpWithRetry triesLeft request =
-  let
-    retry = do
-      -- Get a random jitter between 0 and 100 ms (inclusive).
-      jitter <- getStdRandom (randomR (0, 100))
-      let
-        delayMilliseconds = 50 + jitter
-        delayMicroseconds = 1000 * delayMilliseconds
-      -- Wait a bit before retrying, at least 50 ms, at most 150 ms.
-      -- TODO: Exponential backoff.
-      threadDelay delayMicroseconds
-      httpWithRetry (triesLeft - 1) request
+doRequest :: Secret -> Request -> IO (Either VaultError EnvVar)
+doRequest secret request = do
+  respOrEx <- Exception.try . httpLBS $ request :: IO (Either HttpException (Response LBS.ByteString))
+  let envVarOrErr = Bifunctor.first exToErr respOrEx >>= (parseResponse secret)
 
-  in do
-    responseOrError <- Exception.try $ httpLBS request
-    case responseOrError of
-      Right response ->
-        case (getResponseStatusCode response) of
-          500 -> retry -- Internal Server Error
-          503 -> retry -- Service Unavailable
-          504 -> retry -- Gateway Timeout
-          _   -> pure responseOrError
-      Left (HttpExceptionRequest _ _) -> retry
-      Left a -> Exception.throw a
+  return envVarOrErr
 
+  where
+    exToErr (HttpExceptionRequest _ _) = ServerUnreachable
+    exToErr (InvalidUrlException _ _) = InvalidUrl secret
 
 --
 -- HTTP response handling
@@ -247,6 +247,8 @@ vaultErrorLogMessage vaultError =
         "Made a bad request: " <> (LBS.unpack resp)
       (Forbidden) ->
         "Invalid Vault token"
+      (InvalidUrl secret) ->
+        "Secret " <> (sPath secret) <> " contains characters that are illegal in URLs"
       (ServerError resp) ->
         "Internal Vault error: " <> (LBS.unpack resp)
       (ServerUnavailable resp) ->

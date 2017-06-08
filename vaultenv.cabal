@@ -1,5 +1,5 @@
 name:                vaultenv
-version:             0.4.0
+version:             0.4.1
 synopsis:            Runs processes with secrets from HashiCorp Vault
 homepage:            https://github.com/channable/vaultenv
 build-type:          Simple

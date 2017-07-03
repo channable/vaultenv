@@ -37,6 +37,7 @@ echo ""
 
 echo "[TEST] Happy path"
 stack exec -- vaultenv \
+  --no-connect-tls \
   --token ${VAULT_TOKEN} \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
@@ -47,6 +48,7 @@ echo ""
 
 echo "[TEST] Unknown secret, passes if vaultenv errors with secret not found"
 stack exec -- vaultenv \
+  --no-connect-tls \
   --token ${VAULT_TOKEN} \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
@@ -56,6 +58,7 @@ echo ""
 
 echo "[TEST] Unknown secret key, passes if vaultenv errors with key not found in secret"
 stack exec -- vaultenv \
+  --no-connect-tls \
   --token ${VAULT_TOKEN} \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
@@ -65,6 +68,7 @@ echo ""
 
 echo "[TEST] Bad token, vaultenv should fail with forbidden"
 stack exec -- vaultenv \
+  --no-connect-tls \
   --token notthevaulttoken \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
@@ -93,6 +97,7 @@ vault server -config integration-config.hcl &> /dev/null &
 
 echo "[TEST] Vault unavailable. Should error with a corresponding message"
 stack exec -- vaultenv \
+  --no-connect-tls \
   --token notthevaulttoken \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
@@ -106,6 +111,7 @@ kill %%
 
 echo "[TEST] Vault not running. Should error with a corresponding message"
 stack exec -- vaultenv \
+  --no-connect-tls \
   --token notthevaulttoken \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \

@@ -27,12 +27,13 @@ import qualified Options.Applicative        as O
 --
 
 data Options = Options
-  { oVaultHost   :: String
-  , oVaultPort   :: Int
-  , oVaultToken  :: String
-  , oSecretFile  :: FilePath
-  , oCmd         :: String
-  , oArgs        :: [String]
+  { oVaultHost       :: String
+  , oVaultPort       :: Int
+  , oVaultToken      :: String
+  , oSecretFile      :: FilePath
+  , oCmd             :: String
+  , oArgs            :: [String]
+  , oConnectInsecure :: Bool
   } deriving (Eq, Show)
 
 data Secret = Secret
@@ -84,7 +85,9 @@ optionsParser = Options
        <*> many (argument str
            (  metavar "ARGS..."
            <> help "arguments to pass to CMD, defaults to nothing"))
-
+       <*> switch
+           (  long "no-connect-tls"
+           <> help "don't use TLS when connecting to Vault (default: use TLS)")
 
 -- Adds metadata to the `options` parser so it can be used with
 -- execParser.
@@ -185,6 +188,7 @@ requestSecret opts secret =
             $ setRequestPath (SBS.pack requestPath)
             $ setRequestPort (oVaultPort opts)
             $ setRequestHost (SBS.pack (oVaultHost opts))
+            $ setRequestSecure (not $ oConnectInsecure opts)
             $ defaultRequest
 
     shouldRetry = const $ return . isLeft

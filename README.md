@@ -47,6 +47,9 @@ to get one up and running locally.
 
 ## Tutorial
 
+Before we can start, [build vaultenv locally][build-vaultenv] or [download a
+binary][download-vaultenv].
+
 The following program depends on the secret that we stored in Vault in the
 previous section:
 
@@ -166,3 +169,5 @@ To take full advantage of this, the Stackage snapshot has to be rebuilt.
   [HashiCorp Vault]: https://www.vaultproject.io/
   [envconsul]: https://github.com/hashicorp/envconsul
   [stack]: https://haskellstack.org
+  [build-vaultenv]:#building
+  [download-vaultenv]:https://github.com/channable/vaultenv/releases

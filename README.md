@@ -141,6 +141,18 @@ replaced by underscores.
 Example: the contents of `production/third-party#api-key` will be available
 as `PRODUCTION_THIRD_PARTY_API_KEY`.
 
+## Building
+
+Vaultenv is written in Haskell and builds with [Stack][stack]:
+
+    stack setup
+    stack build
+
+The binary can then be found at `$(stack path --local-install-root)/bin/vaultenv`.
+
+It is possible to `stack build` with `--split-objs` to produce a smaller binary.
+To take full advantage of this, the Stackage snapshot has to be rebuilt.
+
 ## Future work
 
  - Support DNS `SRV` record lookups, so users only need to specify the host
@@ -153,3 +165,4 @@ as `PRODUCTION_THIRD_PARTY_API_KEY`.
 
   [HashiCorp Vault]: https://www.vaultproject.io/
   [envconsul]: https://github.com/hashicorp/envconsul
+  [stack]: https://haskellstack.org

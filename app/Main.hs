@@ -4,7 +4,7 @@ import Control.Lens           (preview)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Char
 import Data.Either            (isLeft)
-import Data.List              (findIndex, nubBy)
+import Data.List              (findIndex)
 import Data.Monoid            ((<>))
 import Network.HTTP.Simple
 import Options.Applicative    hiding (Parser, command)
@@ -137,7 +137,7 @@ main = do
     checkNoDuplicates e =
       let keys = map fst (e ++ env)
       in case dups keys of
-           Left x -> error $ "Found duplicate variable \"" ++ x ++ "\""
+           Left x -> errorWithoutStackTrace $ "Found duplicate variable \"" ++ x ++ "\""
            _ -> e ++ env
     newEnv = case sequence newEnvOrErrors of
       -- We need to eliminate duplicates in the environment and keep
@@ -154,10 +154,10 @@ main = do
     where
       dups :: Eq a => [a] -> Either a ()
       dups [] = Right ()
-      dups (x:xs) | isDup x xs= Left x
+      dups (x:xs) | isDup x xs = Left x
                   | otherwise = dups xs
 
-      isDup x = foldr ((||) . (x==)) False
+      isDup x = foldr (\y acc -> x == y || acc) False
 
 
 parseSecret :: String -> Either String Secret

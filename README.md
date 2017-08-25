@@ -104,7 +104,8 @@ Available options:
   --port PORT              Vault port, defaults to 8200
   --token TOKEN            token to authenticate to Vault with
   --secrets-file FILENAME  config file specifying which secrets to request
-  --no-env-inheritance     don't merge the current environment with the secret
+  --no-connect-tls         don't use TLS when connecting to Vault
+  --no-inherit-env         don't merge the current environment with the secret
   CMD                      command to run after fetching secrets
   ARGS...                  arguments to pass to CMD, defaults to nothing
   -h,--help                Show this help text

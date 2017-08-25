@@ -90,7 +90,7 @@ optionsParser = Options
            (  long "no-connect-tls"
            <> help "don't use TLS when connecting to Vault (default: use TLS)")
        <*> switch
-           (  long "no-env-inheritance"
+           (  long "no-inherit-env"
            <> help "don't merge the parent environment with the secrets file")
 
 -- Adds metadata to the `options` parser so it can be used with

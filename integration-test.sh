@@ -46,6 +46,29 @@ stack exec -- vaultenv \
   | grep "TESTING_KEY"
 echo ""
 
+echo "[TEST] Environment inheritance"
+stack exec -- vaultenv \
+  --no-connect-tls \
+  --token ${VAULT_TOKEN} \
+  --host ${VAULT_HOST} \
+  --port ${VAULT_PORT} \
+  --secrets-file ./integration.secrets \
+  /usr/bin/env \
+  | grep "HOME"
+echo ""
+
+echo "[TEST] No environment inheritance"
+stack exec -- vaultenv \
+  --no-connect-tls \
+  --token ${VAULT_TOKEN} \
+  --host ${VAULT_HOST} \
+  --port ${VAULT_PORT} \
+  --secrets-file ./integration.secrets \
+  --no-inherit-env \
+  /usr/bin/env \
+  | grep -v "HOME"
+echo ""
+
 echo "[TEST] Unknown secret, passes if vaultenv errors with secret not found"
 stack exec -- vaultenv \
   --no-connect-tls \

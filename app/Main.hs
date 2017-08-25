@@ -34,6 +34,7 @@ data Options = Options
   , oCmd             :: String
   , oArgs            :: [String]
   , oConnectInsecure :: Bool
+  , oInheritEnvOff   :: Bool
   } deriving (Eq, Show)
 
 data Secret = Secret
@@ -88,6 +89,9 @@ optionsParser = Options
        <*> switch
            (  long "no-connect-tls"
            <> help "don't use TLS when connecting to Vault (default: use TLS)")
+       <*> switch
+           (  long "no-inherit-env"
+           <> help "don't merge the parent environment with the secrets file")
 
 -- Adds metadata to the `options` parser so it can be used with
 -- execParser.
@@ -137,7 +141,7 @@ main = do
       --
       -- Equality is determined on the first element of the env var
       -- tuples.
-      Right e -> nubBy (\(a,_) (b,_) -> a == b) (e ++ env)
+      Right e -> nubBy (\(a,_) (b,_) -> a == b) (if oInheritEnvOff opts then e else e ++ env)
       Left err -> errorWithoutStackTrace (vaultErrorLogMessage err)
 
   runCommand opts newEnv

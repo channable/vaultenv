@@ -141,11 +141,16 @@ main = do
       --
       -- Equality is determined on the first element of the env var
       -- tuples.
-      Right e -> nubBy (\(a,_) (b,_) -> a == b) (if oInheritEnvOff opts then e else e ++ env)
+      Right e -> if dups (map fst (e ++ env))
+        then error "Duplicate variable found"
+        else nubBy (\(a,_) (b,_) -> a == b) (if oInheritEnvOff opts then e else e ++ env)
       Left err -> errorWithoutStackTrace (vaultErrorLogMessage err)
 
   runCommand opts newEnv
-
+    where
+      dups :: Eq a => [a] -> Bool
+      dups [] = False
+      dups (x:xs) = foldr ((||) . (x==)) False xs || dups xs
 
 parseSecret :: String -> Either String Secret
 parseSecret line =

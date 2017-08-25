@@ -134,6 +134,11 @@ main = do
   newEnvOrErrors <- Async.mapConcurrently (requestSecret opts) secrets
 
   let
+    checkNoDuplicates e =
+      let keys = map fst (e ++ env)
+      in case dups keys of
+           Left x -> error $ "Found duplicate variable \"" ++ x ++ "\""
+           _ -> e ++ env
     newEnv = case sequence newEnvOrErrors of
       -- We need to eliminate duplicates in the environment and keep
       -- the first occurrence. `nubBy` (from Data.List) runs in O(n^2),
@@ -141,10 +146,8 @@ main = do
       --
       -- Equality is determined on the first element of the env var
       -- tuples.
-      Right e -> let keys = map fst (if oInheritEnvOff opts then e else e ++ env)
-                 in case dups keys of
-                      Left x -> error $ "Found duplicate variable \"" ++ x ++ "\""
-                      _ -> nubBy (\(a,_) (b,_) -> a == b) (if oInheritEnvOff opts then e else e ++ env)
+      Right e -> checkNoDuplicates (if oInheritEnvOff opts then e else e ++ env)
+
       Left err -> errorWithoutStackTrace (vaultErrorLogMessage err)
 
   runCommand opts newEnv

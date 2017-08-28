@@ -140,8 +140,8 @@ main = do
            Left x -> errorWithoutStackTrace $ "Found duplicate variable \"" ++ x ++ "\""
            _ -> e ++ env
     newEnv = case sequence newEnvOrErrors of
-      -- We need to eliminate duplicates in the environment and keep
-      -- the first occurrence. `nubBy` (from Data.List) runs in O(n^2),
+      -- We need to check duplicates in the environment and fail if
+      -- there are any. `dups` runs in O(n^2),
       -- but this shouldn't matter for our small lists.
       --
       -- Equality is determined on the first element of the env var

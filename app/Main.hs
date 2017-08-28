@@ -157,7 +157,7 @@ main = do
       dups (x:xs) | isDup x xs = Left x
                   | otherwise = dups xs
 
-      isDup x = foldr (\y acc -> x == y || acc) False
+      isDup x = foldr (\y acc -> acc || x == y) False
 
 
 parseSecret :: String -> Either String Secret

@@ -4,7 +4,7 @@ import Control.Lens           (preview)
 import Control.Monad.IO.Class (MonadIO)
 import Data.Char
 import Data.Either            (isLeft)
-import Data.List              (findIndex, nubBy)
+import Data.List              (findIndex)
 import Data.Monoid            ((<>))
 import Network.HTTP.Simple
 import Options.Applicative    hiding (Parser, command)
@@ -54,6 +54,7 @@ data VaultError
   | ServerUnavailable LBS.ByteString
   | ServerUnreachable
   | InvalidUrl        Secret
+  | DuplicateVar      String
   | Unspecified       Int LBS.ByteString
 
 --
@@ -134,17 +135,29 @@ main = do
   newEnvOrErrors <- Async.mapConcurrently (requestSecret opts) secrets
 
   let
+    checkNoDuplicates e =
+      let keys = map fst e
+      in case dups keys of
+        Left varName -> errorWithoutStackTrace $ vaultErrorLogMessage (DuplicateVar varName)
+        _ -> e
     newEnv = case sequence newEnvOrErrors of
-      -- We need to eliminate duplicates in the environment and keep
-      -- the first occurrence. `nubBy` (from Data.List) runs in O(n^2),
+      -- We need to check duplicates in the environment and fail if
+      -- there are any. `dups` runs in O(n^2),
       -- but this shouldn't matter for our small lists.
       --
       -- Equality is determined on the first element of the env var
       -- tuples.
-      Right e -> nubBy (\(a,_) (b,_) -> a == b) (if oInheritEnvOff opts then e else e ++ env)
+      Right e -> checkNoDuplicates (if oInheritEnvOff opts then e else e ++ env)
       Left err -> errorWithoutStackTrace (vaultErrorLogMessage err)
 
   runCommand opts newEnv
+    where
+      dups :: Eq a => [a] -> Either a ()
+      dups [] = Right ()
+      dups (x:xs) | isDup x xs = Left x
+                  | otherwise = dups xs
+
+      isDup x = foldr (\y acc -> acc || x == y) False
 
 
 parseSecret :: String -> Either String Secret
@@ -251,6 +264,8 @@ vaultErrorLogMessage vaultError =
         "Secret not found: " <> sPath secret
       (KeyNotFound secret) ->
         "Key " <> (sKey secret) <> " not found for path " <> (sPath secret)
+      (DuplicateVar varName) ->
+        "Found duplicate environment variable \"" ++ varName ++ "\""
       (BadRequest resp) ->
         "Made a bad request: " <> (LBS.unpack resp)
       (Forbidden) ->

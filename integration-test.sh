@@ -69,6 +69,18 @@ stack exec -- vaultenv \
   | grep -v "HOME"
 echo ""
 
+echo "[TEST] Duplicate environment variable, vaultenv should fail with duplicate env variable"
+export TESTING_KEY=testing666
+stack exec -- vaultenv \
+      --no-connect-tls \
+      --token ${VAULT_TOKEN} \
+      --host ${VAULT_HOST} \
+      --port ${VAULT_PORT} \
+      --secrets-file ./integration.secrets \
+      /usr/bin/env
+unset TESTING_KEY
+echo ""
+
 echo "[TEST] Unknown secret, passes if vaultenv errors with secret not found"
 stack exec -- vaultenv \
   --no-connect-tls \

@@ -54,6 +54,7 @@ data VaultError
   | ServerUnavailable LBS.ByteString
   | ServerUnreachable
   | InvalidUrl        Secret
+  | DuplicateVar      String
   | Unspecified       Int LBS.ByteString
 
 --
@@ -137,8 +138,8 @@ main = do
     checkNoDuplicates e =
       let keys = map fst e
       in case dups keys of
-           Left x -> errorWithoutStackTrace $ "Found duplicate variable \"" ++ x ++ "\""
-           _ -> e
+        Left varName -> errorWithoutStackTrace $ vaultErrorLogMessage (DuplicateVar varName)
+        _ -> e
     newEnv = case sequence newEnvOrErrors of
       -- We need to check duplicates in the environment and fail if
       -- there are any. `dups` runs in O(n^2),
@@ -147,7 +148,6 @@ main = do
       -- Equality is determined on the first element of the env var
       -- tuples.
       Right e -> checkNoDuplicates (if oInheritEnvOff opts then e else e ++ env)
-
       Left err -> errorWithoutStackTrace (vaultErrorLogMessage err)
 
   runCommand opts newEnv
@@ -264,6 +264,8 @@ vaultErrorLogMessage vaultError =
         "Secret not found: " <> sPath secret
       (KeyNotFound secret) ->
         "Key " <> (sKey secret) <> " not found for path " <> (sPath secret)
+      (DuplicateVar varName) ->
+        "Found duplicate environment variable \"" ++ varName ++ "\""
       (BadRequest resp) ->
         "Made a bad request: " <> (LBS.unpack resp)
       (Forbidden) ->

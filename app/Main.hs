@@ -10,6 +10,7 @@ import Network.HTTP.Simple
 import Options.Applicative    hiding (Parser, command)
 import System.Environment
 import System.Posix.Process
+import System.IO              (stderr, hPutStrLn)
 
 import qualified Control.Concurrent.Async   as Async
 import qualified Control.Exception          as Exception
@@ -127,31 +128,30 @@ main = do
   opts <- execParser optionsInfo
 
   secretsOrError <- readSecretList (oSecretFile opts)
-  let
-    secrets = case secretsOrError of
-      Right ss -> ss
-      Left err -> errorWithoutStackTrace err
-
-  newEnvOrErrors <- Async.mapConcurrently (requestSecret opts) secrets
-
-  let
-    checkNoDuplicates e =
-      let keys = map fst e
-      in case dups keys of
-        Left varName -> errorWithoutStackTrace $ vaultErrorLogMessage (DuplicateVar varName)
-        _ -> e
-    newEnv = case sequence newEnvOrErrors of
-      -- We need to check duplicates in the environment and fail if
-      -- there are any. `dups` runs in O(n^2),
-      -- but this shouldn't matter for our small lists.
-      --
-      -- Equality is determined on the first element of the env var
-      -- tuples.
-      Right e -> checkNoDuplicates (if oInheritEnvOff opts then e else e ++ env)
-      Left err -> errorWithoutStackTrace (vaultErrorLogMessage err)
-
-  runCommand opts newEnv
+  case secretsOrError of
+    Left err -> hPutStrLn stderr err
+    Right ss -> do
+      newEnvOrErrors <- Async.mapConcurrently (requestSecret opts) ss
+      case sequence newEnvOrErrors of
+        -- We need to check duplicates in the environment and fail if
+        -- there are any. `dups` runs in O(n^2),
+        -- but this shouldn't matter for our small lists.
+        --
+        -- Equality is determined on the first element of the env var
+        -- tuples.
+        Right e ->
+          let
+            newEnv = if oInheritEnvOff opts then e else e ++ env
+          in case checkNoDuplicates newEnv of
+            Left varName -> hPutStrLn stderr $ vaultErrorLogMessage (DuplicateVar varName)
+            Right () -> runCommand opts newEnv
+        Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
     where
+      checkNoDuplicates e =
+        let keys = map fst e
+        in dups keys
+
+
       dups :: Eq a => [a] -> Either a ()
       dups [] = Right ()
       dups (x:xs) | isDup x xs = Left x

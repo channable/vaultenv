@@ -1,7 +1,8 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import Control.Lens           (preview)
-import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Char
 import Data.Either            (isLeft)
 import Data.List              (findIndex)
@@ -11,6 +12,8 @@ import Options.Applicative    hiding (Parser, command)
 import System.Environment
 import System.Posix.Process
 import System.IO              (stderr, hPutStrLn)
+import Control.Monad.Reader   (ReaderT, runReaderT, asks)
+import Control.Monad.Except   (ExceptT, MonadError, runExceptT, throwError)
 
 import qualified Control.Concurrent.Async   as Async
 import qualified Control.Exception          as Exception
@@ -46,8 +49,11 @@ data Secret = Secret
 
 type EnvVar = (String, String)
 
+type ExecCtx = ([EnvVar], Options)
+
 data VaultError
   = SecretNotFound    Secret
+  | IOError           FilePath
   | KeyNotFound       Secret
   | BadRequest        LBS.ByteString
   | Forbidden
@@ -127,38 +133,41 @@ main = do
   env <- getEnvironment
   opts <- execParser optionsInfo
 
-  secretsOrError <- readSecretList (oSecretFile opts)
-  case secretsOrError of
-    Left err -> hPutStrLn stderr err
-    Right ss -> do
-      newEnvOrErrors <- Async.mapConcurrently (requestSecret opts) ss
-      case sequence newEnvOrErrors of
-        -- We need to check duplicates in the environment and fail if
-        -- there are any. `dups` runs in O(n^2),
-        -- but this shouldn't matter for our small lists.
-        --
-        -- Equality is determined on the first element of the env var
-        -- tuples.
-        Right e ->
-          let
-            newEnv = if oInheritEnvOff opts then e else e ++ env
-          in case checkNoDuplicates newEnv of
-            Left varName -> hPutStrLn stderr $ vaultErrorLogMessage (DuplicateVar varName)
-            Right () -> runCommand opts newEnv
-        Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
-    where
-      checkNoDuplicates e =
-        let
-          keys = map fst e
-        in
-          dups keys
+  eres <- runExceptT $ runReaderT vaultEnv (env, opts)
+  case eres of
+    Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
+    Right newEnv -> runCommand opts newEnv
 
+vaultEnv :: ReaderT ExecCtx (ExceptT VaultError IO) [EnvVar]
+vaultEnv = do
+  secretFile <- asks (oSecretFile . snd)
+  secrets <- readSecretList secretFile
+  opts <- asks snd
+  secretEnv <- requestSecrets opts secrets
+  localEnv <- asks fst
+  inheritEnvOff <- asks (oInheritEnvOff . snd)
+  checkNoDuplicates (buildEnv localEnv secretEnv inheritEnvOff)
+    where
+      checkNoDuplicates :: MonadError VaultError m => [EnvVar] -> m [EnvVar]
+      checkNoDuplicates e =
+        either (throwError . DuplicateVar) (return . const e) $ dups (map fst e)
+
+      -- We need to check duplicates in the environment and fail if
+      -- there are any. `dups` runs in O(n^2),
+      -- but this shouldn't matter for our small lists.
+      --
+      -- Equality is determined on the first element of the env var
+      -- tuples.
       dups :: Eq a => [a] -> Either a ()
       dups [] = Right ()
       dups (x:xs) | isDup x xs = Left x
                   | otherwise = dups xs
 
       isDup x = foldr (\y acc -> acc || x == y) False
+
+      buildEnv :: [EnvVar] -> [EnvVar] -> Bool -> [EnvVar]
+      buildEnv local remote inheritEnvOff =
+        if inheritEnvOff then remote else remote ++ local
 
 
 parseSecret :: String -> Either String Secret
@@ -181,8 +190,10 @@ parseSecret line =
                 }
 
 
-readSecretList :: FilePath -> IO (Either String [Secret])
-readSecretList fname = fmap (sequence . fmap parseSecret . lines) (readFile fname)
+readSecretList :: (MonadError VaultError m, MonadIO m) => FilePath -> m [Secret]
+readSecretList fname = do
+  esecrets <- liftIO $ fmap (sequence . fmap parseSecret . lines) (readFile fname)
+  either (throwError . IOError) (return . id) esecrets
 
 
 runCommand :: Options -> [EnvVar] -> IO a
@@ -214,6 +225,12 @@ requestSecret opts secret =
   in
     Retry.retrying vaultRetryPolicy shouldRetry retryAction
 
+
+requestSecrets :: (MonadError VaultError m, Traversable t, MonadIO m)
+               => Options -> t Secret -> m (t EnvVar)
+requestSecrets opts secrets = do
+  esecretEnv <- liftIO $ Async.mapConcurrently (requestSecret opts) secrets
+  either throwError (return . id) $ sequence esecretEnv
 
 doRequest :: Secret -> Request -> IO (Either VaultError EnvVar)
 doRequest secret request = do
@@ -262,6 +279,8 @@ vaultErrorLogMessage vaultError =
     description = case vaultError of
       (SecretNotFound secret) ->
         "Secret not found: " <> sPath secret
+      (IOError fp) ->
+        "IO error: " <> fp
       (KeyNotFound secret) ->
         "Key " <> (sKey secret) <> " not found for path " <> (sPath secret)
       (DuplicateVar varName) ->

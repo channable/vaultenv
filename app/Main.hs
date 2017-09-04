@@ -148,9 +148,10 @@ main = do
         Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
     where
       checkNoDuplicates e =
-        let keys = map fst e
-        in dups keys
-
+        let
+          keys = map fst e
+        in
+          dups keys
 
       dups :: Eq a => [a] -> Either a ()
       dups [] = Right ()

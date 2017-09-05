@@ -54,6 +54,7 @@ type ExecCtx = ([EnvVar], Options)
 data VaultError
   = SecretNotFound    Secret
   | IOError           FilePath
+  | ParseError        FilePath
   | KeyNotFound       Secret
   | BadRequest        LBS.ByteString
   | Forbidden
@@ -192,8 +193,18 @@ parseSecret line =
 
 readSecretList :: (MonadError VaultError m, MonadIO m) => FilePath -> m [Secret]
 readSecretList fname = do
-  esecrets <- liftIO $ traverse parseSecret . lines <$> readFile fname
-  either (throwError . IOError) return esecrets
+  mfile <- liftIO $ safeReadFile
+  maybe (throwError $ IOError fname) parseSecrets mfile
+  where
+    parseSecrets file =
+      let
+        esecrets = traverse parseSecret . lines $ file
+      in
+        either (throwError . ParseError) return esecrets
+
+    safeReadFile =
+      Exception.catch (Just <$> readFile fname)
+        ((\_ -> return Nothing) :: Exception.IOException -> IO (Maybe String))
 
 
 runCommand :: Options -> [EnvVar] -> IO a
@@ -280,7 +291,9 @@ vaultErrorLogMessage vaultError =
       (SecretNotFound secret) ->
         "Secret not found: " <> sPath secret
       (IOError fp) ->
-        "IO error: " <> fp
+        "An I/O error happened while opening: " <> fp
+      (ParseError fp) ->
+        "File " <> fp <> " could not be parsed"
       (KeyNotFound secret) ->
         "Key " <> (sKey secret) <> " not found for path " <> (sPath secret)
       (DuplicateVar varName) ->

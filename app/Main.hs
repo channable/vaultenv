@@ -192,7 +192,7 @@ parseSecret line =
 
 readSecretList :: (MonadError VaultError m, MonadIO m) => FilePath -> m [Secret]
 readSecretList fname = do
-  esecrets <- liftIO $ fmap (sequence . fmap parseSecret . lines) (readFile fname)
+  esecrets <- liftIO $ traverse parseSecret . lines <$> readFile fname
   either (throwError . IOError) return esecrets
 
 

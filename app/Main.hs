@@ -193,7 +193,7 @@ parseSecret line =
 readSecretList :: (MonadError VaultError m, MonadIO m) => FilePath -> m [Secret]
 readSecretList fname = do
   esecrets <- liftIO $ fmap (sequence . fmap parseSecret . lines) (readFile fname)
-  either (throwError . IOError) (return . id) esecrets
+  either (throwError . IOError) return esecrets
 
 
 runCommand :: Options -> [EnvVar] -> IO a
@@ -230,7 +230,7 @@ requestSecrets :: (MonadError VaultError m, Traversable t, MonadIO m)
                => Options -> t Secret -> m (t EnvVar)
 requestSecrets opts secrets = do
   esecretEnv <- liftIO $ Async.mapConcurrently (requestSecret opts) secrets
-  either throwError (return . id) $ sequence esecretEnv
+  either throwError return $ sequence esecretEnv
 
 doRequest :: Secret -> Request -> IO (Either VaultError EnvVar)
 doRequest secret request = do

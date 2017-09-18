@@ -25,3 +25,4 @@ executable vaultenv
                      , unordered-containers < 0.3
                      , unix                 < 2.8
                      , utf8-string          < 1.1
+                     , mtl

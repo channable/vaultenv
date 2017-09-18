@@ -52,7 +52,7 @@ data VaultError
   | Forbidden
   | ServerError       LBS.ByteString
   | ServerUnavailable LBS.ByteString
-  | ServerUnreachable
+  | ServerUnreachable HttpException
   | InvalidUrl        Secret
   | DuplicateVar      String
   | Unspecified       Int LBS.ByteString
@@ -218,11 +218,10 @@ doRequest :: Secret -> Request -> IO (Either VaultError EnvVar)
 doRequest secret request = do
   respOrEx <- Exception.try . httpLBS $ request :: IO (Either HttpException (Response LBS.ByteString))
   let envVarOrErr = Bifunctor.first exToErr respOrEx >>= (parseResponse secret)
-
   return envVarOrErr
-
   where
-    exToErr (HttpExceptionRequest _ _) = ServerUnreachable
+    exToErr :: HttpException -> VaultError
+    exToErr e@(HttpExceptionRequest _ _) = ServerUnreachable e
     exToErr (InvalidUrlException _ _) = InvalidUrl secret
 
 --
@@ -277,9 +276,8 @@ vaultErrorLogMessage vaultError =
       (ServerUnavailable resp) ->
         "Vault is unavailable for requests. It can be sealed, " <>
         "under maintenance or enduring heavy load: " <> (LBS.unpack resp)
-      (ServerUnreachable) ->
-        "Network trouble. Host can be unreachable, requests may be " <>
-        "timing out or DNS not working."
+      (ServerUnreachable exception) ->
+        "ServerUnreachable error: " <> show exception
       (Unspecified status resp) ->
         "Received an error that I don't know about (" <> show status
         <> "): " <> (LBS.unpack resp)

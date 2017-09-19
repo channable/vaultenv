@@ -13,6 +13,7 @@ executables:
       - base < 5
       - async
       - bytestring
+      - containers
       - http-conduit
       - lens
       - lens-aeson

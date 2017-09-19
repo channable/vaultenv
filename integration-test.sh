@@ -19,6 +19,8 @@ echo "Writing test secrets..."
 cat > integration.secrets << EOF
 testing#key
 testing#otherkey
+testing2#foo
+testing2#bar
 EOF
 
 cat > not-found.secrets << EOF
@@ -32,6 +34,7 @@ EOF
 sleep 1
 
 VAULT_TOKEN=${VAULT_TOKEN_LOCAL} vault write secret/testing key=testing42 otherkey=testing8 &> /dev/null
+VAULT_TOKEN=${VAULT_TOKEN_LOCAL} vault write secret/testing2 foo=val1 bar=val2 &> /dev/null
 
 echo ""
 

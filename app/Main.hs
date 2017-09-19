@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-import Control.Lens           (preview)
+import Control.Monad          (forM)
+import Control.Lens           (reindexed, to)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Char
 import Data.Either            (isLeft)
@@ -18,11 +19,14 @@ import Control.Monad.Except   (ExceptT, MonadError, runExceptT, throwError)
 import qualified Control.Concurrent.Async   as Async
 import qualified Control.Exception          as Exception
 import qualified Control.Retry              as Retry
-import qualified Data.Aeson.Lens            as Lens (key, _String)
+import qualified Data.Aeson.Lens            as Lens (key, members, _String)
 import qualified Data.Bifunctor             as Bifunctor
 import qualified Data.ByteString.Char8      as SBS
 import qualified Data.ByteString.Lazy       as LBS hiding (unpack)
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Foldable              as Foldable
+import qualified Data.Map                   as Map
+import qualified Data.Map.Lens              as Lens (toMapOf)
 import qualified Data.Text                  as Text
 import qualified Options.Applicative        as O
 
@@ -51,8 +55,10 @@ type EnvVar = (String, String)
 
 type ExecCtx = ([EnvVar], Options)
 
+type VaultData = Map.Map String String
+
 data VaultError
-  = SecretNotFound    Secret
+  = SecretNotFound    String
   | IOError           FilePath
   | ParseError        FilePath
   | KeyNotFound       Secret
@@ -61,7 +67,7 @@ data VaultError
   | ServerError       LBS.ByteString
   | ServerUnavailable LBS.ByteString
   | ServerUnreachable HttpException
-  | InvalidUrl        Secret
+  | InvalidUrl        String
   | DuplicateVar      String
   | Unspecified       Int LBS.ByteString
 
@@ -222,11 +228,11 @@ runCommand options env =
     -- replaces the current process with `command`. It does not return.
     executeFile command searchPath args env'
 
-
-requestSecret :: Options -> Secret -> IO (Either VaultError EnvVar)
-requestSecret opts secret =
+-- | Requests all the data associated with a secret from the vault.
+requestSecret :: Options -> String -> IO (Either VaultError VaultData)
+requestSecret opts secretPath =
   let
-    requestPath = "/v1/secret/" <> (sPath secret)
+    requestPath = "/v1/secret/" <> secretPath
     request = setRequestHeader "x-vault-token" [SBS.pack (oVaultToken opts)]
             $ setRequestPath (SBS.pack requestPath)
             $ setRequestPort (oVaultPort opts)
@@ -235,53 +241,62 @@ requestSecret opts secret =
             $ defaultRequest
 
     shouldRetry = const $ return . isLeft
-    retryAction _retryStatus = doRequest secret request
+    retryAction _retryStatus = doRequest secretPath request
   in
     Retry.retrying vaultRetryPolicy shouldRetry retryAction
 
-
+-- | Request all the supplied secrets from the vault, but just once, even if
+-- multiple keys are specified for a single secret. This is an optimization in
+-- order to avoid unnecessary round trips and DNS requets.
 requestSecrets :: (MonadError VaultError m, Traversable t, MonadIO m)
                => Options -> t Secret -> m (t EnvVar)
 requestSecrets opts secrets = do
-  esecretEnv <- liftIO $ Async.mapConcurrently (requestSecret opts) secrets
-  either throwError return $ sequence esecretEnv
+  let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap sPath secrets
+  esecretData <- liftIO $ Async.mapConcurrently (requestSecret opts) secretPaths
+  either throwError return $ sequence esecretData >>= lookupSecrets secrets
 
-doRequest :: Secret -> Request -> IO (Either VaultError EnvVar)
-doRequest secret request = do
+-- | Look for the requested keys in the secret data that has been previously fetched.
+lookupSecrets :: (Traversable t) => t Secret -> Map.Map String VaultData -> Either VaultError (t EnvVar)
+lookupSecrets secrets vaultData = forM secrets $ \secret ->
+  let secretData = Map.lookup (sPath secret) vaultData
+      secretValue = secretData >>= Map.lookup (sKey secret)
+      toEnvVar val = (sVarName secret, val)
+  in maybe (Left $ KeyNotFound secret) (Right . toEnvVar) $ secretValue
+
+-- | Send a request for secrets to the vault and parse the response.
+doRequest :: String -> Request -> IO (Either VaultError VaultData)
+doRequest secretPath request = do
   respOrEx <- Exception.try . httpLBS $ request :: IO (Either HttpException (Response LBS.ByteString))
-  let envVarOrErr = Bifunctor.first exToErr respOrEx >>= (parseResponse secret)
-  return envVarOrErr
+  return $ Bifunctor.first exToErr respOrEx >>= parseResponse secretPath
   where
     exToErr :: HttpException -> VaultError
     exToErr e@(HttpExceptionRequest _ _) = ServerUnreachable e
-    exToErr (InvalidUrlException _ _) = InvalidUrl secret
+    exToErr (InvalidUrlException _ _) = InvalidUrl secretPath
 
 --
 -- HTTP response handling
 --
 
-parseResponse :: Secret -> Response LBS.ByteString -> Either VaultError EnvVar
-parseResponse secret response =
+parseResponse :: String -> Response LBS.ByteString -> Either VaultError VaultData
+parseResponse secretPath response =
   let
     responseBody = getResponseBody response
     statusCode = getResponseStatusCode response
   in case statusCode of
-    200 -> parseSuccessResponse secret responseBody
+    200 -> Right $ parseSuccessResponse responseBody
     403 -> Left Forbidden
-    404 -> Left $ SecretNotFound secret
+    404 -> Left $ SecretNotFound secretPath
     500 -> Left $ ServerError responseBody
     503 -> Left $ ServerUnavailable responseBody
     _   -> Left $ Unspecified statusCode responseBody
 
 
-parseSuccessResponse :: Secret -> LBS.ByteString -> Either VaultError EnvVar
-parseSuccessResponse secret responseBody =
+parseSuccessResponse :: LBS.ByteString -> VaultData
+parseSuccessResponse responseBody =
   let
-    secretKey = Text.pack (sKey secret)
-    getter = Lens.key "data" . Lens.key secretKey . Lens._String
-    toEnvVar secretValue = (sVarName secret, Text.unpack secretValue)
+    getter = Lens.key "data" . reindexed Text.unpack Lens.members . Lens._String . to Text.unpack
   in
-    maybeToEither (KeyNotFound secret) $ fmap toEnvVar (preview getter responseBody)
+    Lens.toMapOf getter responseBody
 
 --
 -- Utility functions
@@ -291,8 +306,8 @@ vaultErrorLogMessage :: VaultError -> String
 vaultErrorLogMessage vaultError =
   let
     description = case vaultError of
-      (SecretNotFound secret) ->
-        "Secret not found: " <> sPath secret
+      (SecretNotFound secretPath) ->
+        "Secret not found: " <> secretPath
       (IOError fp) ->
         "An I/O error happened while opening: " <> fp
       (ParseError fp) ->
@@ -305,8 +320,8 @@ vaultErrorLogMessage vaultError =
         "Made a bad request: " <> (LBS.unpack resp)
       (Forbidden) ->
         "Invalid Vault token"
-      (InvalidUrl secret) ->
-        "Secret " <> (sPath secret) <> " contains characters that are illegal in URLs"
+      (InvalidUrl secretPath) ->
+        "Secret " <> secretPath <> " contains characters that are illegal in URLs"
       (ServerError resp) ->
         "Internal Vault error: " <> (LBS.unpack resp)
       (ServerUnavailable resp) ->
@@ -329,12 +344,6 @@ varNameFromKey path key = fmap format (path ++ "_" ++ key)
         underscore '-' = '_'
         underscore c   = c
         format         = toUpper . underscore
-
-
-maybeToEither :: e -> Maybe a -> Either e a
-maybeToEither _ (Just a) = Right a
-maybeToEither e Nothing  = Left e
-
 
 -- Like splitAt, but also removes the character at the split position.
 cutAt :: Int -> [a] -> ([a], [a])

@@ -111,8 +111,7 @@ optionsParser env = Options
   where
     environ vars key = maybe mempty value (lookup key vars)
 
--- Adds metadata to the `options` parser so it can be used with
--- execParser.
+-- | Add metadata to the `options` parser so it can be used with execParser.
 optionsInfo :: [EnvVar] -> ParserInfo Options
 optionsInfo env =
   info
@@ -228,7 +227,7 @@ runCommand options env =
     -- replaces the current process with `command`. It does not return.
     executeFile command searchPath args env'
 
--- | Requests all the data associated with a secret from the vault.
+-- | Request all the data associated with a secret from the vault.
 requestSecret :: Options -> String -> IO (Either VaultError VaultData)
 requestSecret opts secretPath =
   let
@@ -336,7 +335,7 @@ vaultErrorLogMessage vaultError =
     "[ERROR] " <> description
 
 
--- Converts a secret name into the name of the environment variable that it
+-- | Convert a secret name into the name of the environment variable that it
 -- will be available under.
 varNameFromKey :: String -> String -> String
 varNameFromKey path key = fmap format (path ++ "_" ++ key)
@@ -345,7 +344,7 @@ varNameFromKey path key = fmap format (path ++ "_" ++ key)
         underscore c   = c
         format         = toUpper . underscore
 
--- Like splitAt, but also removes the character at the split position.
+-- | Like @splitAt@, but also removes the character at the split position.
 cutAt :: Int -> [a] -> ([a], [a])
 cutAt index xs =
   let

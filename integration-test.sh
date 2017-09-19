@@ -3,8 +3,8 @@
 # Integration testing Vault token
 VAULT_HOST="127.0.0.1"
 VAULT_PORT="8200"
+VAULT_TOKEN_LOCAL="somethingsecret"
 
-export VAULT_TOKEN="somethingsecret"
 export VAULT_ADDR="http://127.0.0.1:8200"
 
 echo "Building latest changes"
@@ -12,7 +12,7 @@ stack build
 
 # Run vault while we run the tests
 echo "Starting vault..."
-vault server -dev -dev-root-token-id=${VAULT_TOKEN} &> /dev/null &
+vault server -dev -dev-root-token-id=${VAULT_TOKEN_LOCAL} &> /dev/null &
 
 echo "Writing test secrets..."
 # Write a secrets file to use:
@@ -31,14 +31,14 @@ EOF
 
 sleep 1
 
-vault write secret/testing key=testing42 otherkey=testing8 &> /dev/null
+VAULT_TOKEN=${VAULT_TOKEN_LOCAL} vault write secret/testing key=testing42 otherkey=testing8 &> /dev/null
 
 echo ""
 
 echo "[TEST] Happy path"
 stack exec -- vaultenv \
   --no-connect-tls \
-  --token ${VAULT_TOKEN} \
+  --token ${VAULT_TOKEN_LOCAL} \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
   --secrets-file ./integration.secrets \
@@ -46,10 +46,29 @@ stack exec -- vaultenv \
   | grep "TESTING_KEY"
 echo ""
 
+echo "[TEST] VAULT_TOKEN environment variable"
+VAULT_TOKEN=${VAULT_TOKEN_LOCAL} stack exec -- vaultenv \
+      --no-connect-tls \
+      --host ${VAULT_HOST} \
+      --port ${VAULT_PORT} \
+      --secrets-file ./integration.secrets \
+      /usr/bin/env \
+    | grep "TESTING_KEY"
+echo ""
+
+echo "[TEST] No vault token, should fail with usage message"
+stack exec -- vaultenv \
+           --no-connect-tls \
+           --host ${VAULT_HOST} \
+           --port ${VAULT_PORT} \
+           --secrets-file ./integration.secrets \
+           echo "[FAIL] This should never print"
+echo ""
+
 echo "[TEST] Environment inheritance"
 stack exec -- vaultenv \
   --no-connect-tls \
-  --token ${VAULT_TOKEN} \
+  --token ${VAULT_TOKEN_LOCAL} \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
   --secrets-file ./integration.secrets \
@@ -60,7 +79,7 @@ echo ""
 echo "[TEST] No environment inheritance"
 stack exec -- vaultenv \
   --no-connect-tls \
-  --token ${VAULT_TOKEN} \
+  --token ${VAULT_TOKEN_LOCAL} \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
   --secrets-file ./integration.secrets \
@@ -73,7 +92,7 @@ echo "[TEST] Duplicate environment variable, vaultenv should fail with duplicate
 export TESTING_KEY=testing666
 stack exec -- vaultenv \
       --no-connect-tls \
-      --token ${VAULT_TOKEN} \
+      --token ${VAULT_TOKEN_LOCAL} \
       --host ${VAULT_HOST} \
       --port ${VAULT_PORT} \
       --secrets-file ./integration.secrets \
@@ -84,7 +103,7 @@ echo ""
 echo "[TEST] Unknown secret, passes if vaultenv errors with secret not found"
 stack exec -- vaultenv \
   --no-connect-tls \
-  --token ${VAULT_TOKEN} \
+  --token ${VAULT_TOKEN_LOCAL} \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
   --secrets-file ./not-found.secrets \
@@ -94,7 +113,7 @@ echo ""
 echo "[TEST] Unknown secret key, passes if vaultenv errors with key not found in secret"
 stack exec -- vaultenv \
   --no-connect-tls \
-  --token ${VAULT_TOKEN} \
+  --token ${VAULT_TOKEN_LOCAL} \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
   --secrets-file ./bad-key.secrets \

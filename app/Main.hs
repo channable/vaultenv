@@ -5,7 +5,7 @@ import Control.Lens           (preview)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Char
 import Data.Either            (isLeft)
-import Data.List              (findIndex)
+import Data.List              (findIndex, lookup)
 import Data.Monoid            ((<>))
 import Network.HTTP.Simple
 import Options.Applicative    hiding (Parser, command)
@@ -69,8 +69,8 @@ data VaultError
 -- Argument parsing
 --
 
-optionsParser :: O.Parser Options
-optionsParser = Options
+optionsParser :: [EnvVar] -> O.Parser Options
+optionsParser env = Options
        <$> strOption
            (  long "host"
            <> metavar "HOST"
@@ -84,7 +84,8 @@ optionsParser = Options
        <*> strOption
            (  long "token"
            <> metavar "TOKEN"
-           <> help "token to authenticate to Vault with")
+           <> environ env "VAULT_TOKEN"
+           <> help "token to authenticate to Vault with, defaults to the value of the VAULT_TOKEN environment variable if present")
        <*> strOption
            (  long "secrets-file"
            <> metavar "FILENAME"
@@ -101,13 +102,15 @@ optionsParser = Options
        <*> switch
            (  long "no-inherit-env"
            <> help "don't merge the parent environment with the secrets file")
+  where
+    environ vars key = maybe mempty value (lookup key vars)
 
 -- Adds metadata to the `options` parser so it can be used with
 -- execParser.
-optionsInfo :: ParserInfo Options
-optionsInfo =
+optionsInfo :: [EnvVar] -> ParserInfo Options
+optionsInfo env =
   info
-    (optionsParser <**> helper)
+    (optionsParser env <**> helper)
     (fullDesc <> header "vaultenv - run programs with secrets from HashiCorp Vault")
 
 -- | Retry configuration to use for network requests to Vault.
@@ -132,7 +135,7 @@ vaultRetryPolicy =
 main :: IO ()
 main = do
   env <- getEnvironment
-  opts <- execParser optionsInfo
+  opts <- execParser (optionsInfo env)
 
   eres <- runExceptT $ runReaderT vaultEnv (env, opts)
   case eres of

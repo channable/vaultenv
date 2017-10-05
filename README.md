@@ -82,7 +82,7 @@ production/third-party#api-key
 And run `vaultenv` like so:
 
 ```
-$ vaultenv --token <YOUR_VAULT_TOKEN_HERE> --secrets-file ./tutorial.secrets ./tutorial.sh
+$ vaultenv --token <YOUR_VAULT_TOKEN_HERE> --no-connect-tls --secrets-file ./tutorial.secrets ./tutorial.sh
 fecb0f6e97c5b37b3a814107682cf68416f072a8
 ```
 

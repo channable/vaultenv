@@ -43,6 +43,7 @@ data Options = Options
   , oArgs            :: [String]
   , oConnectInsecure :: Bool
   , oInheritEnvOff   :: Bool
+  , oRetryBaseDelay  :: MilliSeconds
   } deriving (Eq, Show)
 
 data Secret = Secret
@@ -70,6 +71,9 @@ data VaultError
   | InvalidUrl        String
   | DuplicateVar      String
   | Unspecified       Int LBS.ByteString
+
+newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
+  deriving (Eq, Show)
 
 --
 -- Argument parsing
@@ -108,6 +112,11 @@ optionsParser env = Options
        <*> switch
            (  long "no-inherit-env"
            <> help "don't merge the parent environment with the secrets file")
+       <*> (MilliSeconds <$> option auto
+               (  long "retry-base-delay"
+               <> metavar "MILLISECONDS"
+               <> value (40 :: Int)
+               <> help "base delay for vault connection retrying. Defaults to 40ms because, in testing, we found out that fetching 50 secrets takes roughly 200 milliseconds"))
   where
     environ vars key = maybe mempty value (lookup key vars)
 
@@ -121,16 +130,12 @@ optionsInfo env =
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
 -- fullJitterBackoff that comes with the Retry package.
-vaultRetryPolicy :: (MonadIO m) => Retry.RetryPolicyM m
-vaultRetryPolicy =
+vaultRetryPolicy :: (MonadIO m) => MilliSeconds -> Retry.RetryPolicyM m
+vaultRetryPolicy baseDelay =
   let
     -- Try at most 10 times in total
     maxRetries = 9
-    -- The base delay is 40 milliseconds because, in testing,
-    -- we found out that fetching 50 secrets takes roughly
-    -- 200 milliseconds.
-    baseDelayMicroSeconds = 40000
-  in Retry.fullJitterBackoff baseDelayMicroSeconds
+  in Retry.fullJitterBackoff (unMilliSeconds baseDelay * 1000)
   <> Retry.limitRetries maxRetries
 
 --
@@ -241,8 +246,9 @@ requestSecret opts secretPath =
 
     shouldRetry = const $ return . isLeft
     retryAction _retryStatus = doRequest secretPath request
+    retryBaseDelay = oRetryBaseDelay opts
   in
-    Retry.retrying vaultRetryPolicy shouldRetry retryAction
+    Retry.retrying (vaultRetryPolicy retryBaseDelay) shouldRetry retryAction
 
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in

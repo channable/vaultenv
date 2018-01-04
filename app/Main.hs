@@ -113,7 +113,7 @@ optionsParser env = Options
            (  long "no-inherit-env"
            <> help "don't merge the parent environment with the secrets file")
        <*> (MilliSeconds <$> option auto
-               (  long "retry-base-delay"
+               (  long "retry-base-delay-milliseconds"
                <> metavar "MILLISECONDS"
                <> value (40 :: Int)
                <> help "base delay for vault connection retrying. Defaults to 40ms because, in testing, we found out that fetching 50 secrets takes roughly 200 milliseconds"))

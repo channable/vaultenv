@@ -106,6 +106,12 @@ Available options:
   --secrets-file FILENAME  config file specifying which secrets to request
   --no-connect-tls         don't use TLS when connecting to Vault
   --no-inherit-env         don't merge the current environment with the secret
+  --retry-base-delay-milliseconds MILLISECONDS
+                           base delay for vault connection retrying. Defaults to
+                           40ms because, in testing, we found out that fetching
+                           50 secrets takes roughly 200 milliseconds
+  --retry-attempts NUM     maximum number of vault connection retries. Defaults
+                           to 9
   CMD                      command to run after fetching secrets
   ARGS...                  arguments to pass to CMD, defaults to nothing
   -h,--help                Show this help text

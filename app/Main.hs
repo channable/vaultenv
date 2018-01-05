@@ -44,6 +44,7 @@ data Options = Options
   , oConnectInsecure :: Bool
   , oInheritEnvOff   :: Bool
   , oRetryBaseDelay  :: MilliSeconds
+  , oRetryAttempts   :: Int
   } deriving (Eq, Show)
 
 data Secret = Secret
@@ -117,6 +118,11 @@ optionsParser env = Options
                <> metavar "MILLISECONDS"
                <> value (40 :: Int)
                <> help "base delay for vault connection retrying. Defaults to 40ms because, in testing, we found out that fetching 50 secrets takes roughly 200 milliseconds"))
+       <*> option auto
+           (  long "retry-attempts"
+           <> metavar "NUM"
+           <> value (9 :: Int)
+           <> help "maximum number of vault connection retries. Defaults to 9")
   where
     environ vars key = maybe mempty value (lookup key vars)
 
@@ -130,13 +136,9 @@ optionsInfo env =
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
 -- fullJitterBackoff that comes with the Retry package.
-vaultRetryPolicy :: (MonadIO m) => MilliSeconds -> Retry.RetryPolicyM m
-vaultRetryPolicy baseDelay =
-  let
-    -- Try at most 10 times in total
-    maxRetries = 9
-  in Retry.fullJitterBackoff (unMilliSeconds baseDelay * 1000)
-  <> Retry.limitRetries maxRetries
+vaultRetryPolicy :: (MonadIO m) => Options -> Retry.RetryPolicyM m
+vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds (oRetryBaseDelay opts) * 1000)
+                     <> Retry.limitRetries (oRetryAttempts opts)
 
 --
 -- IO
@@ -246,9 +248,8 @@ requestSecret opts secretPath =
 
     shouldRetry = const $ return . isLeft
     retryAction _retryStatus = doRequest secretPath request
-    retryBaseDelay = oRetryBaseDelay opts
   in
-    Retry.retrying (vaultRetryPolicy retryBaseDelay) shouldRetry retryAction
+    Retry.retrying (vaultRetryPolicy opts) shouldRetry retryAction
 
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in

@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import Control.Monad          (forM)
@@ -59,11 +60,11 @@ data Secret = Secret
 
 type EnvVar = (String, String)
 
-data ExecCtx
-  = ExecCtx
-  { ctxEnv :: [EnvVar]
-  , ctxOpts :: Options
-  , ctxMan :: Manager
+data Context
+  = Context
+  { cEnvVars :: [EnvVar]
+  , cCliOptions :: Options
+  , cHttpManager :: Manager
   }
 
 type VaultData = Map.Map String String
@@ -158,14 +159,18 @@ vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds (oRetryBaseDelay
 
 main :: IO ()
 main = do
-  env <- getEnvironment
-  opts <- execParser (optionsInfo env)
-  manager <- getManager opts
+  envVars <- getEnvironment
+  cliOptions <- execParser (optionsInfo envVars)
+  httpManager <- getManager cliOptions
 
-  eres <- runExceptT $ runReaderT vaultEnv (ExecCtx env opts manager)
-  case eres of
+  let context = Context { cEnvVars = envVars
+                        , cCliOptions = cliOptions
+                        , cHttpManager = httpManager
+                        }
+
+  (runExceptT $ runReaderT vaultEnv context) >>= \case
     Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
-    Right newEnv -> runCommand opts newEnv
+    Right newEnv -> runCommand context newEnv
 
 getManager :: Options -> IO Manager
 getManager opts =
@@ -181,15 +186,15 @@ getManager opts =
   in
     newManager managerSettings
 
-vaultEnv :: ReaderT ExecCtx (ExceptT VaultError IO) [EnvVar]
+vaultEnv :: ReaderT Context (ExceptT VaultError IO) [EnvVar]
 vaultEnv = do
-  secretFile <- asks (oSecretFile . ctxOpts)
+  secretFile <- asks (oSecretFile . cCliOptions)
   secrets <- readSecretList secretFile
-  opts <- asks ctxOpts
-  manager <- asks ctxMan
+  opts <- asks cCliOptions
+  manager <- asks cHttpManager
   secretEnv <- requestSecrets manager opts secrets
-  localEnv <- asks ctxEnv
-  inheritEnvOff <- asks (oInheritEnvOff . ctxOpts)
+  localEnv <- asks cEnvVars
+  inheritEnvOff <- asks (oInheritEnvOff . cCliOptions)
   checkNoDuplicates (buildEnv localEnv secretEnv inheritEnvOff)
     where
       checkNoDuplicates :: MonadError VaultError m => [EnvVar] -> m [EnvVar]
@@ -250,12 +255,12 @@ readSecretList fname = do
         ((\_ -> return Nothing) :: Exception.IOException -> IO (Maybe String))
 
 
-runCommand :: Options -> [EnvVar] -> IO a
-runCommand options env =
+runCommand :: Context -> [EnvVar] -> IO a
+runCommand context env =
   let
-    command = oCmd options
+    command = (oCmd . cCliOptions) context
     searchPath = False
-    args = oArgs options
+    args = (oArgs . cCliOptions) context
     env' = Just env
   in
     -- `executeFile` calls one of the syscalls in the execv* family, which

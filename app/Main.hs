@@ -5,17 +5,21 @@
 import Control.Monad          (forM)
 import Control.Lens           (reindexed, to)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Char
+import Data.Char              (toUpper)
 import Data.Either            (isLeft)
 import Data.List              (findIndex, lookup)
 import Data.Monoid            ((<>))
 import Network.Connection     (TLSSettings(..))
 import Network.HTTP.Client    (defaultManagerSettings)
 import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
-import Network.HTTP.Simple
+import Network.HTTP.Simple    (HttpException(..), Request, Response,
+                               defaultRequest, setRequestHeader, setRequestPort,
+                               setRequestPath, setRequestHost, setRequestManager,
+                               setRequestSecure, httpLBS, getResponseBody,
+                               getResponseStatusCode)
 import Options.Applicative    hiding (Parser, command)
-import System.Environment
-import System.Posix.Process
+import System.Environment     (getEnvironment)
+import System.Posix.Process   (executeFile)
 import System.IO              (stderr, hPutStrLn)
 import Control.Monad.Except   (ExceptT, MonadError, runExceptT, throwError)
 

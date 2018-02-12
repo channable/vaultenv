@@ -17,7 +17,6 @@ import Options.Applicative    hiding (Parser, command)
 import System.Environment
 import System.Posix.Process
 import System.IO              (stderr, hPutStrLn)
-import Control.Monad.Reader   (ReaderT, runReaderT, asks)
 import Control.Monad.Except   (ExceptT, MonadError, runExceptT, throwError)
 
 import qualified Control.Concurrent.Async   as Async
@@ -62,7 +61,7 @@ type EnvVar = (String, String)
 
 data Context
   = Context
-  { cEnvVars :: [EnvVar]
+  { cLocalEnvVars :: [EnvVar]
   , cCliOptions :: Options
   , cHttpManager :: Manager
   }
@@ -159,16 +158,16 @@ vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds (oRetryBaseDelay
 
 main :: IO ()
 main = do
-  envVars <- getEnvironment
-  cliOptions <- execParser (optionsInfo envVars)
+  localEnvVars <- getEnvironment
+  cliOptions <- execParser (optionsInfo localEnvVars)
   httpManager <- getManager cliOptions
 
-  let context = Context { cEnvVars = envVars
+  let context = Context { cLocalEnvVars = localEnvVars
                         , cCliOptions = cliOptions
                         , cHttpManager = httpManager
                         }
 
-  (runExceptT $ runReaderT vaultEnv context) >>= \case
+  runExceptT (vaultEnv context) >>= \case
     Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
     Right newEnv -> runCommand context newEnv
 
@@ -186,16 +185,11 @@ getManager opts =
   in
     newManager managerSettings
 
-vaultEnv :: ReaderT Context (ExceptT VaultError IO) [EnvVar]
-vaultEnv = do
-  secretFile <- asks (oSecretFile . cCliOptions)
-  secrets <- readSecretList secretFile
-  opts <- asks cCliOptions
-  manager <- asks cHttpManager
-  secretEnv <- requestSecrets manager opts secrets
-  localEnv <- asks cEnvVars
-  inheritEnvOff <- asks (oInheritEnvOff . cCliOptions)
-  checkNoDuplicates (buildEnv localEnv secretEnv inheritEnvOff)
+vaultEnv :: Context -> (ExceptT VaultError IO) [EnvVar]
+vaultEnv context = do
+  secrets <- readSecretList (oSecretFile . cCliOptions $ context)
+  secretEnv <- requestSecrets context secrets
+  checkNoDuplicates (buildEnv secretEnv)
     where
       checkNoDuplicates :: MonadError VaultError m => [EnvVar] -> m [EnvVar]
       checkNoDuplicates e =
@@ -214,9 +208,11 @@ vaultEnv = do
 
       isDup x = foldr (\y acc -> acc || x == y) False
 
-      buildEnv :: [EnvVar] -> [EnvVar] -> Bool -> [EnvVar]
-      buildEnv local remote inheritEnvOff =
-        if inheritEnvOff then remote else remote ++ local
+      buildEnv :: [EnvVar] -> [EnvVar]
+      buildEnv secretsEnv =
+        if (oInheritEnvOff . cCliOptions $ context)
+        then secretsEnv
+        else secretsEnv ++ (cLocalEnvVars context)
 
 
 parseSecret :: String -> Either String Secret
@@ -268,35 +264,36 @@ runCommand context env =
     executeFile command searchPath args env'
 
 -- | Request all the data associated with a secret from the vault.
-requestSecret :: Manager -> Options -> String -> IO (Either VaultError VaultData)
-requestSecret man opts secretPath =
+requestSecret :: Context -> String -> IO (Either VaultError VaultData)
+requestSecret context secretPath =
   let
+    cliOptions = cCliOptions context
     requestPath = "/v1/secret/" <> secretPath
-    request = setRequestManager man
-            $ setRequestHeader "x-vault-token" [SBS.pack (oVaultToken opts)]
+    request = setRequestManager (cHttpManager context)
+            $ setRequestHeader "x-vault-token" [SBS.pack (oVaultToken cliOptions)]
             $ setRequestPath (SBS.pack requestPath)
-            $ setRequestPort (oVaultPort opts)
-            $ setRequestHost (SBS.pack (oVaultHost opts))
-            $ setRequestSecure (not $ oConnectInsecure opts)
+            $ setRequestPort (oVaultPort cliOptions)
+            $ setRequestHost (SBS.pack (oVaultHost cliOptions))
+            $ setRequestSecure (not $ oConnectInsecure cliOptions)
             $ defaultRequest
 
     shouldRetry = const $ return . isLeft
     retryAction _retryStatus = doRequest secretPath request
   in
-    Retry.retrying (vaultRetryPolicy opts) shouldRetry retryAction
+    Retry.retrying (vaultRetryPolicy cliOptions) shouldRetry retryAction
 
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in
 -- order to avoid unnecessary round trips and DNS requets.
-requestSecrets :: (MonadError VaultError m, Traversable t, MonadIO m)
-               => Manager -> Options -> t Secret -> m (t EnvVar)
-requestSecrets man opts secrets = do
+requestSecrets :: (MonadError VaultError m, MonadIO m)
+               => Context -> [Secret] -> m [EnvVar]
+requestSecrets context secrets = do
   let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap sPath secrets
-  esecretData <- liftIO $ Async.mapConcurrently (requestSecret man opts) secretPaths
+  esecretData <- liftIO $ Async.mapConcurrently (requestSecret context) secretPaths
   either throwError return $ sequence esecretData >>= lookupSecrets secrets
 
 -- | Look for the requested keys in the secret data that has been previously fetched.
-lookupSecrets :: (Traversable t) => t Secret -> Map.Map String VaultData -> Either VaultError (t EnvVar)
+lookupSecrets :: [Secret] -> Map.Map String VaultData -> Either VaultError [EnvVar]
 lookupSecrets secrets vaultData = forM secrets $ \secret ->
   let secretData = Map.lookup (sPath secret) vaultData
       secretValue = secretData >>= Map.lookup (sKey secret)

@@ -293,8 +293,8 @@ requestSecret context secretPath =
 requestSecrets :: Context -> [Secret] -> (ExceptT VaultError IO) [EnvVar]
 requestSecrets context secrets = do
   let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap sPath secrets
-  esecretData <- liftIO $ Async.mapConcurrently (requestSecret context) secretPaths
-  either throwError return $ sequence esecretData >>= lookupSecrets secrets
+  secretDataOrErr <- liftIO $ Async.mapConcurrently (requestSecret context) secretPaths
+  either throwError return $ sequence secretDataOrErr >>= lookupSecrets secrets
 
 -- | Look for the requested keys in the secret data that has been previously fetched.
 lookupSecrets :: [Secret] -> Map.Map String VaultData -> Either VaultError [EnvVar]

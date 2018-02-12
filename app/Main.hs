@@ -8,6 +8,9 @@ import Data.Char
 import Data.Either            (isLeft)
 import Data.List              (findIndex, lookup)
 import Data.Monoid            ((<>))
+import Network.Connection     (TLSSettings(..))
+import Network.HTTP.Client    (defaultManagerSettings)
+import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
 import Network.HTTP.Simple
 import Options.Applicative    hiding (Parser, command)
 import System.Environment
@@ -42,6 +45,7 @@ data Options = Options
   , oCmd             :: String
   , oArgs            :: [String]
   , oConnectInsecure :: Bool
+  , oNoValidateCerts :: Bool
   , oInheritEnvOff   :: Bool
   , oRetryBaseDelay  :: MilliSeconds
   , oRetryAttempts   :: Int
@@ -55,7 +59,12 @@ data Secret = Secret
 
 type EnvVar = (String, String)
 
-type ExecCtx = ([EnvVar], Options)
+data ExecCtx
+  = ExecCtx
+  { ctxEnv :: [EnvVar]
+  , ctxOpts :: Options
+  , ctxMan :: Manager
+  }
 
 type VaultData = Map.Map String String
 
@@ -111,6 +120,9 @@ optionsParser env = Options
            (  long "no-connect-tls"
            <> help "don't use TLS when connecting to Vault (default: use TLS)")
        <*> switch
+           (  long "no-validate-certs"
+           <> help "don't validate TLS certificates when connecting to Vault (default: validate certs)")
+       <*> switch
            (  long "no-inherit-env"
            <> help "don't merge the parent environment with the secrets file")
        <*> (MilliSeconds <$> option auto
@@ -148,20 +160,36 @@ main :: IO ()
 main = do
   env <- getEnvironment
   opts <- execParser (optionsInfo env)
+  manager <- getManager opts
 
-  eres <- runExceptT $ runReaderT vaultEnv (env, opts)
+  eres <- runExceptT $ runReaderT vaultEnv (ExecCtx env opts manager)
   case eres of
     Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
     Right newEnv -> runCommand opts newEnv
 
+getManager :: Options -> IO Manager
+getManager opts =
+  let
+    managerSettings = if oConnectInsecure opts
+                      then defaultManagerSettings
+                      else mkManagerSettings tlsSettings Nothing
+    tlsSettings = TLSSettingsSimple
+                { settingDisableCertificateValidation = oNoValidateCerts opts
+                , settingDisableSession = False
+                , settingUseServerName = True
+                }
+  in
+    newManager managerSettings
+
 vaultEnv :: ReaderT ExecCtx (ExceptT VaultError IO) [EnvVar]
 vaultEnv = do
-  secretFile <- asks (oSecretFile . snd)
+  secretFile <- asks (oSecretFile . ctxOpts)
   secrets <- readSecretList secretFile
-  opts <- asks snd
-  secretEnv <- requestSecrets opts secrets
-  localEnv <- asks fst
-  inheritEnvOff <- asks (oInheritEnvOff . snd)
+  opts <- asks ctxOpts
+  manager <- asks ctxMan
+  secretEnv <- requestSecrets manager opts secrets
+  localEnv <- asks ctxEnv
+  inheritEnvOff <- asks (oInheritEnvOff . ctxOpts)
   checkNoDuplicates (buildEnv localEnv secretEnv inheritEnvOff)
     where
       checkNoDuplicates :: MonadError VaultError m => [EnvVar] -> m [EnvVar]
@@ -235,11 +263,12 @@ runCommand options env =
     executeFile command searchPath args env'
 
 -- | Request all the data associated with a secret from the vault.
-requestSecret :: Options -> String -> IO (Either VaultError VaultData)
-requestSecret opts secretPath =
+requestSecret :: Manager -> Options -> String -> IO (Either VaultError VaultData)
+requestSecret man opts secretPath =
   let
     requestPath = "/v1/secret/" <> secretPath
-    request = setRequestHeader "x-vault-token" [SBS.pack (oVaultToken opts)]
+    request = setRequestManager man
+            $ setRequestHeader "x-vault-token" [SBS.pack (oVaultToken opts)]
             $ setRequestPath (SBS.pack requestPath)
             $ setRequestPort (oVaultPort opts)
             $ setRequestHost (SBS.pack (oVaultHost opts))
@@ -255,10 +284,10 @@ requestSecret opts secretPath =
 -- multiple keys are specified for a single secret. This is an optimization in
 -- order to avoid unnecessary round trips and DNS requets.
 requestSecrets :: (MonadError VaultError m, Traversable t, MonadIO m)
-               => Options -> t Secret -> m (t EnvVar)
-requestSecrets opts secrets = do
+               => Manager -> Options -> t Secret -> m (t EnvVar)
+requestSecrets man opts secrets = do
   let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap sPath secrets
-  esecretData <- liftIO $ Async.mapConcurrently (requestSecret opts) secretPaths
+  esecretData <- liftIO $ Async.mapConcurrently (requestSecret man opts) secretPaths
   either throwError return $ sequence esecretData >>= lookupSecrets secrets
 
 -- | Look for the requested keys in the secret data that has been previously fetched.

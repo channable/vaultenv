@@ -96,24 +96,33 @@ of `tutorial.sh`.
 vaultenv - run programs with secrets from HashiCorp Vault
 
 Usage: vaultenv [--host HOST] [--port PORT] --token TOKEN
-                --secrets-file FILENAME CMD [ARGS...]
+                --secrets-file FILENAME CMD [ARGS...] [--no-connect-tls]
+                [--no-validate-certs] [--no-inherit-env]
+                [--retry-base-delay-milliseconds MILLISECONDS]
+                [--retry-attempts NUM]
 
 Available options:
   --host HOST              Vault host, either an IP address or DNS name,
                            defaults to localhost
   --port PORT              Vault port, defaults to 8200
-  --token TOKEN            token to authenticate to Vault with
+  --token TOKEN            token to authenticate to Vault with, defaults to the
+                           value of the VAULT_TOKEN environment variable if
+                           present
   --secrets-file FILENAME  config file specifying which secrets to request
-  --no-connect-tls         don't use TLS when connecting to Vault
-  --no-inherit-env         don't merge the current environment with the secret
+  CMD                      command to run after fetching secrets
+  ARGS...                  arguments to pass to CMD, defaults to nothing
+  --no-connect-tls         don't use TLS when connecting to Vault (default: use
+                           TLS)
+  --no-validate-certs      don't validate TLS certificates when connecting to
+                           Vault (default: validate certs)
+  --no-inherit-env         don't merge the parent environment with the secrets
+                           file
   --retry-base-delay-milliseconds MILLISECONDS
                            base delay for vault connection retrying. Defaults to
                            40ms because, in testing, we found out that fetching
                            50 secrets takes roughly 200 milliseconds
   --retry-attempts NUM     maximum number of vault connection retries. Defaults
                            to 9
-  CMD                      command to run after fetching secrets
-  ARGS...                  arguments to pass to CMD, defaults to nothing
   -h,--help                Show this help text
 ```
 

@@ -13,8 +13,10 @@ executables:
       - base < 5
       - async
       - bytestring
+      - connection
       - containers
       - http-conduit
+      - http-client
       - lens
       - lens-aeson
       - optparse-applicative

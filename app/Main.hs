@@ -1,19 +1,26 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import Control.Monad          (forM)
 import Control.Lens           (reindexed, to)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Char
+import Data.Char              (toUpper)
 import Data.Either            (isLeft)
 import Data.List              (findIndex, lookup)
 import Data.Monoid            ((<>))
-import Network.HTTP.Simple
+import Network.Connection     (TLSSettings(..))
+import Network.HTTP.Client    (defaultManagerSettings)
+import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
+import Network.HTTP.Simple    (HttpException(..), Request, Response,
+                               defaultRequest, setRequestHeader, setRequestPort,
+                               setRequestPath, setRequestHost, setRequestManager,
+                               setRequestSecure, httpLBS, getResponseBody,
+                               getResponseStatusCode)
 import Options.Applicative    hiding (Parser, command)
-import System.Environment
-import System.Posix.Process
+import System.Environment     (getEnvironment)
+import System.Posix.Process   (executeFile)
 import System.IO              (stderr, hPutStrLn)
-import Control.Monad.Reader   (ReaderT, runReaderT, asks)
 import Control.Monad.Except   (ExceptT, MonadError, runExceptT, throwError)
 
 import qualified Control.Concurrent.Async   as Async
@@ -41,7 +48,8 @@ data Options = Options
   , oSecretFile      :: FilePath
   , oCmd             :: String
   , oArgs            :: [String]
-  , oConnectInsecure :: Bool
+  , oConnectHttp     :: Bool
+  , oNoValidateCerts :: Bool
   , oInheritEnvOff   :: Bool
   , oRetryBaseDelay  :: MilliSeconds
   , oRetryAttempts   :: Int
@@ -55,7 +63,12 @@ data Secret = Secret
 
 type EnvVar = (String, String)
 
-type ExecCtx = ([EnvVar], Options)
+data Context
+  = Context
+  { cLocalEnvVars :: [EnvVar]
+  , cCliOptions :: Options
+  , cHttpManager :: Manager
+  }
 
 type VaultData = Map.Map String String
 
@@ -111,6 +124,9 @@ optionsParser env = Options
            (  long "no-connect-tls"
            <> help "don't use TLS when connecting to Vault (default: use TLS)")
        <*> switch
+           (  long "no-validate-certs"
+           <> help "don't validate TLS certificates when connecting to Vault (default: validate certs)")
+       <*> switch
            (  long "no-inherit-env"
            <> help "don't merge the parent environment with the secrets file")
        <*> (MilliSeconds <$> option auto
@@ -146,23 +162,47 @@ vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds (oRetryBaseDelay
 
 main :: IO ()
 main = do
-  env <- getEnvironment
-  opts <- execParser (optionsInfo env)
+  localEnvVars <- getEnvironment
+  cliOptions <- execParser (optionsInfo localEnvVars)
+  httpManager <- getHttpManager cliOptions
 
-  eres <- runExceptT $ runReaderT vaultEnv (env, opts)
-  case eres of
+  let context = Context { cLocalEnvVars = localEnvVars
+                        , cCliOptions = cliOptions
+                        , cHttpManager = httpManager
+                        }
+
+  runExceptT (vaultEnv context) >>= \case
     Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
-    Right newEnv -> runCommand opts newEnv
+    Right newEnv -> runCommand cliOptions newEnv
 
-vaultEnv :: ReaderT ExecCtx (ExceptT VaultError IO) [EnvVar]
-vaultEnv = do
-  secretFile <- asks (oSecretFile . snd)
-  secrets <- readSecretList secretFile
-  opts <- asks snd
-  secretEnv <- requestSecrets opts secrets
-  localEnv <- asks fst
-  inheritEnvOff <- asks (oInheritEnvOff . snd)
-  checkNoDuplicates (buildEnv localEnv secretEnv inheritEnvOff)
+-- | This function returns either a manager for plain HTTP or
+-- for HTTPS connections. If TLS is wanted, we also check if the
+-- user specified an option to disable the certificate check.
+getHttpManager :: Options -> IO Manager
+getHttpManager opts = newManager managerSettings
+  where
+    managerSettings = if oConnectHttp opts
+                      then defaultManagerSettings
+                      else mkManagerSettings tlsSettings Nothing
+    tlsSettings = TLSSettingsSimple
+                { settingDisableCertificateValidation = oNoValidateCerts opts
+                , settingDisableSession = False
+                , settingUseServerName = True
+                }
+
+-- | Main logic of our application. Reads a list of secrets, fetches
+-- each of them from Vault, checks for duplicates, and then yields
+-- the list of environment variables to make available to the process
+-- we want to run eventually. It either scrubs the environment that
+-- already existed or keeps it.
+--
+-- Signails failure through a value of type VaultError, but can also
+-- throw HTTP exceptions.
+vaultEnv :: Context -> ExceptT VaultError IO [EnvVar]
+vaultEnv context = do
+  secrets <- readSecretList (oSecretFile . cCliOptions $ context)
+  secretEnv <- requestSecrets context secrets
+  checkNoDuplicates (buildEnv secretEnv)
     where
       checkNoDuplicates :: MonadError VaultError m => [EnvVar] -> m [EnvVar]
       checkNoDuplicates e =
@@ -181,9 +221,11 @@ vaultEnv = do
 
       isDup x = foldr (\y acc -> acc || x == y) False
 
-      buildEnv :: [EnvVar] -> [EnvVar] -> Bool -> [EnvVar]
-      buildEnv local remote inheritEnvOff =
-        if inheritEnvOff then remote else remote ++ local
+      buildEnv :: [EnvVar] -> [EnvVar]
+      buildEnv secretsEnv =
+        if (oInheritEnvOff . cCliOptions $ context)
+        then secretsEnv
+        else secretsEnv ++ (cLocalEnvVars context)
 
 
 parseSecret :: String -> Either String Secret
@@ -235,34 +277,35 @@ runCommand options env =
     executeFile command searchPath args env'
 
 -- | Request all the data associated with a secret from the vault.
-requestSecret :: Options -> String -> IO (Either VaultError VaultData)
-requestSecret opts secretPath =
+requestSecret :: Context -> String -> IO (Either VaultError VaultData)
+requestSecret context secretPath =
   let
+    cliOptions = cCliOptions context
     requestPath = "/v1/secret/" <> secretPath
-    request = setRequestHeader "x-vault-token" [SBS.pack (oVaultToken opts)]
+    request = setRequestManager (cHttpManager context)
+            $ setRequestHeader "x-vault-token" [SBS.pack (oVaultToken cliOptions)]
             $ setRequestPath (SBS.pack requestPath)
-            $ setRequestPort (oVaultPort opts)
-            $ setRequestHost (SBS.pack (oVaultHost opts))
-            $ setRequestSecure (not $ oConnectInsecure opts)
+            $ setRequestPort (oVaultPort cliOptions)
+            $ setRequestHost (SBS.pack (oVaultHost cliOptions))
+            $ setRequestSecure (not $ oConnectHttp cliOptions)
             $ defaultRequest
 
     shouldRetry = const $ return . isLeft
     retryAction _retryStatus = doRequest secretPath request
   in
-    Retry.retrying (vaultRetryPolicy opts) shouldRetry retryAction
+    Retry.retrying (vaultRetryPolicy cliOptions) shouldRetry retryAction
 
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in
 -- order to avoid unnecessary round trips and DNS requets.
-requestSecrets :: (MonadError VaultError m, Traversable t, MonadIO m)
-               => Options -> t Secret -> m (t EnvVar)
-requestSecrets opts secrets = do
+requestSecrets :: Context -> [Secret] -> (ExceptT VaultError IO) [EnvVar]
+requestSecrets context secrets = do
   let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap sPath secrets
-  esecretData <- liftIO $ Async.mapConcurrently (requestSecret opts) secretPaths
-  either throwError return $ sequence esecretData >>= lookupSecrets secrets
+  secretDataOrErr <- liftIO $ Async.mapConcurrently (requestSecret context) secretPaths
+  either throwError return $ sequence secretDataOrErr >>= lookupSecrets secrets
 
 -- | Look for the requested keys in the secret data that has been previously fetched.
-lookupSecrets :: (Traversable t) => t Secret -> Map.Map String VaultData -> Either VaultError (t EnvVar)
+lookupSecrets :: [Secret] -> Map.Map String VaultData -> Either VaultError [EnvVar]
 lookupSecrets secrets vaultData = forM secrets $ \secret ->
   let secretData = Map.lookup (sPath secret) vaultData
       secretValue = secretData >>= Map.lookup (sKey secret)

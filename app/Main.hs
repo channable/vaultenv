@@ -190,7 +190,15 @@ getHttpManager opts = newManager managerSettings
                 , settingUseServerName = True
                 }
 
-vaultEnv :: Context -> (ExceptT VaultError IO) [EnvVar]
+-- | Main logic of our application. Reads a list of secrets, fetches
+-- each of them from Vault, checks for duplicates, and then yields
+-- the list of environment variables to make available to the process
+-- we want to run eventually. It either scrubs the environment that
+-- already existed or keeps it.
+--
+-- Signails failure through a value of type VaultError, but can also
+-- throw HTTP exceptions.
+vaultEnv :: Context -> ExceptT VaultError IO [EnvVar]
 vaultEnv context = do
   secrets <- readSecretList (oSecretFile . cCliOptions $ context)
   secretEnv <- requestSecrets context secrets

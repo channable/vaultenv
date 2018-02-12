@@ -48,7 +48,7 @@ data Options = Options
   , oSecretFile      :: FilePath
   , oCmd             :: String
   , oArgs            :: [String]
-  , oConnectInsecure :: Bool
+  , oConnectHttp     :: Bool
   , oNoValidateCerts :: Bool
   , oInheritEnvOff   :: Bool
   , oRetryBaseDelay  :: MilliSeconds
@@ -164,7 +164,7 @@ main :: IO ()
 main = do
   localEnvVars <- getEnvironment
   cliOptions <- execParser (optionsInfo localEnvVars)
-  httpManager <- getManager cliOptions
+  httpManager <- getHttpManager cliOptions
 
   let context = Context { cLocalEnvVars = localEnvVars
                         , cCliOptions = cliOptions
@@ -175,10 +175,13 @@ main = do
     Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
     Right newEnv -> runCommand context newEnv
 
-getManager :: Options -> IO Manager
-getManager opts =
-  let
-    managerSettings = if oConnectInsecure opts
+-- | This function returns either a manager for plain HTTP or
+-- for HTTPS connections. If TLS is wanted, we also check if the
+-- user specified an option to disable the certificate check.
+getHttpManager :: Options -> IO Manager
+getHttpManager opts = newManager managerSettings
+  where
+    managerSettings = if oConnectHttp opts
                       then defaultManagerSettings
                       else mkManagerSettings tlsSettings Nothing
     tlsSettings = TLSSettingsSimple
@@ -186,8 +189,6 @@ getManager opts =
                 , settingDisableSession = False
                 , settingUseServerName = True
                 }
-  in
-    newManager managerSettings
 
 vaultEnv :: Context -> (ExceptT VaultError IO) [EnvVar]
 vaultEnv context = do
@@ -278,7 +279,7 @@ requestSecret context secretPath =
             $ setRequestPath (SBS.pack requestPath)
             $ setRequestPort (oVaultPort cliOptions)
             $ setRequestHost (SBS.pack (oVaultHost cliOptions))
-            $ setRequestSecure (not $ oConnectInsecure cliOptions)
+            $ setRequestSecure (not $ oConnectHttp cliOptions)
             $ defaultRequest
 
     shouldRetry = const $ return . isLeft

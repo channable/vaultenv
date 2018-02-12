@@ -196,7 +196,7 @@ getHttpManager opts = newManager managerSettings
 -- we want to run eventually. It either scrubs the environment that
 -- already existed or keeps it.
 --
--- Signails failure through a value of type VaultError, but can also
+-- Signals failure through a value of type VaultError, but can also
 -- throw HTTP exceptions.
 vaultEnv :: Context -> ExceptT VaultError IO [EnvVar]
 vaultEnv context = do

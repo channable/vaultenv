@@ -173,7 +173,7 @@ main = do
 
   runExceptT (vaultEnv context) >>= \case
     Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
-    Right newEnv -> runCommand context newEnv
+    Right newEnv -> runCommand cliOptions newEnv
 
 -- | This function returns either a manager for plain HTTP or
 -- for HTTPS connections. If TLS is wanted, we also check if the
@@ -256,12 +256,12 @@ readSecretList fname = do
         ((\_ -> return Nothing) :: Exception.IOException -> IO (Maybe String))
 
 
-runCommand :: Context -> [EnvVar] -> IO a
-runCommand context env =
+runCommand :: Options -> [EnvVar] -> IO a
+runCommand options env =
   let
-    command = (oCmd . cCliOptions) context
+    command = oCmd options
     searchPath = False
-    args = (oArgs . cCliOptions) context
+    args = oArgs options
     env' = Just env
   in
     -- `executeFile` calls one of the syscalls in the execv* family, which
@@ -290,8 +290,7 @@ requestSecret context secretPath =
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in
 -- order to avoid unnecessary round trips and DNS requets.
-requestSecrets :: (MonadError VaultError m, MonadIO m)
-               => Context -> [Secret] -> m [EnvVar]
+requestSecrets :: Context -> [Secret] -> (ExceptT VaultError IO) [EnvVar]
 requestSecrets context secrets = do
   let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap sPath secrets
   esecretData <- liftIO $ Async.mapConcurrently (requestSecret context) secretPaths

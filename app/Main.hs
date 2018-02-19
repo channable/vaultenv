@@ -6,10 +6,12 @@ import Control.Monad          (forM)
 import Control.Lens           (reindexed, to)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Char              (toUpper)
+import Data.Default           (def)
 import Data.Either            (isLeft)
 import Data.List              (findIndex, lookup)
 import Data.Monoid            ((<>))
 import Network.Connection     (TLSSettings(..), initConnectionContext)
+import Network.Connection.Types (ConnectionContext(..))
 import Network.HTTP.Client    (defaultManagerSettings)
 import Network.HTTP.Client.TLS  (mkManagerSettingsContext)
 import Network.HTTP.Conduit   (Manager, newManager)
@@ -36,6 +38,8 @@ import qualified Data.Foldable              as Foldable
 import qualified Data.Map                   as Map
 import qualified Data.Map.Lens              as Lens (toMapOf)
 import qualified Data.Text                  as Text
+import qualified Network.TLS                as Tls
+import qualified Network.TLS.SessionManager as TlsSession
 import qualified Options.Applicative        as O
 
 --
@@ -64,8 +68,8 @@ data Secret = Secret
 
 type EnvVar = (String, String)
 
-data Context
-  = Context
+data VaultContext
+  = VaultContext
   { cLocalEnvVars :: [EnvVar]
   , cCliOptions :: Options
   , cHttpManager :: Manager
@@ -167,10 +171,10 @@ main = do
   cliOptions <- execParser (optionsInfo localEnvVars)
   httpManager <- getHttpManager cliOptions
 
-  let context = Context { cLocalEnvVars = localEnvVars
-                        , cCliOptions = cliOptions
-                        , cHttpManager = httpManager
-                        }
+  let context = VaultContext { cLocalEnvVars = localEnvVars
+                             , cCliOptions = cliOptions
+                             , cHttpManager = httpManager
+                             }
 
   runExceptT (vaultEnv context) >>= \case
     Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
@@ -182,17 +186,31 @@ main = do
 getHttpManager :: Options -> IO Manager
 getHttpManager opts = do
   context <- initConnectionContext
+  tlsSessionManager <- TlsSession.newSessionManager TlsSession.defaultConfig
   newManager (managerSettings context)
   where
     managerSettings context
       = if oConnectHttp opts
         then defaultManagerSettings
-        else mkManagerSettingsContext (Just context) tlsSettings socksProxySettings
-    tlsSettings = TLSSettingsSimple
-                { settingDisableCertificateValidation = oNoValidateCerts opts
-                , settingDisableSession = False
-                , settingUseServerName = True
-                }
+        else mkManagerSettingsContext (Just context) (tlsSettings context) socksProxySettings
+    tlsSettings context = TLSSettings $ (Tls.defaultParamsClient "" "")
+      { Tls.clientShared = def
+        { Tls.sharedValidationCache =
+            if oNoValidateCerts opts
+              then insecureValidationCache
+              else def
+        , Tls.sharedCAStore = globalCertificateStore context
+        }
+
+      }
+                -- { settingDisableCertificateValidation = oNoValidateCerts opts
+                -- , settingDisableSession = False
+                -- , settingUseServerName = True
+                -- }
+                --
+    insecureValidationCache = Tls.ValidationCache
+      (\_ _ _ -> return Tls.ValidationCachePass)
+      (\_ _ _ -> return ())
     socksProxySettings = Nothing
 
 -- | Main logic of our application. Reads a list of secrets, fetches
@@ -203,7 +221,7 @@ getHttpManager opts = do
 --
 -- Signals failure through a value of type VaultError, but can also
 -- throw HTTP exceptions.
-vaultEnv :: Context -> ExceptT VaultError IO [EnvVar]
+vaultEnv :: VaultContext -> ExceptT VaultError IO [EnvVar]
 vaultEnv context = do
   secrets <- readSecretList (oSecretFile . cCliOptions $ context)
   secretEnv <- requestSecrets context secrets
@@ -282,7 +300,7 @@ runCommand options env =
     executeFile command searchPath args env'
 
 -- | Request all the data associated with a secret from the vault.
-requestSecret :: Context -> String -> IO (Either VaultError VaultData)
+requestSecret :: VaultContext -> String -> IO (Either VaultError VaultData)
 requestSecret context secretPath =
   let
     cliOptions = cCliOptions context
@@ -303,7 +321,7 @@ requestSecret context secretPath =
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in
 -- order to avoid unnecessary round trips and DNS requets.
-requestSecrets :: Context -> [Secret] -> (ExceptT VaultError IO) [EnvVar]
+requestSecrets :: VaultContext -> [Secret] -> (ExceptT VaultError IO) [EnvVar]
 requestSecrets context secrets = do
   let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap sPath secrets
   secretDataOrErr <- liftIO $ Async.mapConcurrently (requestSecret context) secretPaths

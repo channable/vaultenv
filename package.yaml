@@ -15,6 +15,7 @@ executables:
       - bytestring
       - connection
       - containers
+      - data-default
       - http-conduit
       - http-client
       - http-client-tls
@@ -23,6 +24,8 @@ executables:
       - optparse-applicative
       - retry
       - text
+      - tls
+      - tls-session-manager
       - unordered-containers
       - unix
       - utf8-string

@@ -17,6 +17,7 @@ executables:
       - containers
       - http-conduit
       - http-client
+      - http-client-tls
       - lens
       - lens-aeson
       - optparse-applicative

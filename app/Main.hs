@@ -9,9 +9,10 @@ import Data.Char              (toUpper)
 import Data.Either            (isLeft)
 import Data.List              (findIndex, lookup)
 import Data.Monoid            ((<>))
-import Network.Connection     (TLSSettings(..))
+import Network.Connection     (TLSSettings(..), initConnectionContext)
 import Network.HTTP.Client    (defaultManagerSettings)
-import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
+import Network.HTTP.Client.TLS  (mkManagerSettingsContext)
+import Network.HTTP.Conduit   (Manager, newManager)
 import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                defaultRequest, setRequestHeader, setRequestPort,
                                setRequestPath, setRequestHost, setRequestManager,
@@ -179,16 +180,20 @@ main = do
 -- for HTTPS connections. If TLS is wanted, we also check if the
 -- user specified an option to disable the certificate check.
 getHttpManager :: Options -> IO Manager
-getHttpManager opts = newManager managerSettings
+getHttpManager opts = do
+  context <- initConnectionContext
+  newManager (managerSettings context)
   where
-    managerSettings = if oConnectHttp opts
-                      then defaultManagerSettings
-                      else mkManagerSettings tlsSettings Nothing
+    managerSettings context
+      = if oConnectHttp opts
+        then defaultManagerSettings
+        else mkManagerSettingsContext (Just context) tlsSettings socksProxySettings
     tlsSettings = TLSSettingsSimple
                 { settingDisableCertificateValidation = oNoValidateCerts opts
                 , settingDisableSession = False
                 , settingUseServerName = True
                 }
+    socksProxySettings = Nothing
 
 -- | Main logic of our application. Reads a list of secrets, fetches
 -- each of them from Vault, checks for duplicates, and then yields

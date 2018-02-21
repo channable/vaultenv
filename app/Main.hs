@@ -18,6 +18,7 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                setRequestSecure, httpLBS, getResponseBody,
                                getResponseStatusCode)
 import Options.Applicative    hiding (Parser, command)
+import Options.Applicative.Builder.Internal (FlagFields(..), Mod(..))
 import System.Environment     (getEnvironment)
 import System.Posix.Process   (executeFile)
 import System.IO              (stderr, hPutStrLn)
@@ -36,6 +37,7 @@ import qualified Data.Map                   as Map
 import qualified Data.Map.Lens              as Lens (toMapOf)
 import qualified Data.Text                  as Text
 import qualified Options.Applicative        as O
+import qualified Text.Read as Read
 
 --
 -- Datatypes
@@ -94,25 +96,27 @@ newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
 --
 
 optionsParser :: [EnvVar] -> O.Parser Options
-optionsParser env = Options
+optionsParser environment = Options
        <$> strOption
            (  long "host"
            <> metavar "HOST"
+           <> lookupFromEnv "VAULT_HOST"
            <> value "localhost"
            <> help "Vault host, either an IP address or DNS name, defaults to localhost" )
        <*> option auto
            (  long "port"
            <> metavar "PORT"
-           <> value 8200
+           <> maybe (value 8200) value (readFromEnvironment "VAULT_PORT")
            <> help "Vault port, defaults to 8200" )
        <*> strOption
            (  long "token"
            <> metavar "TOKEN"
-           <> environ env "VAULT_TOKEN"
+           <> lookupFromEnv "VAULT_TOKEN"
            <> help "token to authenticate to Vault with, defaults to the value of the VAULT_TOKEN environment variable if present")
        <*> strOption
            (  long "secrets-file"
            <> metavar "FILENAME"
+           <> lookupFromEnv "VAULTENV_SECRETS_FILE"
            <> help "config file specifying which secrets to request" )
        <*> argument str
            (  metavar "CMD"
@@ -121,7 +125,8 @@ optionsParser env = Options
            (  metavar "ARGS..."
            <> help "arguments to pass to CMD, defaults to nothing"))
        <*> switch
-           (  long "no-connect-tls"
+           (  switchFromEnv "VAULTENV_NO_CONNECT_TLS"
+           <> long "no-connect-tls"
            <> help "don't use TLS when connecting to Vault (default: use TLS)")
        <*> switch
            (  long "no-validate-certs"
@@ -132,15 +137,25 @@ optionsParser env = Options
        <*> (MilliSeconds <$> option auto
                (  long "retry-base-delay-milliseconds"
                <> metavar "MILLISECONDS"
-               <> value (40 :: Int)
+               <> maybe (value 40) value (readFromEnvironment "VAULTENV_RETRY_BASE_DELAY_MS")
                <> help "base delay for vault connection retrying. Defaults to 40ms because, in testing, we found out that fetching 50 secrets takes roughly 200 milliseconds"))
        <*> option auto
            (  long "retry-attempts"
            <> metavar "NUM"
-           <> value (9 :: Int)
+           <> maybe (value 9) value (readFromEnvironment "VAULTENV_RETRY_ATTEMPTS")
            <> help "maximum number of vault connection retries. Defaults to 9")
   where
-    environ vars key = maybe mempty value (lookup key vars)
+    lookupFromEnv key = foldMap value (lookup key environment)
+
+    readFromEnvironment :: Read a => String -> Maybe a
+    readFromEnvironment var = lookup var environment >>= Read.readMaybe
+
+    switchFromEnv :: String -> Mod FlagFields Bool
+    switchFromEnv _var = --case readFromEnvironment var :: Maybe String of
+      --Just "yes" ->
+        Mod (\ff -> ff { flagActive = True }) mempty id
+      --_ -> Mod id mempty id
+
 
 -- | Add metadata to the `options` parser so it can be used with execParser.
 optionsInfo :: [EnvVar] -> ParserInfo Options
@@ -163,7 +178,10 @@ vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds (oRetryBaseDelay
 main :: IO ()
 main = do
   localEnvVars <- getEnvironment
+  print $ lookup "VAULTENV_NO_CONNECT_TLS" localEnvVars
   cliOptions <- execParser (optionsInfo localEnvVars)
+  print cliOptions
+
   httpManager <- getHttpManager cliOptions
 
   let context = Context { cLocalEnvVars = localEnvVars

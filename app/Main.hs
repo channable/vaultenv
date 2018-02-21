@@ -102,52 +102,58 @@ newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
 
 optionsParser :: EnvSwitches -> [EnvVar] -> O.Parser Options
 optionsParser envSwitches environment = Options
-       <$> strOption
-           (  long "host"
-           <> metavar "HOST"
-           <> lookupFromEnv "VAULT_HOST"
-           <> value "localhost"
-           <> help "Vault host, either an IP address or DNS name, defaults to localhost" )
-       <*> option auto
-           (  long "port"
-           <> metavar "PORT"
-           <> lookupFromEnvWithDefault "VAULT_PORT" 8200
-           <> help "Vault port, defaults to 8200" )
-       <*> strOption
-           (  long "token"
-           <> metavar "TOKEN"
-           <> lookupFromEnv "VAULT_TOKEN"
-           <> help "token to authenticate to Vault with, defaults to the value of the VAULT_TOKEN environment variable if present")
-       <*> strOption
-           (  long "secrets-file"
-           <> metavar "FILENAME"
-           <> lookupFromEnv "VAULTENV_SECRETS_FILE"
-           <> help "config file specifying which secrets to request" )
-       <*> argument str
-           (  metavar "CMD"
-           <> help "command to run after fetching secrets")
-       <*> many (argument str
-           (  metavar "ARGS..."
-           <> help "arguments to pass to CMD, defaults to nothing"))
-       <*> flag (esNoConnectTls envSwitches) True
-           (  long "no-connect-tls"
-           <> help "don't use TLS when connecting to Vault (default: use TLS)")
-       <*> flag (esNoValidateCerts envSwitches) True
-           (  long "no-validate-certs"
-           <> help "don't validate TLS certificates when connecting to Vault (default: validate certs)")
-       <*> flag (esNoInheritEnv envSwitches) True
-           (  long "no-inherit-env"
-           <> help "don't merge the parent environment with the secrets file")
-       <*> (MilliSeconds <$> option auto
-               (  long "retry-base-delay-milliseconds"
-               <> metavar "MILLISECONDS"
-               <> lookupFromEnvWithDefault "VAULTENV_RETRY_BASE_DELAY_MS" 40
-               <> help "base delay for vault connection retrying. Defaults to 40ms because, in testing, we found out that fetching 50 secrets takes roughly 200 milliseconds"))
-       <*> option auto
-           (  long "retry-attempts"
-           <> metavar "NUM"
-           <> lookupFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9
-           <> help "maximum number of vault connection retries. Defaults to 9")
+    <$> strOption
+      (  long "host"
+      <> metavar "HOST"
+      <> value "localhost"
+      <> lookupFromEnv "VAULT_HOST"
+      <> help ("Vault host, either an IP address or DNS name. Defaults to localhost. " ++
+               "Also configurable via VAULT_HOST."))
+    <*> option auto
+      (  long "port"
+      <> metavar "PORT"
+      <> lookupFromEnvWithDefault "VAULT_PORT" 8200
+      <> help "Vault port. Defaults to 8200. Also configurable via VAULT_PORT." )
+    <*> strOption
+      (  long "token"
+      <> metavar "TOKEN"
+      <> lookupFromEnv "VAULT_TOKEN"
+      <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN.")
+    <*> strOption
+      (  long "secrets-file"
+      <> metavar "FILENAME"
+      <> lookupFromEnv "VAULTENV_SECRETS_FILE"
+      <> help ("Config file specifying which secrets to request. Also configurable " ++
+               "via VAULTENV_SECRETS_FILE." ))
+    <*> argument str
+      (  metavar "CMD"
+      <> help "command to run after fetching secrets")
+    <*> many (argument str
+      (  metavar "ARGS..."
+      <> help "Arguments to pass to CMD, defaults to nothing"))
+    <*> flag (esNoConnectTls envSwitches) True
+      (  long "no-connect-tls"
+      <> help ("Don't use TLS when connecting to Vault. Default: use TLS. Also " ++
+               "configurable via VAULTENV_NO_CONNECT_TLS."))
+    <*> flag (esNoValidateCerts envSwitches) True
+      (  long "no-validate-certs"
+      <> help ("Don't validate TLS certificates when connecting to Vault. Default: " ++
+               "validate certs. Also configurable via VAULTENV_NO_VALIDATE_CERTS."))
+    <*> flag (esNoInheritEnv envSwitches) True
+      (  long "no-inherit-env"
+      <> help ("Don't merge the parent environment with the secrets file. Default: " ++
+               "merge environments. Also configurable via VAULTENV_NO_INHERIT_ENV."))
+    <*> (MilliSeconds <$> option auto
+            (  long "retry-base-delay-milliseconds"
+            <> metavar "MILLISECONDS"
+            <> lookupFromEnvWithDefault "VAULTENV_RETRY_BASE_DELAY_MS" 40
+            <> help ("Base delay for vault connection retrying. Defaults to 40ms. " ++
+                     "Also configurable via VAULTENV_RETRY_BASE_DELAY_MS.")))
+    <*> option auto
+      (  long "retry-attempts"
+      <> metavar "NUM"
+      <> lookupFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9
+      <> help "Maximum number of vault connection retries. Defaults to 9")
   where
     lookupFromEnv key = foldMap value (lookup key environment)
     lookupFromEnvWithDefault key defVal = maybe (value defVal) value (readFromEnvironment key)

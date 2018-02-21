@@ -49,17 +49,17 @@ data Options = Options
   , oSecretFile      :: FilePath
   , oCmd             :: String
   , oArgs            :: [String]
-  , oConnectHttp     :: Bool
+  , oNoConnectTls    :: Bool
   , oNoValidateCerts :: Bool
-  , oInheritEnvOff   :: Bool
+  , oNoInheritEnv    :: Bool
   , oRetryBaseDelay  :: MilliSeconds
   , oRetryAttempts   :: Int
   } deriving (Eq, Show)
 
 data EnvSwitches = EnvSwitches
-  { esConnectHttp :: Bool
+  { esNoConnectTls :: Bool
   , esNoValidateCerts :: Bool
-  , esInheritEnvOff :: Bool
+  , esNoInheritEnv :: Bool
   }
 
 data Secret = Secret
@@ -129,13 +129,13 @@ optionsParser envSwitches environment = Options
        <*> many (argument str
            (  metavar "ARGS..."
            <> help "arguments to pass to CMD, defaults to nothing"))
-       <*> flag (esConnectHttp envSwitches) True
+       <*> flag (esNoConnectTls envSwitches) True
            (  long "no-connect-tls"
            <> help "don't use TLS when connecting to Vault (default: use TLS)")
        <*> flag (esNoValidateCerts envSwitches) True
            (  long "no-validate-certs"
            <> help "don't validate TLS certificates when connecting to Vault (default: validate certs)")
-       <*> flag (esInheritEnvOff envSwitches) True
+       <*> flag (esNoInheritEnv envSwitches) True
            (  long "no-inherit-env"
            <> help "don't merge the parent environment with the secrets file")
        <*> (MilliSeconds <$> option auto
@@ -162,8 +162,26 @@ optionsInfo envSwitches localEnvVars =
     (optionsParser envSwitches localEnvVars <**> helper)
     (fullDesc <> header "vaultenv - run programs with secrets from HashiCorp Vault")
 
+-- | Parses behaviour switches from a list of environment variables. If an
+-- environment variable corresponding to the flag is set to @"true"@ or
+-- @"false"@, we use that as the default on the corresponding CLI option.
+--
+-- If these variables aren't present, we default to @False@. We print an error
+-- if they're set to anything else than @"true"@ or @"false"@.
 parseEnvSwitches :: [EnvVar] -> EnvSwitches
-parseEnvSwitches _vars = EnvSwitches False False True
+parseEnvSwitches vars
+  = EnvSwitches
+  { esNoConnectTls = envSwitch "VAULTENV_NO_CONNECT_TLS"
+  , esNoValidateCerts = envSwitch "VAULTENV_NO_VALIDATE_CERTS"
+  , esNoInheritEnv = envSwitch "VAULTENV_NO_INHERIT_ENV"
+  }
+  where
+    envSwitch key =
+      case lookup key vars of
+        Just "true" -> True
+        Just "false" -> False
+        Nothing -> False
+        _ -> errorWithoutStackTrace $ "[ERROR]: Invalid value for environment variable " ++ key
 
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
@@ -201,7 +219,7 @@ main = do
 getHttpManager :: Options -> IO Manager
 getHttpManager opts = newManager managerSettings
   where
-    managerSettings = if oConnectHttp opts
+    managerSettings = if oNoConnectTls opts
                       then defaultManagerSettings
                       else mkManagerSettings tlsSettings Nothing
     tlsSettings = TLSSettingsSimple
@@ -243,7 +261,7 @@ vaultEnv context = do
 
       buildEnv :: [EnvVar] -> [EnvVar]
       buildEnv secretsEnv =
-        if (oInheritEnvOff . cCliOptions $ context)
+        if (oNoInheritEnv . cCliOptions $ context)
         then secretsEnv
         else secretsEnv ++ (cLocalEnvVars context)
 
@@ -307,7 +325,7 @@ requestSecret context secretPath =
             $ setRequestPath (SBS.pack requestPath)
             $ setRequestPort (oVaultPort cliOptions)
             $ setRequestHost (SBS.pack (oVaultHost cliOptions))
-            $ setRequestSecure (not $ oConnectHttp cliOptions)
+            $ setRequestSecure (not $ oNoConnectTls cliOptions)
             $ defaultRequest
 
     shouldRetry = const $ return . isLeft

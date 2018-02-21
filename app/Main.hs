@@ -18,7 +18,6 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                setRequestSecure, httpLBS, getResponseBody,
                                getResponseStatusCode)
 import Options.Applicative    hiding (Parser, command)
-import Options.Applicative.Builder.Internal (FlagFields(..), Mod(..))
 import System.Environment     (getEnvironment)
 import System.Posix.Process   (executeFile)
 import System.IO              (stderr, hPutStrLn)
@@ -56,6 +55,12 @@ data Options = Options
   , oRetryBaseDelay  :: MilliSeconds
   , oRetryAttempts   :: Int
   } deriving (Eq, Show)
+
+data EnvSwitches = EnvSwitches
+  { esConnectHttp :: Bool
+  , esNoValidateCerts :: Bool
+  , esInheritEnvOff :: Bool
+  }
 
 data Secret = Secret
   { sPath    :: String
@@ -95,8 +100,8 @@ newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
 -- Argument parsing
 --
 
-optionsParser :: [EnvVar] -> O.Parser Options
-optionsParser environment = Options
+optionsParser :: EnvSwitches -> [EnvVar] -> O.Parser Options
+optionsParser envSwitches environment = Options
        <$> strOption
            (  long "host"
            <> metavar "HOST"
@@ -106,7 +111,7 @@ optionsParser environment = Options
        <*> option auto
            (  long "port"
            <> metavar "PORT"
-           <> maybe (value 8200) value (readFromEnvironment "VAULT_PORT")
+           <> lookupFromEnvWithDefault "VAULT_PORT" 8200
            <> help "Vault port, defaults to 8200" )
        <*> strOption
            (  long "token"
@@ -124,45 +129,41 @@ optionsParser environment = Options
        <*> many (argument str
            (  metavar "ARGS..."
            <> help "arguments to pass to CMD, defaults to nothing"))
-       <*> switch
-           (  switchFromEnv "VAULTENV_NO_CONNECT_TLS"
-           <> long "no-connect-tls"
+       <*> flag (esConnectHttp envSwitches) True
+           (  long "no-connect-tls"
            <> help "don't use TLS when connecting to Vault (default: use TLS)")
-       <*> switch
+       <*> flag (esNoValidateCerts envSwitches) True
            (  long "no-validate-certs"
            <> help "don't validate TLS certificates when connecting to Vault (default: validate certs)")
-       <*> switch
+       <*> flag (esInheritEnvOff envSwitches) True
            (  long "no-inherit-env"
            <> help "don't merge the parent environment with the secrets file")
        <*> (MilliSeconds <$> option auto
                (  long "retry-base-delay-milliseconds"
                <> metavar "MILLISECONDS"
-               <> maybe (value 40) value (readFromEnvironment "VAULTENV_RETRY_BASE_DELAY_MS")
+               <> lookupFromEnvWithDefault "VAULTENV_RETRY_BASE_DELAY_MS" 40
                <> help "base delay for vault connection retrying. Defaults to 40ms because, in testing, we found out that fetching 50 secrets takes roughly 200 milliseconds"))
        <*> option auto
            (  long "retry-attempts"
            <> metavar "NUM"
-           <> maybe (value 9) value (readFromEnvironment "VAULTENV_RETRY_ATTEMPTS")
+           <> lookupFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9
            <> help "maximum number of vault connection retries. Defaults to 9")
   where
     lookupFromEnv key = foldMap value (lookup key environment)
+    lookupFromEnvWithDefault key defVal = maybe (value defVal) value (readFromEnvironment key)
 
     readFromEnvironment :: Read a => String -> Maybe a
     readFromEnvironment var = lookup var environment >>= Read.readMaybe
 
-    switchFromEnv :: String -> Mod FlagFields Bool
-    switchFromEnv _var = --case readFromEnvironment var :: Maybe String of
-      --Just "yes" ->
-        Mod (\ff -> ff { flagActive = True }) mempty id
-      --_ -> Mod id mempty id
-
-
 -- | Add metadata to the `options` parser so it can be used with execParser.
-optionsInfo :: [EnvVar] -> ParserInfo Options
-optionsInfo env =
+optionsInfo :: EnvSwitches -> [EnvVar] -> ParserInfo Options
+optionsInfo envSwitches localEnvVars =
   info
-    (optionsParser env <**> helper)
+    (optionsParser envSwitches localEnvVars <**> helper)
     (fullDesc <> header "vaultenv - run programs with secrets from HashiCorp Vault")
+
+parseEnvSwitches :: [EnvVar] -> EnvSwitches
+parseEnvSwitches _vars = EnvSwitches False False True
 
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
@@ -178,20 +179,21 @@ vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds (oRetryBaseDelay
 main :: IO ()
 main = do
   localEnvVars <- getEnvironment
-  print $ lookup "VAULTENV_NO_CONNECT_TLS" localEnvVars
-  cliOptions <- execParser (optionsInfo localEnvVars)
-  print cliOptions
 
-  httpManager <- getHttpManager cliOptions
+  cliAndEnvOptions <- execParser (optionsInfo (parseEnvSwitches localEnvVars) localEnvVars)
+
+  print cliAndEnvOptions
+
+  httpManager <- getHttpManager cliAndEnvOptions
 
   let context = Context { cLocalEnvVars = localEnvVars
-                        , cCliOptions = cliOptions
+                        , cCliOptions = cliAndEnvOptions
                         , cHttpManager = httpManager
                         }
 
   runExceptT (vaultEnv context) >>= \case
     Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
-    Right newEnv -> runCommand cliOptions newEnv
+    Right newEnv -> runCommand cliAndEnvOptions newEnv
 
 -- | This function returns either a manager for plain HTTP or
 -- for HTTPS connections. If TLS is wanted, we also check if the

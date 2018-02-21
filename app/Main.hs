@@ -131,18 +131,39 @@ optionsParser envSwitches environment = Options
     <*> many (argument str
       (  metavar "ARGS..."
       <> help "Arguments to pass to CMD, defaults to nothing"))
-    <*> flag (esNoConnectTls envSwitches) True
-      (  long "no-connect-tls"
-      <> help ("Don't use TLS when connecting to Vault. Default: use TLS. Also " ++
-               "configurable via VAULTENV_NO_CONNECT_TLS."))
-    <*> flag (esNoValidateCerts envSwitches) True
-      (  long "no-validate-certs"
-      <> help ("Don't validate TLS certificates when connecting to Vault. Default: " ++
-               "validate certs. Also configurable via VAULTENV_NO_VALIDATE_CERTS."))
-    <*> flag (esNoInheritEnv envSwitches) True
-      (  long "no-inherit-env"
-      <> help ("Don't merge the parent environment with the secrets file. Default: " ++
-               "merge environments. Also configurable via VAULTENV_NO_INHERIT_ENV."))
+    <*>
+      ( flag (esNoConnectTls envSwitches) True
+        (  long "no-connect-tls"
+        <> help ("Don't use TLS when connecting to Vault. Default: use TLS. Also " ++
+                "configurable via VAULTENV_NO_CONNECT_TLS."))
+      <|> flag (esNoConnectTls envSwitches) False
+        (  long "connect-tls"
+        <> help ("Always connect to Vault via TLS. Default: use TLS. Can be used " ++
+                 "to override VAULTENV_NO_CONNECT_TLS.")
+        )
+      )
+    <*>
+      ( flag (esNoValidateCerts envSwitches) True
+        (  long "no-validate-certs"
+        <> help ("Don't validate TLS certificates when connecting to Vault. Default: " ++
+                "validate certs. Also configurable via VAULTENV_NO_VALIDATE_CERTS."))
+      <|> flag (esNoValidateCerts envSwitches) False
+        (  long "validate-certs"
+        <> help ("Always validate TLS certificates when connecting to Vault. Default: " ++
+                 "validate certs. Can be used to override VAULTENV_NO_CONNECT_TLS.")
+        )
+      )
+    <*>
+      ( flag (esNoInheritEnv envSwitches) True
+        (  long "no-inherit-env"
+        <> help ("Don't merge the parent environment with the secrets file. Default: " ++
+                "merge environments. Also configurable via VAULTENV_NO_INHERIT_ENV."))
+      <|> flag (esNoInheritEnv envSwitches) False
+        (  long "inherit-env"
+        <> help ("Always merge the parent environment with the secrets file. Default: " ++
+                 "merge environments. Can be used to override VAULTENV_NO_INHERIT_ENV.")
+        )
+      )
     <*> (MilliSeconds <$> option auto
             (  long "retry-base-delay-milliseconds"
             <> metavar "MILLISECONDS"

@@ -100,6 +100,33 @@ newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
 -- Argument parsing
 --
 
+-- | Parser for our CLI options. Seems intimidating, but is straightforward
+-- once you know about applicative parsing patterns. We construct a parser for
+-- @Options@ by concatenating parsers for parts of the record.
+--
+-- Toy example to illustrate the pattern:
+--
+-- @
+--     OptionRecord <$> parser1 <*> parser2 <*> parser3
+-- @
+--
+-- Here, the parser for @OptionRecord@ is the combination of parsers of it's
+-- internal fields.
+--
+-- The parsers get constructed by using different combinators from the
+-- @Options.Applicative@ module. Here, we use @strOption@, @option@, @argument@
+-- and flag. These take a @Mod@ value, which can specify how to parse an
+-- option. These @Mod@ values have monoid instances and are composed as such.
+--
+-- So in our example above, we could have the following definition for
+-- @parser1@:
+--
+-- @
+--    parser1 = strOption $ long "my-option" <> value "default"
+-- @
+--
+-- And have the thing compile if the first member of @OptionRecord@ would have
+-- type @String@.
 optionsParser :: EnvSwitches -> [EnvVar] -> O.Parser Options
 optionsParser envSwitches environment = Options
     <$> strOption

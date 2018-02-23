@@ -112,59 +112,67 @@ optionsParserWithInfo envFlags localEnvVars =
 -- type @String@.
 optionsParser :: EnvFlags -> [EnvVar] -> OptParse.Parser Options
 optionsParser envFlags envVars = Options
-    <$> strOption
-      (  long "host"
+    <$> host
+    <*> port
+    <*> token
+    <*> secretsFile
+    <*> cmd
+    <*> cmdArgs
+    <*> noConnectTls
+    <*> noValidateCerts
+    <*> noInheritEnv
+    <*> baseDelayMs
+    <*> retryAttempts
+  where
+    host = strOption
+      $  long "host"
       <> metavar "HOST"
       <> value "localhost"
       <> readValueFromEnv "VAULT_HOST" envVars
       <> help ("Vault host, either an IP address or DNS name. Defaults to localhost. " ++
-               "Also configurable via VAULT_HOST."))
-    <*> option auto
-      (  long "port"
+               "Also configurable via VAULT_HOST.")
+    port = option auto
+      $  long "port"
       <> metavar "PORT"
       <> readValueFromEnvWithDefault "VAULT_PORT" 8200 envVars
-      <> help "Vault port. Defaults to 8200. Also configurable via VAULT_PORT." )
-    <*> strOption
-      (  long "token"
+      <> help "Vault port. Defaults to 8200. Also configurable via VAULT_PORT."
+    token = strOption
+      $  long "token"
       <> metavar "TOKEN"
       <> readValueFromEnv "VAULT_TOKEN" envVars
-      <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN.")
-    <*> strOption
-      (  long "secrets-file"
+      <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN."
+    secretsFile = strOption
+      $  long "secrets-file"
       <> metavar "FILENAME"
       <> readValueFromEnv "VAULTENV_SECRETS_FILE" envVars
       <> help ("Config file specifying which secrets to request. Also configurable " ++
-               "via VAULTENV_SECRETS_FILE." ))
-    <*> argument str
-      (  metavar "CMD"
-      <> help "command to run after fetching secrets")
-    <*> many (argument str
+               "via VAULTENV_SECRETS_FILE." )
+    cmd = argument str
+      $  metavar "CMD"
+      <> help "command to run after fetching secrets"
+    cmdArgs =  many $ argument str
       (  metavar "ARGS..."
-      <> help "Arguments to pass to CMD, defaults to nothing"))
-    <*>
-      ( flag (efNoConnectTls envFlags) True
+      <> help "Arguments to pass to CMD, defaults to nothing")
+    noConnectTls =
+       flag (efNoConnectTls envFlags) True
         (  long "no-connect-tls"
         <> help ("Don't use TLS when connecting to Vault. Default: use TLS. Also " ++
                 "configurable via VAULTENV_NO_CONNECT_TLS."))
       <|> flag (efNoConnectTls envFlags) False
         (  long "connect-tls"
         <> help ("Always connect to Vault via TLS. Default: use TLS. Can be used " ++
-                 "to override VAULTENV_NO_CONNECT_TLS.")
-        )
-      )
-    <*>
-      ( flag (efNoValidateCerts envFlags) True
+                 "to override VAULTENV_NO_CONNECT_TLS."))
+    noValidateCerts =
+      flag (efNoValidateCerts envFlags) True
         (  long "no-validate-certs"
         <> help ("Don't validate TLS certificates when connecting to Vault. Default: " ++
                 "validate certs. Also configurable via VAULTENV_NO_VALIDATE_CERTS."))
       <|> flag (efNoValidateCerts envFlags) False
         (  long "validate-certs"
         <> help ("Always validate TLS certificates when connecting to Vault. Default: " ++
-                 "validate certs. Can be used to override VAULTENV_NO_CONNECT_TLS.")
-        )
-      )
-    <*>
-      ( flag (efNoInheritEnv envFlags) True
+                 "validate certs. Can be used to override VAULTENV_NO_CONNECT_TLS."))
+    noInheritEnv =
+      flag (efNoInheritEnv envFlags) True
         (  long "no-inherit-env"
         <> help ("Don't merge the parent environment with the secrets file. Default: " ++
                 "merge environments. Also configurable via VAULTENV_NO_INHERIT_ENV."))
@@ -173,18 +181,17 @@ optionsParser envFlags envVars = Options
         <> help ("Always merge the parent environment with the secrets file. Default: " ++
                  "merge environments. Can be used to override VAULTENV_NO_INHERIT_ENV.")
         )
-      )
-    <*> (MilliSeconds <$> option auto
-            (  long "retry-base-delay-milliseconds"
-            <> metavar "MILLISECONDS"
-            <> readValueFromEnvWithDefault "VAULTENV_RETRY_BASE_DELAY_MS" 40 envVars
-            <> help ("Base delay for vault connection retrying. Defaults to 40ms. " ++
-                     "Also configurable via VAULTENV_RETRY_BASE_DELAY_MS.")))
-    <*> option auto
-      (  long "retry-attempts"
+    baseDelayMs = MilliSeconds <$> (option auto
+      $  long "retry-base-delay-milliseconds"
+      <> metavar "MILLISECONDS"
+      <> readValueFromEnvWithDefault "VAULTENV_RETRY_BASE_DELAY_MS" 40 envVars
+      <> help ("Base delay for vault connection retrying. Defaults to 40ms. " ++
+                "Also configurable via VAULTENV_RETRY_BASE_DELAY_MS."))
+    retryAttempts = option auto
+      $  long "retry-attempts"
       <> metavar "NUM"
       <> readValueFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9 envVars
-      <> help "Maximum number of vault connection retries. Defaults to 9")
+      <> help "Maximum number of vault connection retries. Defaults to 9"
 
 -- ! Attempt to parse an optparse default value modifier from a list of
 -- environment variables. This function returns an empty option modifier in

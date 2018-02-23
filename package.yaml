@@ -4,6 +4,13 @@ synopsis: Runs processes with secrets from HashiCorp Vault
 license: BSD3
 github: channable/vaultenv
 
+dependencies:
+  - base
+  - optparse-applicative
+
+library:
+  source-dirs: src
+
 executables:
   vaultenv:
     main: Main.hs
@@ -19,10 +26,11 @@ executables:
       - http-client
       - lens
       - lens-aeson
+      - mtl
       - optparse-applicative
       - retry
       - text
       - unordered-containers
       - unix
       - utf8-string
-      - mtl
+      - vaultenv

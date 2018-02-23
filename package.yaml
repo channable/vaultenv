@@ -6,6 +6,21 @@ github: channable/vaultenv
 
 dependencies:
   - base
+  - async
+  - bytestring
+  - connection
+  - containers
+  - http-conduit
+  - http-client
+  - lens
+  - lens-aeson
+  - mtl
+  - optparse-applicative
+  - retry
+  - text
+  - unordered-containers
+  - unix
+  - utf8-string
   - optparse-applicative
 
 library:
@@ -17,20 +32,4 @@ executables:
     source-dirs: app
     ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Werror
     dependencies:
-      - base < 5
-      - async
-      - bytestring
-      - connection
-      - containers
-      - http-conduit
-      - http-client
-      - lens
-      - lens-aeson
-      - mtl
-      - optparse-applicative
-      - retry
-      - text
-      - unordered-containers
-      - unix
-      - utf8-string
       - vaultenv

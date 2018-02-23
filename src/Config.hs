@@ -22,7 +22,7 @@ newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
   deriving (Eq, Show)
 
 -- | @Options@ contains all the configuration we support in vaultenv. It is
--- used in our @Main@ module to specify behaviour.
+-- used in our @Main@ module to specify behavior.
 data Options = Options
   { oVaultHost       :: String
   , oVaultPort       :: Int
@@ -37,7 +37,7 @@ data Options = Options
   , oRetryAttempts   :: Int
   } deriving (Eq, Show)
 
--- | Behaviour flags that we allow users to set via environment variables.
+-- | Behavior flags that we allow users to set via environment variables.
 -- This type is internal to the workings of this module. It is used as an
 -- intermediate value to get optparse-applicative to play nice with environment
 -- variables as used for behavior flags.
@@ -54,7 +54,7 @@ parseOptionsFromEnvAndCli envVars =
       parser = optionsParserWithInfo envFlags envVars
   in OptParse.execParser parser
 
--- | Parses behaviour flags from a list of environment variables. If an
+-- | Parses behavior flags from a list of environment variables. If an
 -- environment variable corresponding to the flag is set to @"true"@ or
 -- @"false"@, we use that as the default on the corresponding CLI option.
 --

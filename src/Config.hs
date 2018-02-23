@@ -8,7 +8,7 @@ import Control.Applicative ((<*>), (<|>))
 import Data.Monoid ((<>))
 
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
-                            str, argument, many, strOption, (<**>))
+                            str, argument, many, strOption)
 
 import qualified Options.Applicative as OptParse
 import qualified Options.Applicative.Builder.Internal as OptParse

@@ -80,7 +80,7 @@ parseEnvFlags envVars
 optionsParserWithInfo :: EnvFlags -> [EnvVar] -> OptParse.ParserInfo Options
 optionsParserWithInfo envFlags localEnvVars =
   OptParse.info
-    (optionsParser envFlags localEnvVars <**> OptParse.helper)
+    (OptParse.helper <*> optionsParser envFlags localEnvVars)
     (OptParse.fullDesc <> OptParse.header "vaultenv - run programs with secrets from HashiCorp Vault")
 
 -- | Parser for our CLI options. Seems intimidating, but is straightforward

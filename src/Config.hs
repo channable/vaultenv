@@ -7,16 +7,22 @@ module Config
 import Control.Applicative ((<*>), (<|>))
 import Data.Monoid ((<>))
 
-import Options.Applicative (value, long, auto, option, metavar, help, flag, str, argument, many, strOption, (<**>))
+import Options.Applicative (value, long, auto, option, metavar, help, flag,
+                            str, argument, many, strOption, (<**>))
 
 import qualified Options.Applicative as OptParse
+import qualified Options.Applicative.Builder.Internal as OptParse
 import qualified Text.Read as Read
 
+-- ! Type alias for enviornment variables, used for readability in this module.
 type EnvVar = (String, String)
 
+-- ! Newtype wrapper for millisecond values.
 newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
   deriving (Eq, Show)
 
+-- | @Options@ contains all the configuration we support in vaultenv. It is
+-- used in our @Main@ module to specify behaviour.
 data Options = Options
   { oVaultHost       :: String
   , oVaultPort       :: Int
@@ -32,7 +38,9 @@ data Options = Options
   } deriving (Eq, Show)
 
 -- | Behaviour flags that we allow users to set via environment variables.
--- This type is internal to the workings of this module.
+-- This type is internal to the workings of this module. It is used as an
+-- intermediate value to get optparse-applicative to play nice with environment
+-- variables as used for behavior flags.
 data EnvFlags = EnvFlags
   { efNoConnectTls :: Bool
   , efNoValidateCerts :: Bool
@@ -67,7 +75,8 @@ parseEnvFlags envVars
         Nothing -> False
         _ -> errorWithoutStackTrace $ "[ERROR]: Invalid value for environment variable " ++ key
 
--- | Add metadata to the @Options@ parser so it can be used with execParser.
+-- | This function adds metadata to the @Options@ parser so it can be used with
+-- execParser.
 optionsParserWithInfo :: EnvFlags -> [EnvVar] -> OptParse.ParserInfo Options
 optionsParserWithInfo envFlags localEnvVars =
   OptParse.info
@@ -76,7 +85,7 @@ optionsParserWithInfo envFlags localEnvVars =
 
 -- | Parser for our CLI options. Seems intimidating, but is straightforward
 -- once you know about applicative parsing patterns. We construct a parser for
--- @Options@ by concatenating parsers for parts of the record.
+-- @Options@ by combining parsers for parts of the record.
 --
 -- Toy example to illustrate the pattern:
 --
@@ -84,7 +93,7 @@ optionsParserWithInfo envFlags localEnvVars =
 --     OptionRecord <$> parser1 <*> parser2 <*> parser3
 -- @
 --
--- Here, the parser for @OptionRecord@ is the combination of parsers of it's
+-- Here, the parser for @OptionRecord@ is the combination of parsers of its
 -- internal fields.
 --
 -- The parsers get constructed by using different combinators from the
@@ -107,23 +116,23 @@ optionsParser envFlags envVars = Options
       (  long "host"
       <> metavar "HOST"
       <> value "localhost"
-      <> lookupFromEnv "VAULT_HOST"
+      <> readValueFromEnv "VAULT_HOST" envVars
       <> help ("Vault host, either an IP address or DNS name. Defaults to localhost. " ++
                "Also configurable via VAULT_HOST."))
     <*> option auto
       (  long "port"
       <> metavar "PORT"
-      <> lookupFromEnvWithDefault "VAULT_PORT" 8200
+      <> readValueFromEnvWithDefault "VAULT_PORT" 8200 envVars
       <> help "Vault port. Defaults to 8200. Also configurable via VAULT_PORT." )
     <*> strOption
       (  long "token"
       <> metavar "TOKEN"
-      <> lookupFromEnv "VAULT_TOKEN"
+      <> readValueFromEnv "VAULT_TOKEN" envVars
       <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN.")
     <*> strOption
       (  long "secrets-file"
       <> metavar "FILENAME"
-      <> lookupFromEnv "VAULTENV_SECRETS_FILE"
+      <> readValueFromEnv "VAULTENV_SECRETS_FILE" envVars
       <> help ("Config file specifying which secrets to request. Also configurable " ++
                "via VAULTENV_SECRETS_FILE." ))
     <*> argument str
@@ -168,17 +177,33 @@ optionsParser envFlags envVars = Options
     <*> (MilliSeconds <$> option auto
             (  long "retry-base-delay-milliseconds"
             <> metavar "MILLISECONDS"
-            <> lookupFromEnvWithDefault "VAULTENV_RETRY_BASE_DELAY_MS" 40
+            <> readValueFromEnvWithDefault "VAULTENV_RETRY_BASE_DELAY_MS" 40 envVars
             <> help ("Base delay for vault connection retrying. Defaults to 40ms. " ++
                      "Also configurable via VAULTENV_RETRY_BASE_DELAY_MS.")))
     <*> option auto
       (  long "retry-attempts"
       <> metavar "NUM"
-      <> lookupFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9
+      <> readValueFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9 envVars
       <> help "Maximum number of vault connection retries. Defaults to 9")
-  where
-    lookupFromEnv key = foldMap value (lookup key envVars)
-    lookupFromEnvWithDefault key defVal = maybe (value defVal) value (readFromEnvironment key)
 
-    readFromEnvironment :: Read a => String -> Maybe a
-    readFromEnvironment var = lookup var envVars >>= Read.readMaybe
+-- ! Attempt to parse an optparse default value modifier from a list of
+-- environment variables. This function returns an empty option modifier in
+-- case the environment variable is missing or does not parse.
+readValueFromEnv :: (Read a, OptParse.HasValue f)
+                 => String
+                 -> [EnvVar]
+                 -> OptParse.Mod f a
+readValueFromEnv var envVars =
+  let parseResult = lookup var envVars >>= Read.readMaybe
+  in foldMap value parseResult
+
+-- | Attempt to parse an optparse default value modifier from the process
+-- environment with a default.
+readValueFromEnvWithDefault :: (Read a, OptParse.HasValue f)
+                            => String
+                            -> a
+                            -> [EnvVar]
+                            -> OptParse.Mod f a
+readValueFromEnvWithDefault key defVal envVars
+  =  value defVal
+  <> readValueFromEnv key envVars

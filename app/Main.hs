@@ -2,10 +2,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
---
--- Stackage and stdlib
---
-
 import Control.Monad          (forM)
 import Control.Lens           (reindexed, to)
 import Control.Monad.IO.Class (MonadIO, liftIO)

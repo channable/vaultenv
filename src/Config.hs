@@ -14,10 +14,10 @@ import qualified Options.Applicative as OptParse
 import qualified Options.Applicative.Builder.Internal as OptParse
 import qualified Text.Read as Read
 
--- ! Type alias for enviornment variables, used for readability in this module.
+-- | Type alias for enviornment variables, used for readability in this module.
 type EnvVar = (String, String)
 
--- ! Newtype wrapper for millisecond values.
+-- | Newtype wrapper for millisecond values.
 newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
   deriving (Eq, Show)
 
@@ -210,7 +210,7 @@ optionsParser envFlags envVars = Options
       <> readValueFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9 envVars
       <> help "Maximum number of vault connection retries. Defaults to 9"
 
--- ! Attempt to parse an optparse default value modifier from a list of
+-- | Attempt to parse an optparse default value modifier from a list of
 -- environment variables. This function returns an empty option modifier in
 -- case the environment variable is missing or does not parse.
 readValueFromEnv :: (Read a, OptParse.HasValue f)

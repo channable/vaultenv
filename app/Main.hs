@@ -95,7 +95,6 @@ main :: IO ()
 main = do
   localEnvVars <- getEnvironment
   cliAndEnvOptions <- parseOptionsFromEnvAndCli localEnvVars
-  print cliAndEnvOptions
 
   httpManager <- getHttpManager cliAndEnvOptions
 

@@ -112,11 +112,29 @@ optionsParserWithInfo envFlags localEnvVars =
 -- type @String@.
 --
 -- Another thing that should be noted is the way we use the Alternate instance
--- of Parsers in order to provide dual options. The @noConnectTls@,
--- @noValidateCerts@ and @noInheritEnv@ parsers constist of two parts. One for
--- the affirmative and one for the negative case. This is required so
--- we can override environment variables, since optparse-applicative does not
--- provide an abstraction for this by itself.
+-- of @Parser@s. The @connectTls@, @validateCerts@ and @inheritEnv@ parsers all
+-- have a cousin prefixed with @no@. Combining these with the alternate
+-- instance like so
+--
+-- @
+--    noConnectTls <|> connectTls
+-- @
+--
+-- means that they are both mutually exclusive.
+--
+-- Why do we have the options for the affirmative case? (e.g. why does
+-- @--connect-tls@ exist if we default to that behavior?) Because we want to be
+-- able to override all config that happens via environment variables on the
+-- CLI. So @VAULTENV_NO_CONNECT_TLS=true vaultenv --connect-tls@ should connect
+-- to Vault over a secure connection. Without this option, this use case is not
+-- possible.
+--
+-- The way we do this in the parser is by taking an @EnvFlags@ record which
+-- contains the settings that were provided via environment variables (and the
+-- defaults, if there wasn't anything configured). We use this record to set
+-- the default values of the different behaviour switches. So, if an
+-- environment variable is used to configure the TLS option, that value will
+-- always be used, except if it is overridden on the CLI.
 optionsParser :: EnvFlags -> [EnvVar] -> OptParse.Parser Options
 optionsParser envFlags envVars = Options
     <$> host

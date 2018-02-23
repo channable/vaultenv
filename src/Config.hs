@@ -54,7 +54,7 @@ parseOptionsFromEnvAndCli envVars =
       parser = optionsParserWithInfo envFlags envVars
   in OptParse.execParser parser
 
--- | Parses behaviour switches from a list of environment variables. If an
+-- | Parses behaviour flags from a list of environment variables. If an
 -- environment variable corresponding to the flag is set to @"true"@ or
 -- @"false"@, we use that as the default on the corresponding CLI option.
 --
@@ -110,6 +110,13 @@ optionsParserWithInfo envFlags localEnvVars =
 --
 -- And have the thing compile if the first member of @OptionRecord@ would have
 -- type @String@.
+--
+-- Another thing that should be noted is the way we use the Alternate instance
+-- of Parsers in order to provide dual options. The @noConnectTls@,
+-- @noValidateCerts@ and @noInheritEnv@ parsers constist of two parts. One for
+-- the affirmative and one for the negative case. This is required so
+-- we can override environment variables, since optparse-applicative does not
+-- provide an abstraction for this by itself.
 optionsParser :: EnvFlags -> [EnvVar] -> OptParse.Parser Options
 optionsParser envFlags envVars = Options
     <$> host

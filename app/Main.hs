@@ -7,7 +7,7 @@ import Control.Lens           (reindexed, to)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Char              (toUpper)
 import Data.Either            (isLeft)
-import Data.List              (findIndex, lookup)
+import Data.List              (findIndex)
 import Data.Monoid            ((<>))
 import Network.Connection     (TLSSettings(..))
 import Network.HTTP.Client    (defaultManagerSettings)
@@ -17,7 +17,6 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                setRequestPath, setRequestHost, setRequestManager,
                                setRequestSecure, httpLBS, getResponseBody,
                                getResponseStatusCode)
-import Options.Applicative    hiding (Parser, command)
 import System.Environment     (getEnvironment)
 import System.Posix.Process   (executeFile)
 import System.IO              (stderr, hPutStrLn)
@@ -35,25 +34,16 @@ import qualified Data.Foldable              as Foldable
 import qualified Data.Map                   as Map
 import qualified Data.Map.Lens              as Lens (toMapOf)
 import qualified Data.Text                  as Text
-import qualified Options.Applicative        as O
+
+--
+-- Internal imports
+--
+
+import Config
 
 --
 -- Datatypes
 --
-
-data Options = Options
-  { oVaultHost       :: String
-  , oVaultPort       :: Int
-  , oVaultToken      :: String
-  , oSecretFile      :: FilePath
-  , oCmd             :: String
-  , oArgs            :: [String]
-  , oConnectHttp     :: Bool
-  , oNoValidateCerts :: Bool
-  , oInheritEnvOff   :: Bool
-  , oRetryBaseDelay  :: MilliSeconds
-  , oRetryAttempts   :: Int
-  } deriving (Eq, Show)
 
 data Secret = Secret
   { sPath    :: String
@@ -86,69 +76,6 @@ data VaultError
   | DuplicateVar      String
   | Unspecified       Int LBS.ByteString
 
-newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
-  deriving (Eq, Show)
-
---
--- Argument parsing
---
-
-optionsParser :: [EnvVar] -> O.Parser Options
-optionsParser env = Options
-       <$> strOption
-           (  long "host"
-           <> metavar "HOST"
-           <> value "localhost"
-           <> help "Vault host, either an IP address or DNS name, defaults to localhost" )
-       <*> option auto
-           (  long "port"
-           <> metavar "PORT"
-           <> value 8200
-           <> help "Vault port, defaults to 8200" )
-       <*> strOption
-           (  long "token"
-           <> metavar "TOKEN"
-           <> environ env "VAULT_TOKEN"
-           <> help "token to authenticate to Vault with, defaults to the value of the VAULT_TOKEN environment variable if present")
-       <*> strOption
-           (  long "secrets-file"
-           <> metavar "FILENAME"
-           <> help "config file specifying which secrets to request" )
-       <*> argument str
-           (  metavar "CMD"
-           <> help "command to run after fetching secrets")
-       <*> many (argument str
-           (  metavar "ARGS..."
-           <> help "arguments to pass to CMD, defaults to nothing"))
-       <*> switch
-           (  long "no-connect-tls"
-           <> help "don't use TLS when connecting to Vault (default: use TLS)")
-       <*> switch
-           (  long "no-validate-certs"
-           <> help "don't validate TLS certificates when connecting to Vault (default: validate certs)")
-       <*> switch
-           (  long "no-inherit-env"
-           <> help "don't merge the parent environment with the secrets file")
-       <*> (MilliSeconds <$> option auto
-               (  long "retry-base-delay-milliseconds"
-               <> metavar "MILLISECONDS"
-               <> value (40 :: Int)
-               <> help "base delay for vault connection retrying. Defaults to 40ms because, in testing, we found out that fetching 50 secrets takes roughly 200 milliseconds"))
-       <*> option auto
-           (  long "retry-attempts"
-           <> metavar "NUM"
-           <> value (9 :: Int)
-           <> help "maximum number of vault connection retries. Defaults to 9")
-  where
-    environ vars key = maybe mempty value (lookup key vars)
-
--- | Add metadata to the `options` parser so it can be used with execParser.
-optionsInfo :: [EnvVar] -> ParserInfo Options
-optionsInfo env =
-  info
-    (optionsParser env <**> helper)
-    (fullDesc <> header "vaultenv - run programs with secrets from HashiCorp Vault")
-
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
 -- fullJitterBackoff that comes with the Retry package.
@@ -163,17 +90,18 @@ vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds (oRetryBaseDelay
 main :: IO ()
 main = do
   localEnvVars <- getEnvironment
-  cliOptions <- execParser (optionsInfo localEnvVars)
-  httpManager <- getHttpManager cliOptions
+  cliAndEnvOptions <- parseOptionsFromEnvAndCli localEnvVars
+
+  httpManager <- getHttpManager cliAndEnvOptions
 
   let context = Context { cLocalEnvVars = localEnvVars
-                        , cCliOptions = cliOptions
+                        , cCliOptions = cliAndEnvOptions
                         , cHttpManager = httpManager
                         }
 
   runExceptT (vaultEnv context) >>= \case
     Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
-    Right newEnv -> runCommand cliOptions newEnv
+    Right newEnv -> runCommand cliAndEnvOptions newEnv
 
 -- | This function returns either a manager for plain HTTP or
 -- for HTTPS connections. If TLS is wanted, we also check if the
@@ -181,7 +109,7 @@ main = do
 getHttpManager :: Options -> IO Manager
 getHttpManager opts = newManager managerSettings
   where
-    managerSettings = if oConnectHttp opts
+    managerSettings = if oNoConnectTls opts
                       then defaultManagerSettings
                       else mkManagerSettings tlsSettings Nothing
     tlsSettings = TLSSettingsSimple
@@ -223,7 +151,7 @@ vaultEnv context = do
 
       buildEnv :: [EnvVar] -> [EnvVar]
       buildEnv secretsEnv =
-        if (oInheritEnvOff . cCliOptions $ context)
+        if (oNoInheritEnv . cCliOptions $ context)
         then secretsEnv
         else secretsEnv ++ (cLocalEnvVars context)
 
@@ -287,7 +215,7 @@ requestSecret context secretPath =
             $ setRequestPath (SBS.pack requestPath)
             $ setRequestPort (oVaultPort cliOptions)
             $ setRequestHost (SBS.pack (oVaultHost cliOptions))
-            $ setRequestSecure (not $ oConnectHttp cliOptions)
+            $ setRequestSecure (not $ oNoConnectTls cliOptions)
             $ defaultRequest
 
     shouldRetry = const $ return . isLeft

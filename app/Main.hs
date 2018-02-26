@@ -92,6 +92,10 @@ main = do
   localEnvVars <- getEnvironment
   cliAndEnvOptions <- parseOptionsFromEnvAndCli localEnvVars
 
+  if oDebug cliAndEnvOptions
+    then print cliAndEnvOptions
+    else pure ()
+
   httpManager <- getHttpManager cliAndEnvOptions
 
   let context = Context { cLocalEnvVars = localEnvVars

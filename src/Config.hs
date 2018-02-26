@@ -5,6 +5,7 @@ module Config
   ) where
 
 import Control.Applicative ((<*>), (<|>))
+import Data.List (intercalate)
 import Data.Monoid ((<>))
 
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
@@ -33,18 +34,36 @@ data Options = Options
   , oNoConnectTls    :: Bool
   , oNoValidateCerts :: Bool
   , oNoInheritEnv    :: Bool
+  , oDebug           :: Bool
   , oRetryBaseDelay  :: MilliSeconds
   , oRetryAttempts   :: Int
-  } deriving (Eq, Show)
+  } deriving (Eq)
+
+instance Show Options where
+  show opts = intercalate "\n"
+    [ "Host:           " ++ oVaultHost opts
+    , "Port:           " ++ (show $ oVaultPort opts)
+    , "Token:          " ++ "*****"
+    , "Secret file:    " ++ oSecretFile opts
+    , "Command:        " ++ oCmd opts
+    , "Arguments:      " ++ (show $ oArgs opts)
+    , "Use TLS:        " ++ (show . not $ oNoConnectTls opts)
+    , "Validate certs: " ++ (show . not $ oNoValidateCerts opts)
+    , "Inherit env:    " ++ (show . not $ oNoInheritEnv opts)
+    , "Debug:          " ++ (show $ oDebug opts)
+    , "Base delay:     " ++ (show . unMilliSeconds $ oRetryBaseDelay opts)
+    , "Retry attempts: " ++ (show $ oRetryAttempts opts)
+    ]
 
 -- | Behavior flags that we allow users to set via environment variables.
 -- This type is internal to the workings of this module. It is used as an
 -- intermediate value to get optparse-applicative to play nice with environment
--- variables as used for behavior flags.
+-- variables as used for behavior flags. All flags are off by default.
 data EnvFlags = EnvFlags
   { efNoConnectTls :: Bool
   , efNoValidateCerts :: Bool
   , efNoInheritEnv :: Bool
+  , efDebug :: Bool
   }
 
 -- | Parse program options from the command line and the process environment.
@@ -66,6 +85,7 @@ parseEnvFlags envVars
   { efNoConnectTls = lookupEnvFlag "VAULTENV_NO_CONNECT_TLS"
   , efNoValidateCerts = lookupEnvFlag "VAULTENV_NO_VALIDATE_CERTS"
   , efNoInheritEnv = lookupEnvFlag "VAULTENV_NO_INHERIT_ENV"
+  , efDebug = lookupEnvFlag "VAULTENV_DEBUG"
   }
   where
     lookupEnvFlag key =
@@ -146,6 +166,7 @@ optionsParser envFlags envVars = Options
     <*> (noConnectTls    <|> connectTls)
     <*> (noValidateCerts <|> validateCerts)
     <*> (noInheritEnv    <|> inheritEnv)
+    <*> (noDebug         <|> debug)
     <*> baseDelayMs
     <*> retryAttempts
   where
@@ -213,6 +234,15 @@ optionsParser envFlags envVars = Options
       $  long "inherit-env"
       <> help ("Always merge the parent environment with the secrets file. Default: " ++
                 "merge environments. Can be used to override VAULTENV_NO_INHERIT_ENV.")
+    noDebug
+      =  flag (efDebug envFlags) False
+      $  long "no-debug"
+      <> help "Run vaultenv in debug mode. Can be used to override VAULTENV_DEBUG"
+    debug
+      =  flag (efDebug envFlags) True
+      $  long "debug"
+      <> help ("Run vaultenv in debug mode. Default: don't run in debug. Also " ++
+              "configurable via VAULTENV_DEBUG.")
     baseDelayMs
       =  MilliSeconds <$> (option auto
       $  long "retry-base-delay-milliseconds"

@@ -255,8 +255,8 @@ readValueFromEnv :: (Read a, OptParse.HasValue f)
                  => String
                  -> [EnvVar]
                  -> OptParse.Mod f a
-readValueFromEnv var envVars =
-  let parseResult = lookup var envVars >>= Read.readMaybe
+readValueFromEnv key envVars =
+  let parseResult = lookup key envVars >>= Read.readMaybe
   in foldMap value parseResult
 
 -- | Attempt to parse an optparse default value modifier from the process

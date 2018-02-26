@@ -153,8 +153,7 @@ optionsParser envFlags envVars = Options
       =  strOption
       $  long "host"
       <> metavar "HOST"
-      <> value "localhost"
-      <> readValueFromEnv "VAULT_HOST" envVars
+      <> stringFromEnvWithDefault "VAULT_HOST" "localhost" envVars
       <> help ("Vault host, either an IP address or DNS name. Defaults to localhost. " ++
                "Also configurable via VAULT_HOST.")
     port
@@ -167,13 +166,13 @@ optionsParser envFlags envVars = Options
       =  strOption
       $  long "token"
       <> metavar "TOKEN"
-      <> readValueFromEnv "VAULT_TOKEN" envVars
+      <> stringFromEnv "VAULT_TOKEN" envVars
       <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN."
     secretsFile
       =  strOption
       $  long "secrets-file"
       <> metavar "FILENAME"
-      <> readValueFromEnv "VAULTENV_SECRETS_FILE" envVars
+      <> stringFromEnv "VAULTENV_SECRETS_FILE" envVars
       <> help ("Config file specifying which secrets to request. Also configurable " ++
                "via VAULTENV_SECRETS_FILE." )
     cmd

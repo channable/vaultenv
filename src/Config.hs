@@ -228,6 +228,26 @@ optionsParser envFlags envVars = Options
       <> readValueFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9 envVars
       <> help "Maximum number of vault connection retries. Defaults to 9"
 
+-- | Specialization of @readValueFromEnv@ that does not use a @Read@ instance.
+-- This is useful for "plain" string values, so the user does not have to
+-- format environment variables like @VAULT_HOST='"localhost"'@. Note the
+-- double quoting.
+stringFromEnv :: OptParse.HasValue f
+              => String
+              -> [EnvVar]
+              -> OptParse.Mod f String
+stringFromEnv key envVars = foldMap value $ lookup key envVars
+
+-- | Like @stringFromEnv@, but with a default value.
+stringFromEnvWithDefault :: OptParse.HasValue f
+                         => String
+                         -> String
+                         -> [EnvVar]
+                         -> OptParse.Mod f String
+stringFromEnvWithDefault key defVal envVars
+  =  value defVal
+  <> stringFromEnv key envVars
+
 -- | Attempt to parse an optparse default value modifier from a list of
 -- environment variables. This function returns an empty option modifier in
 -- case the environment variable is missing or does not parse.

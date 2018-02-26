@@ -96,34 +96,51 @@ of `tutorial.sh`.
 vaultenv - run programs with secrets from HashiCorp Vault
 
 Usage: vaultenv [--host HOST] [--port PORT] --token TOKEN
-                --secrets-file FILENAME CMD [ARGS...] [--no-connect-tls]
-                [--no-validate-certs] [--no-inherit-env]
-                [--retry-base-delay-milliseconds MILLISECONDS]
+                --secrets-file FILENAME CMD [ARGS...] ([--no-connect-tls] |
+                [--connect-tls]) ([--no-validate-certs] | [--validate-certs])
+                ([--no-inherit-env] | [--inherit-env]) ([--no-debug] |
+                [--debug]) [--retry-base-delay-milliseconds MILLISECONDS]
                 [--retry-attempts NUM]
 
 Available options:
-  --host HOST              Vault host, either an IP address or DNS name,
-                           defaults to localhost
-  --port PORT              Vault port, defaults to 8200
-  --token TOKEN            token to authenticate to Vault with, defaults to the
-                           value of the VAULT_TOKEN environment variable if
-                           present
-  --secrets-file FILENAME  config file specifying which secrets to request
-  CMD                      command to run after fetching secrets
-  ARGS...                  arguments to pass to CMD, defaults to nothing
-  --no-connect-tls         don't use TLS when connecting to Vault (default: use
-                           TLS)
-  --no-validate-certs      don't validate TLS certificates when connecting to
-                           Vault (default: validate certs)
-  --no-inherit-env         don't merge the parent environment with the secrets
-                           file
-  --retry-base-delay-milliseconds MILLISECONDS
-                           base delay for vault connection retrying. Defaults to
-                           40ms because, in testing, we found out that fetching
-                           50 secrets takes roughly 200 milliseconds
-  --retry-attempts NUM     maximum number of vault connection retries. Defaults
-                           to 9
   -h,--help                Show this help text
+  --host HOST              Vault host, either an IP address or DNS name.
+                           Defaults to localhost. Also configurable via
+                           VAULT_HOST.
+  --port PORT              Vault port. Defaults to 8200. Also configurable via
+                           VAULT_PORT.
+  --token TOKEN            Token to authenticate to Vault with. Also
+                           configurable via VAULT_TOKEN.
+  --secrets-file FILENAME  Config file specifying which secrets to request. Also
+                           configurable via VAULTENV_SECRETS_FILE.
+  CMD                      command to run after fetching secrets
+  ARGS...                  Arguments to pass to CMD, defaults to nothing
+  --no-connect-tls         Don't use TLS when connecting to Vault. Default: use
+                           TLS. Also configurable via VAULTENV_NO_CONNECT_TLS.
+  --connect-tls            Always connect to Vault via TLS. Default: use TLS.
+                           Can be used to override VAULTENV_NO_CONNECT_TLS.
+  --no-validate-certs      Don't validate TLS certificates when connecting to
+                           Vault. Default: validate certs. Also configurable via
+                           VAULTENV_NO_VALIDATE_CERTS.
+  --validate-certs         Always validate TLS certificates when connecting to
+                           Vault. Default: validate certs. Can be used to
+                           override VAULTENV_NO_CONNECT_TLS.
+  --no-inherit-env         Don't merge the parent environment with the secrets
+                           file. Default: merge environments. Also configurable
+                           via VAULTENV_NO_INHERIT_ENV.
+  --inherit-env            Always merge the parent environment with the secrets
+                           file. Default: merge environments. Can be used to
+                           override VAULTENV_NO_INHERIT_ENV.
+  --no-debug               Run vaultenv in debug mode. Can be used to override
+                           VAULTENV_DEBUG
+  --debug                  Run vaultenv in debug mode. Default: don't run in
+                           debug. Also configurable via VAULTENV_DEBUG.
+  --retry-base-delay-milliseconds MILLISECONDS
+                           Base delay for vault connection retrying. Defaults to
+                           40ms. Also configurable via
+                           VAULTENV_RETRY_BASE_DELAY_MS.
+  --retry-attempts NUM     Maximum number of vault connection retries. Defaults
+                           to 9
 ```
 
 ## Secret specification

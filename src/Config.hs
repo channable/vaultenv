@@ -73,8 +73,8 @@ data EnvFlags = EnvFlags
 --
 -- Under @Info@, we print some additional information related to the config.
 data LogLevel
-  = Error
-  | Info
+  = Info
+  | Error
   deriving (Eq, Ord, Show)
 
 instance Read LogLevel where

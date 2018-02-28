@@ -92,7 +92,7 @@ main = do
   localEnvVars <- getEnvironment
   cliAndEnvOptions <- parseOptionsFromEnvAndCli localEnvVars
 
-  if (oLogLevel cliAndEnvOptions) >= Info
+  if (oLogLevel cliAndEnvOptions) <= Info
     then print cliAndEnvOptions
     else pure ()
 

@@ -2,6 +2,7 @@ module Config
   ( Options(..)
   , MilliSeconds(..)
   , parseOptionsFromEnvAndCli
+  , LogLevel(..)
   ) where
 
 import Control.Applicative ((<*>), (<|>))
@@ -34,9 +35,9 @@ data Options = Options
   , oNoConnectTls    :: Bool
   , oNoValidateCerts :: Bool
   , oNoInheritEnv    :: Bool
-  , oDebug           :: Bool
   , oRetryBaseDelay  :: MilliSeconds
   , oRetryAttempts   :: Int
+  , oLogLevel        :: LogLevel
   } deriving (Eq)
 
 instance Show Options where
@@ -50,9 +51,9 @@ instance Show Options where
     , "Use TLS:        " ++ (show . not $ oNoConnectTls opts)
     , "Validate certs: " ++ (show . not $ oNoValidateCerts opts)
     , "Inherit env:    " ++ (show . not $ oNoInheritEnv opts)
-    , "Debug:          " ++ (show $ oDebug opts)
     , "Base delay:     " ++ (show . unMilliSeconds $ oRetryBaseDelay opts)
     , "Retry attempts: " ++ (show $ oRetryAttempts opts)
+    , "Log-level:      " ++ (show $ oLogLevel opts)
     ]
 
 -- | Behavior flags that we allow users to set via environment variables.
@@ -63,8 +64,23 @@ data EnvFlags = EnvFlags
   { efNoConnectTls :: Bool
   , efNoValidateCerts :: Bool
   , efNoInheritEnv :: Bool
-  , efDebug :: Bool
   }
+
+-- | LogLevel to run vaultenv under. Under @Error@, which is the default, we
+-- will print error messages in error cases. Examples: Vault gives 404s, our
+-- token is invalid, we don't have permissions for a certain path, Vault is
+-- unavailable.
+--
+-- Under @Info@, we print some additional information related to the config.
+data LogLevel
+  = Error
+  | Info
+  deriving (Eq, Ord, Show)
+
+instance Read LogLevel where
+  readsPrec _ "error" = [(Error, "")]
+  readsPrec _ "info" = [(Info, "")]
+  readsPrec _ _ = []
 
 -- | Parse program options from the command line and the process environment.
 parseOptionsFromEnvAndCli :: [EnvVar] -> IO Options
@@ -85,7 +101,6 @@ parseEnvFlags envVars
   { efNoConnectTls = lookupEnvFlag "VAULTENV_NO_CONNECT_TLS"
   , efNoValidateCerts = lookupEnvFlag "VAULTENV_NO_VALIDATE_CERTS"
   , efNoInheritEnv = lookupEnvFlag "VAULTENV_NO_INHERIT_ENV"
-  , efDebug = lookupEnvFlag "VAULTENV_DEBUG"
   }
   where
     lookupEnvFlag key =
@@ -166,9 +181,9 @@ optionsParser envFlags envVars = Options
     <*> (noConnectTls    <|> connectTls)
     <*> (noValidateCerts <|> validateCerts)
     <*> (noInheritEnv    <|> inheritEnv)
-    <*> (noDebug         <|> debug)
     <*> baseDelayMs
     <*> retryAttempts
+    <*> logLevel
   where
     host
       =  strOption
@@ -234,15 +249,6 @@ optionsParser envFlags envVars = Options
       $  long "inherit-env"
       <> help ("Always merge the parent environment with the secrets file. Default: " ++
                 "merge environments. Can be used to override VAULTENV_NO_INHERIT_ENV.")
-    noDebug
-      =  flag (efDebug envFlags) False
-      $  long "no-debug"
-      <> help "Run vaultenv in debug mode. Can be used to override VAULTENV_DEBUG"
-    debug
-      =  flag (efDebug envFlags) True
-      $  long "debug"
-      <> help ("Run vaultenv in debug mode. Default: don't run in debug. Also " ++
-              "configurable via VAULTENV_DEBUG.")
     baseDelayMs
       =  MilliSeconds <$> (option auto
       $  long "retry-base-delay-milliseconds"
@@ -256,6 +262,14 @@ optionsParser envFlags envVars = Options
       <> metavar "NUM"
       <> readValueFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9 envVars
       <> help "Maximum number of vault connection retries. Defaults to 9"
+    logLevel
+      =  option auto
+      $  long "log-level"
+      <> metavar "error | info"
+      <> readValueFromEnvWithDefault "VAULTENV_LOG_LEVEL" Error envVars
+      <> help ("Log-level to run vaultenv under. Options: 'error' or 'info'. " ++
+               "Defaults to 'error'. Also configurable via VAULTENV_LOG_LEVEL")
+
 
 -- | Specialization of @readValueFromEnv@ that does not use a @Read@ instance.
 -- This is useful for "plain" string values, so the user does not have to

@@ -32,9 +32,9 @@ data Options = Options
   , oSecretFile      :: FilePath
   , oCmd             :: String
   , oArgs            :: [String]
-  , oNoConnectTls    :: Bool
-  , oNoValidateCerts :: Bool
-  , oNoInheritEnv    :: Bool
+  , oConnectTls      :: Bool
+  , oValidateCerts   :: Bool
+  , oInheritEnv      :: Bool
   , oRetryBaseDelay  :: MilliSeconds
   , oRetryAttempts   :: Int
   , oLogLevel        :: LogLevel
@@ -48,9 +48,9 @@ instance Show Options where
     , "Secret file:    " ++ oSecretFile opts
     , "Command:        " ++ oCmd opts
     , "Arguments:      " ++ (show $ oArgs opts)
-    , "Use TLS:        " ++ (show . not $ oNoConnectTls opts)
-    , "Validate certs: " ++ (show . not $ oNoValidateCerts opts)
-    , "Inherit env:    " ++ (show . not $ oNoInheritEnv opts)
+    , "Use TLS:        " ++ (show $ oConnectTls opts)
+    , "Validate certs: " ++ (show $ oValidateCerts opts)
+    , "Inherit env:    " ++ (show $ oInheritEnv opts)
     , "Base delay:     " ++ (show . unMilliSeconds $ oRetryBaseDelay opts)
     , "Retry attempts: " ++ (show $ oRetryAttempts opts)
     , "Log-level:      " ++ (show $ oLogLevel opts)
@@ -61,9 +61,9 @@ instance Show Options where
 -- intermediate value to get optparse-applicative to play nice with environment
 -- variables as used for behavior flags. All flags are off by default.
 data EnvFlags = EnvFlags
-  { efNoConnectTls :: Bool
-  , efNoValidateCerts :: Bool
-  , efNoInheritEnv :: Bool
+  { efConnectTls :: Bool
+  , efValidateCerts :: Bool
+  , efInheritEnv :: Bool
   }
 
 -- | LogLevel to run vaultenv under. Under @Error@, which is the default, we
@@ -98,16 +98,16 @@ parseOptionsFromEnvAndCli envVars =
 parseEnvFlags :: [EnvVar] -> EnvFlags
 parseEnvFlags envVars
   = EnvFlags
-  { efNoConnectTls = lookupEnvFlag "VAULTENV_NO_CONNECT_TLS"
-  , efNoValidateCerts = lookupEnvFlag "VAULTENV_NO_VALIDATE_CERTS"
-  , efNoInheritEnv = lookupEnvFlag "VAULTENV_NO_INHERIT_ENV"
+  { efConnectTls = lookupEnvFlag "VAULTENV_CONNECT_TLS"
+  , efValidateCerts = lookupEnvFlag "VAULTENV_VALIDATE_CERTS"
+  , efInheritEnv = lookupEnvFlag "VAULTENV_INHERIT_ENV"
   }
   where
     lookupEnvFlag key =
       case lookup key envVars of
         Just "true" -> True
         Just "false" -> False
-        Nothing -> False
+        Nothing -> True
         _ -> errorWithoutStackTrace $ "[ERROR]: Invalid value for environment variable " ++ key
 
 -- | This function adds metadata to the @Options@ parser so it can be used with
@@ -160,7 +160,7 @@ optionsParserWithInfo envFlags localEnvVars =
 -- Why do we have the options for the affirmative case? (e.g. why does
 -- @--connect-tls@ exist if we default to that behavior?) Because we want to be
 -- able to override all config that happens via environment variables on the
--- CLI. So @VAULTENV_NO_CONNECT_TLS=true vaultenv --connect-tls@ should connect
+-- CLI. So @VAULTENV_CONNECT_TLS=false vaultenv --connect-tls@ should connect
 -- to Vault over a secure connection. Without this option, this use case is not
 -- possible.
 --
@@ -220,35 +220,35 @@ optionsParser envFlags envVars = Options
       (  metavar "ARGS..."
       <> help "Arguments to pass to CMD, defaults to nothing")
     noConnectTls
-      =  flag (efNoConnectTls envFlags) True
+      =  flag (efConnectTls envFlags) False
       $  long "no-connect-tls"
       <> help ("Don't use TLS when connecting to Vault. Default: use TLS. Also " ++
-              "configurable via VAULTENV_NO_CONNECT_TLS.")
+              "configurable via VAULTENV_CONNECT_TLS.")
     connectTls
-      =  flag (efNoConnectTls envFlags) False
+      =  flag (efConnectTls envFlags) True
       $  long "connect-tls"
       <> help ("Always connect to Vault via TLS. Default: use TLS. Can be used " ++
-                "to override VAULTENV_NO_CONNECT_TLS.")
+                "to override VAULTENV_CONNECT_TLS.")
     noValidateCerts
-      =  flag (efNoValidateCerts envFlags) True
+      =  flag (efValidateCerts envFlags) False
       $  long "no-validate-certs"
       <> help ("Don't validate TLS certificates when connecting to Vault. Default: " ++
-              "validate certs. Also configurable via VAULTENV_NO_VALIDATE_CERTS.")
+              "validate certs. Also configurable via VAULTENV_VALIDATE_CERTS.")
     validateCerts
-      =  flag (efNoValidateCerts envFlags) False
+      =  flag (efValidateCerts envFlags) True
       $  long "validate-certs"
       <> help ("Always validate TLS certificates when connecting to Vault. Default: " ++
-                "validate certs. Can be used to override VAULTENV_NO_CONNECT_TLS.")
+                "validate certs. Can be used to override VAULTENV_CONNECT_TLS.")
     noInheritEnv
-      =  flag (efNoInheritEnv envFlags) True
+      =  flag (efInheritEnv envFlags) False
       $  long "no-inherit-env"
       <> help ("Don't merge the parent environment with the secrets file. Default: " ++
-              "merge environments. Also configurable via VAULTENV_NO_INHERIT_ENV.")
+              "merge environments. Also configurable via VAULTENV_INHERIT_ENV.")
     inheritEnv
-      =  flag (efNoInheritEnv envFlags) False
+      =  flag (efInheritEnv envFlags) True
       $  long "inherit-env"
       <> help ("Always merge the parent environment with the secrets file. Default: " ++
-                "merge environments. Can be used to override VAULTENV_NO_INHERIT_ENV.")
+                "merge environments. Can be used to override VAULTENV_INHERIT_ENV.")
     baseDelayMs
       =  MilliSeconds <$> (option auto
       $  long "retry-base-delay-milliseconds"

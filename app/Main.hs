@@ -113,11 +113,11 @@ main = do
 getHttpManager :: Options -> IO Manager
 getHttpManager opts = newManager managerSettings
   where
-    managerSettings = if oNoConnectTls opts
-                      then defaultManagerSettings
-                      else mkManagerSettings tlsSettings Nothing
+    managerSettings = if oConnectTls opts
+                      then mkManagerSettings tlsSettings Nothing
+                      else defaultManagerSettings
     tlsSettings = TLSSettingsSimple
-                { settingDisableCertificateValidation = oNoValidateCerts opts
+                { settingDisableCertificateValidation = not $ oValidateCerts opts
                 , settingDisableSession = False
                 , settingUseServerName = True
                 }
@@ -155,9 +155,9 @@ vaultEnv context = do
 
       buildEnv :: [EnvVar] -> [EnvVar]
       buildEnv secretsEnv =
-        if (oNoInheritEnv . cCliOptions $ context)
-        then secretsEnv
-        else secretsEnv ++ (cLocalEnvVars context)
+        if (oInheritEnv . cCliOptions $ context)
+        then secretsEnv ++ (cLocalEnvVars context)
+        else secretsEnv
 
 
 parseSecret :: String -> Either String Secret
@@ -219,7 +219,7 @@ requestSecret context secretPath =
             $ setRequestPath (SBS.pack requestPath)
             $ setRequestPort (oVaultPort cliOptions)
             $ setRequestHost (SBS.pack (oVaultHost cliOptions))
-            $ setRequestSecure (not $ oNoConnectTls cliOptions)
+            $ setRequestSecure (oConnectTls cliOptions)
             $ defaultRequest
 
     shouldRetry = const $ return . isLeft

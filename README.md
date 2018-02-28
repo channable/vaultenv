@@ -136,10 +136,12 @@ Available options:
                            40ms. Also configurable via
                            VAULTENV_RETRY_BASE_DELAY_MS.
   --retry-attempts NUM     Maximum number of vault connection retries. Defaults
-                           to 9
+                           to 9. Also configurable through
+                           VAULTENV_RETRY_ATTEMPTS.
   --log-level error | info Log-level to run vaultenv under. Options: 'error' or
                            'info'. Defaults to 'error'. Also configurable via
                            VAULTENV_LOG_LEVEL
+
 ```
 
 ## Secret specification

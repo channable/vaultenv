@@ -261,7 +261,8 @@ optionsParser envFlags envVars = Options
       $  long "retry-attempts"
       <> metavar "NUM"
       <> readValueFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9 envVars
-      <> help "Maximum number of vault connection retries. Defaults to 9"
+      <> help ("Maximum number of vault connection retries. Defaults to 9. " ++
+               "Also configurable through VAULTENV_RETRY_ATTEMPTS.")
     logLevel
       =  option auto
       $  long "log-level"

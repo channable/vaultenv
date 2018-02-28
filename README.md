@@ -98,9 +98,9 @@ vaultenv - run programs with secrets from HashiCorp Vault
 Usage: vaultenv [--host HOST] [--port PORT] --token TOKEN
                 --secrets-file FILENAME CMD [ARGS...] ([--no-connect-tls] |
                 [--connect-tls]) ([--no-validate-certs] | [--validate-certs])
-                ([--no-inherit-env] | [--inherit-env]) ([--no-debug] |
-                [--debug]) [--retry-base-delay-milliseconds MILLISECONDS]
-                [--retry-attempts NUM]
+                ([--no-inherit-env] | [--inherit-env])
+                [--retry-base-delay-milliseconds MILLISECONDS]
+                [--retry-attempts NUM] [--log-level error | info]
 
 Available options:
   -h,--help                Show this help text
@@ -116,31 +116,30 @@ Available options:
   CMD                      command to run after fetching secrets
   ARGS...                  Arguments to pass to CMD, defaults to nothing
   --no-connect-tls         Don't use TLS when connecting to Vault. Default: use
-                           TLS. Also configurable via VAULTENV_NO_CONNECT_TLS.
+                           TLS. Also configurable via VAULTENV_CONNECT_TLS.
   --connect-tls            Always connect to Vault via TLS. Default: use TLS.
-                           Can be used to override VAULTENV_NO_CONNECT_TLS.
+                           Can be used to override VAULTENV_CONNECT_TLS.
   --no-validate-certs      Don't validate TLS certificates when connecting to
                            Vault. Default: validate certs. Also configurable via
-                           VAULTENV_NO_VALIDATE_CERTS.
+                           VAULTENV_VALIDATE_CERTS.
   --validate-certs         Always validate TLS certificates when connecting to
                            Vault. Default: validate certs. Can be used to
-                           override VAULTENV_NO_CONNECT_TLS.
+                           override VAULTENV_CONNECT_TLS.
   --no-inherit-env         Don't merge the parent environment with the secrets
                            file. Default: merge environments. Also configurable
-                           via VAULTENV_NO_INHERIT_ENV.
+                           via VAULTENV_INHERIT_ENV.
   --inherit-env            Always merge the parent environment with the secrets
                            file. Default: merge environments. Can be used to
-                           override VAULTENV_NO_INHERIT_ENV.
-  --no-debug               Run vaultenv in debug mode. Can be used to override
-                           VAULTENV_DEBUG
-  --debug                  Run vaultenv in debug mode. Default: don't run in
-                           debug. Also configurable via VAULTENV_DEBUG.
+                           override VAULTENV_INHERIT_ENV.
   --retry-base-delay-milliseconds MILLISECONDS
                            Base delay for vault connection retrying. Defaults to
                            40ms. Also configurable via
                            VAULTENV_RETRY_BASE_DELAY_MS.
   --retry-attempts NUM     Maximum number of vault connection retries. Defaults
                            to 9
+  --log-level error | info Log-level to run vaultenv under. Options: 'error' or
+                           'info'. Defaults to 'error'. Also configurable via
+                           VAULTENV_LOG_LEVEL
 ```
 
 ## Secret specification

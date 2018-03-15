@@ -1,5 +1,5 @@
 name: vaultenv
-version: 0.7.0
+version: 0.7.1
 synopsis: Runs processes with secrets from HashiCorp Vault
 license: BSD3
 github: channable/vaultenv

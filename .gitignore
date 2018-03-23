@@ -1,6 +1,9 @@
 # Build output
 /.stack-work
 *.deb
+rootfs.tar.xz
+chroot/
+chroot.tar
 
 # auto-generated files
 vaultenv.cabal

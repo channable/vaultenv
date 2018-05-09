@@ -9,138 +9,172 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Dict, Optional
 
-from channabuild.chroot import execute_in_chroot
-from channabuild.config import ConfigLevel, get_config
+import click
+
+from channabuild.caching import BuildStep
 from channabuild.exceptions import ChannaBuildUserError
-from channabuild.logging import get_logger
-from channabuild.main import initialize
-from channabuild.namespaces import execute_in_new_namespace
-from channabuild.packaging import build_deb, ship_deb_to_freight
-from channabuild.repository import get_changelog, get_tag
-from channabuild.subprocess import execute, execute_capture
-from channabuild.system import create_file
+from channabuild.main import ChannaBuild
+
+cb = ChannaBuild(logging_level=logging.DEBUG)
 
 
-@execute_in_new_namespace
-def extract_image() -> None:
-    execute(['rm', '-rf', 'chroot/'])
-    execute(['mkdir', 'chroot/'])
-    execute(['tar', '--checkpoint=10000', '--anchored', '--exclude=./dev/*',
-             '-xpf', 'chroot.tar', '-C', 'chroot/'])
+class DownloadRootFs(BuildStep):
+    dependencies = []
+
+    @classmethod
+    def run(cls):
+        cb.download_image_from_lxc(filename='rootfs.tar.xz')
+        cb.execute(['rm', '-rf', 'cache/chroot'])
+        cb.execute(['mkdir', '-p', 'cache/chroot'])
+        cb.execute(['tar', '--exclude=./dev/*', '-xpJf',
+                    'rootfs.tar.xz', '-C', 'cache/chroot/'])
 
 
-@execute_in_chroot(
-    chroot_dir='chroot',
-    binds={
-        '.': '/root/build/repo'
-    }
-)
-def build_in_chroot() -> None:
-    os.chdir('/root/build/repo')
+class SetupRootFs(BuildStep):
+    dependencies = [DownloadRootFs]
 
-    for line in get_changelog().splitlines():
-        logger.info(line)
+    @classmethod
+    def run(cls):
+        if cls.dependencies_changed:
+            cls.run_changed()
+        cls.run_always()
 
-    execute(['stack', 'build'])
-    execute(['stack', 'install'])
+    @classmethod
+    @cb.execute_in_new_namespace
+    def run_always(cls):
+        cb.execute(['rm', '-rf', 'chroot/'])
+        cb.execute(['cp', '-r', 'cache/chroot', 'chroot/'])
 
+    @classmethod
+    @cb.execute_in_chroot('cache/chroot')
+    def run_changed(cls):
+        cb.install_apt_packages(['curl', 'wget', 'unzip'])
+        cb.execute(['bash', '-c', 'curl -sSL https://get.haskellstack.org/ | sh'])
 
-@execute_in_chroot(
-    chroot_dir='chroot',
-    binds={
-        '.': '/root/build/repo'
-    }
-)
-def test_in_chroot() -> None:
-    os.chdir('/root/build/repo')
-    execute(['./integration-test.sh'])
-
-
-def build_package() -> None:
-    config = get_config()
-
-    # Install vaultenv into ./pkg
-    execute(['rm', '-rf', 'pkg/'])
-
-    Path('pkg/usr/bin').mkdir(parents=True, exist_ok=True)
-    Path('pkg/etc/secrets.d').mkdir(parents=True, exist_ok=True)
-
-    create_file('pkg/DEBIAN/control', dedent(f"""\
-        Package: vaultenv
-        Version: {config.VERSION}
-        Priority: optional
-        Architecture: amd64
-        Maintainer: Laurens Duijvesteijn <laurens@channable.com>
-        Description: Run processes with secrets from HashiCorp Vault
-        Depends: libc6,
-                 libgmp10,
-                 libgcc1,
-                 zlib1g,
-                 netbase
-        """))
-
-    stack_path = execute_capture(['stack', 'path', '--local-install-root']).strip().decode()
-    execute(['cp', f'{stack_path}/bin/vaultenv', 'pkg/usr/bin/'])
-
-    # Package it as deb file
-    build_deb('pkg', f'vaultenv-{config.VERSION}.deb')
+        Path('/tmp/vault').mkdir()
+        os.chdir('/tmp/vault')
+        vault_url = 'https://releases.hashicorp.com/vault/0.9.6/vault_0.9.6_linux_amd64.zip'
+        cb.execute(['wget', vault_url])
+        cb.execute(['unzip', 'vault_0.9.6_linux_amd64.zip'])
+        cb.execute(['cp', 'vault', '/usr/local/bin/vault'])
+        os.chdir('/')
+        cb.execute(['rm', '-rf', '/tmp/vault'])
 
 
-def ship_package() -> None:
-    config = get_config()
+class Build(BuildStep):
+    dependencies = [SetupRootFs]
 
-    # Ship package if tagged with production tag:
-    if config.VERSION and re.fullmatch('[0-9]+', config.VERSION):
-        ship_deb_to_freight(f'chroot/root/build/repo/channabuild-{config.VERSION}.deb')
-
-
-def cleanup() -> None:
-    # We need to clear the chroot from within a namespace due to permission errors.
-    execute_in_new_namespace(lambda: execute(['rm', '-rf', 'chroot']))()
-
-    execute(['rm', '-rf', 'pkg/'])
+    @classmethod
+    @cb.execute_in_chroot('chroot', binds={'.': '/root/build/repo'},
+            working_dir='/root/build/repo', environment_overrides={'HOME':'/root'}
+            )
+    def run(cls):
+        cb.execute(['stack', 'build'])
+        cb.execute(['stack', 'install'])
 
 
-def build() -> None:
-    extract_image()
-    build_in_chroot()
-    test_in_chroot()
-    build_package()
-    ship_package()
-    cleanup()
+class Test(BuildStep):
+    dependencies = [Build]
+
+    @classmethod
+    @cb.execute_in_chroot('chroot', binds={'.': '/root/build/repo'}, working_dir='/root/build/repo')
+    def run(cls):
+        cb.execute(['./integration-test.sh'])
 
 
-def dynamic_config() -> Dict[ConfigLevel, Dict[str, Optional[str]]]:
-    config: Dict[ConfigLevel, Dict[str, Optional[str]]] = defaultdict(lambda: {})
+class Package(BuildStep):
+    dependencies = [Test]
 
-    # Figure out the version.
-    stack_version = execute_capture(
-        ['stack', 'query', 'locals', 'vaultenv', 'version']).strip().decode('utf-8')
-    stack_version = stack_version.strip("'")
+    @classmethod
+    @cb.execute_in_chroot('chroot', binds={'.': '/root/build/repo'}, working_dir='/root/build/repo')
+    def run(cls):
+        config = cb.get_config()
 
-    git_version = get_tag()
+        # Install vaultenv into ./pkg
+        cb.execute(['rm', '-rf', 'pkg/'])
 
-    if stack_version == git_version:
-        config[ConfigLevel.repository]['VERSION'] = stack_version
-    else:
-        config[ConfigLevel.repository]['VERSION'] = f'{stack_version}.dev'
+        Path('pkg/usr/bin').mkdir(parents=True, exist_ok=True)
+        Path('pkg/etc/secrets.d').mkdir(parents=True, exist_ok=True)
 
-    return config
+        cb.create_file('pkg/DEBIAN/control', dedent(f"""\
+            Package: vaultenv
+            Version: {config.VERSION}
+            Priority: optional
+            Architecture: amd64
+            Maintainer: Laurens Duijvesteijn <laurens@channable.com>
+            Description: Run processes with secrets from HashiCorp Vault
+            Depends: libc6,
+                    libgmp10,
+                    libgcc1,
+                    zlib1g,
+                    netbase
+            """))
+
+        stack_path = execute_capture(['stack', 'path', '--local-install-root']).strip().decode()
+        cb.execute(['cp', f'{stack_path}/bin/vaultenv', 'pkg/usr/bin/'])
+
+        # Package it as deb file
+        cb.build_deb('pkg', f'vaultenv-{config.VERSION}.deb')
+
+
+class Ship(BuildStep):
+    dependencies = [Package]
+
+    @classmethod
+    def run(cls):
+        config = get_config()
+
+        # Ship package if tagged with production tag:
+        if config.VERSION and re.fullmatch('[0-9]+', config.VERSION):
+            ship_deb_to_freight(f'channabuild-{config.VERSION}.deb')
+
+
+class CleanArtifacts(BuildStep):
+    pass
+
+
+class CleanCache(BuildStep):
+    pass
+
+
+# class InitializeVersion(BuildStep):
+#     dependencies = []
+#
+#     @classmethod
+#     def run(cls):
+#         config: Dict[ConfigLevel, Dict[str, Optional[str]]] = defaultdict(lambda: {})
+#
+#         # Figure out the version.
+#         stack_version = execute_capture(
+#             ['stack', 'query', 'locals', 'vaultenv', 'version']).strip().decode('utf-8')
+#         stack_version = stack_version.strip("'")
+#
+#         git_version = get_tag()
+#
+#         if stack_version == git_version:
+#             config[ConfigLevel.repository]['VERSION'] = stack_version
+#         else:
+#             config[ConfigLevel.repository]['VERSION'] = f'{stack_version}.dev'
+
+
+BUILD_GRAPH = BuildStep.__subclasses__()
+CACHE_FILE = 'channabuild.cache'
+
+
+@cb.cli.command(name='build')
+@click.option('--ship-package/--no-ship-package', default=False, help='Ship package?')
+def build_cmd(ship_package):
+    """Build everything"""
+    target = Ship if ship_package else Package
+    cb.get_and_run_build_plan(target, BUILD_GRAPH, CACHE_FILE)
 
 
 if __name__ == '__main__':
-    initialize(config=dynamic_config, log_level=logging.DEBUG)
-    logger = get_logger()
-
     try:
-        if sys.argv[1] == 'build':
-            build()
-        else:
-            print('Specify a valid command')
-            sys.exit(1)
+        cb.cli()
     except ChannaBuildUserError:
-        logger.exception('Build failed:')
+        cb.error('Build failed')
         sys.exit(1)
     except Exception:
-        logger.exception('Build failed:')
+        cb.exception('Build failed:')
         sys.exit(1)

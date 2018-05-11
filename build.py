@@ -168,7 +168,7 @@ class Ship(BuildStep):
 
         # Ship package if tagged with production tag:
         if config.VERSION and re.fullmatch('[0-9]+', config.VERSION):
-            ship_deb_to_freight(f'channabuild-{config.VERSION}.deb')
+            cb.ship_deb_to_freight(f'channabuild-{config.VERSION}.deb')
 
 
 class CleanArtifacts(BuildStep):

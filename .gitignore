@@ -1,5 +1,8 @@
 # Build output
 /.stack-work
+/.stack
+/cache
+/pkg
 *.deb
 rootfs.tar.xz
 chroot/

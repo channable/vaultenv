@@ -125,7 +125,6 @@ class BuildPackageTree(BuildStep):
             environment_overrides={'HOME':'/root'},working_dir='/root/build/repo')
     def run(cls):
         config = cb.get_config()
-        print(config.VERSION)
 
         # Install vaultenv into ./pkg
         cb.execute(['rm', '-rf', 'pkg/'])

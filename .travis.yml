@@ -1,0 +1,45 @@
+language: python
+python:
+  - 3.6
+
+notifications:
+  email: false
+
+branches:
+  only:
+    # Only build master. We build pull requests separately. So if you are
+    # working on a branch without it being ready for review, that will not
+    # trigger builds. Also build release tags that match the regex "v\d+".
+    - master
+    - /^v\d+$/
+
+git:
+  # Don't do a shallow clone (which is the default and breaks our build). Docs:
+  # https://docs.travis-ci.com/user/customizing-the-build#Git-Clone-Depth
+  depth: false
+
+cache:
+  directories:
+    - $TRAVIS_BUILD_DIR/cache
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y uidmap dpkg fakeroot
+  - pip install git+ssh://git@github.com/channable/channabuild@master
+
+install:
+  # Travis does a branch specific clone, but our build requires the entire
+  # history, so we fetch the missing things, such as the master branch and
+  # tags. (Not all tags might be reachable from the branch). Before the fetch
+  # command works, we need to tell git what branches we want to fetch from the
+  # origin remote. Without this, we wouldn't actually fetch the master branch,
+  # (because of the branch specific clone).
+  - git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+  - git fetch --all --tags --quiet
+
+  # Ensure that a "master" branch exists, so the inner clone in the container
+  # has an origin/master branch.
+  - git branch -f master origin/master
+
+script:
+  - ./build.py build

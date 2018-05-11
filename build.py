@@ -181,7 +181,7 @@ class CleanCache(BuildStep):
 
 
 BUILD_GRAPH = BuildStep.__subclasses__()
-CACHE_FILE = 'channabuild.cache'
+CACHE_FILE = 'cache/channabuild.cache'
 
 
 @cb.cli.command(name='build')

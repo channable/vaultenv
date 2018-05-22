@@ -23,19 +23,18 @@ BINDS = { '.': '/root/build/repo',
           'cache/stack': '/root/.stack'
         }
 
+
 class SetupCache(BuildStep):
     dependencies = []
 
-    @classmethod
-    def run(cls):
+    def run(self):
         cb.ensure_directories(['cache/stack', 'cache/stack-work'])
 
 
 class DownloadRootFs(BuildStep):
     dependencies = [SetupCache]
 
-    @classmethod
-    def run(cls):
+    def run(self):
         cb.download_image_from_lxc(filename='rootfs.tar.xz')
         cb.execute(['rm', '-rf', 'cache/chroot'])
         cb.execute(['mkdir', '-p', 'cache/chroot'])
@@ -46,21 +45,18 @@ class DownloadRootFs(BuildStep):
 class SetupRootFs(BuildStep):
     dependencies = [DownloadRootFs]
 
-    @classmethod
-    def run(cls):
-        if cls.dependencies_changed:
-            cls.run_changed()
-        cls.run_always()
+    def run(self):
+        if self.dependencies_changed:
+            self.run_changed()
+        self.run_always()
 
-    @classmethod
     @cb.execute_in_new_namespace
-    def run_always(cls):
+    def run_always(self):
         cb.execute(['rm', '-rf', 'chroot/'])
         cb.execute(['cp', '-r', 'cache/chroot', 'chroot/'])
 
-    @classmethod
     @cb.execute_in_chroot('cache/chroot')
-    def run_changed(cls):
+    def run_changed(self):
         cb.install_apt_packages(['curl', 'wget', 'unzip'])
         cb.execute(['bash', '-c', 'curl -sSL https://get.haskellstack.org/ | sh'])
 
@@ -77,11 +73,10 @@ class SetupRootFs(BuildStep):
 class Build(BuildStep):
     dependencies = [SetupRootFs]
 
-    @classmethod
     @cb.execute_in_chroot('chroot', binds=BINDS,
             working_dir='/root/build/repo', environment_overrides={'HOME':'/root'}
             )
-    def run(cls):
+    def run(self):
         cb.execute(['stack', 'build'])
         cb.execute(['stack', 'install'])
 
@@ -89,10 +84,9 @@ class Build(BuildStep):
 class Test(BuildStep):
     dependencies = [Build]
 
-    @classmethod
     @cb.execute_in_chroot('chroot', binds=BINDS, working_dir='/root/build/repo',
         environment_overrides={'HOME':'/root'})
-    def run(cls):
+    def run(self):
         cb.execute(['./integration-test.sh'])
 
 
@@ -100,8 +94,7 @@ class InitializeVersion(BuildStep):
     dependencies = [SetupRootFs]
     always_run = True
 
-    @classmethod
-    def run(cls):
+    def run(self):
         repository_config = cb.get_config_layer(ConfigLevel.repository)
 
         # Figure out the version.
@@ -120,10 +113,9 @@ class InitializeVersion(BuildStep):
 class BuildPackageTree(BuildStep):
     dependencies = [Test, InitializeVersion]
 
-    @classmethod
     @cb.execute_in_chroot('chroot', binds=BINDS,
             environment_overrides={'HOME':'/root'},working_dir='/root/build/repo')
-    def run(cls):
+    def run(self):
         config = cb.get_config()
 
         # Install vaultenv into ./pkg
@@ -153,8 +145,7 @@ class BuildPackageTree(BuildStep):
 class Package(BuildStep):
     dependencies = [BuildPackageTree, InitializeVersion]
 
-    @classmethod
-    def run(cls):
+    def run(self):
         config = cb.get_config()
         cb.build_deb('pkg', f'vaultenv-{config.VERSION}.deb')
 
@@ -162,8 +153,7 @@ class Package(BuildStep):
 class Ship(BuildStep):
     dependencies = [Package]
 
-    @classmethod
-    def run(cls):
+    def run(self):
         config = get_config()
 
         # Ship package if tagged with production tag:
@@ -188,7 +178,7 @@ CACHE_FILE = 'cache/channabuild.cache'
 def build_cmd(ship_package):
     """Build everything"""
     target = Ship if ship_package else Package
-    cb.get_and_run_build_plan(target, BUILD_GRAPH, CACHE_FILE)
+    cb.get_and_run_build_plan([target])
 
 
 if __name__ == '__main__':

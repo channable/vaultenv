@@ -1,9 +1,12 @@
 load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 cc_library(
-  name = "includes",
+  name = "cbits",
   defines = ["_GNU_SOURCE", "CALLCONV=ccall"],
   includes = ["include"],
+  srcs = [
+    "cbits/HsNet.c"
+  ],
   hdrs = [
     "include/HsNet.h",
     "include/HsNetworkConfig.h",
@@ -14,7 +17,7 @@ haskell_library(
   name = "network",
   visibility = ["//visibility:public"],
   deps = [
-    ":includes",
+    ":cbits",
   ],
   prebuilt_dependencies = [
     "bytestring",
@@ -23,6 +26,7 @@ haskell_library(
   ],
   compiler_flags = ["-cpp"],
   srcs = [
+    "Network.hs",
     "Network/BSD.hsc",
     "Network/Socket.hsc",
     "Network/Socket/ByteString.hsc",

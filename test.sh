@@ -8,6 +8,10 @@ export VAULT_ADDR="http://${VAULT_HOST}:${VAULT_PORT}"
 # Start the Vault server we're going to use for our integration tests
 vault server -dev -dev-root-token-id=${VAULT_TOKEN} &> /dev/null &
 
+# Brief timeout hack to avoid race condition where we write secrets but
+# vault hasn't booted yet.
+sleep 1
+
 # Seed Vault and some secret files
 export VAULT_SEEDS="$(mktemp)"
 cat > ${VAULT_SEEDS} << EOF

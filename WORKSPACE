@@ -883,33 +883,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/lifted-base-0.2.3.11.tar.gz",
   ],
   strip_prefix = "lifted-base-0.2.3.11",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "lifted-base",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_monad_control//:monad-control",
-    "@hackage_transformers_base//:transformers-base",
-  ],
-  prebuilt_dependencies = [
-    "base",
-  ],
-  srcs = [
-    "Data/IORef/Lifted.hs",
-    "Foreign/Marshal/Utils/Lifted.hs",
-    "System/Timeout/Lifted.hs",
-    "Control/Concurrent/Lifted.hs",
-    "Control/Concurrent/Chan/Lifted.hs",
-    "Control/Concurrent/QSem/Lifted.hs",
-    "Control/Concurrent/SampleVar/Lifted.hs",
-    "Control/Concurrent/MVar/Lifted.hs",
-    "Control/Concurrent/QSemN/Lifted.hs",
-    "Control/Exception/Lifted.hs",
-  ],
-)
-""",
+  build_file = "hackage/lifted_base.BUILD",
 )
 
 new_http_archive(

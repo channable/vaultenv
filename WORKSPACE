@@ -50,8 +50,13 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 
 haskell_library(
   name = "transformers-compat",
-  srcs = glob(["src/**/*.hs"]),
+  visibility = ["//visibility:public"],
+  srcs = [
+    "src/Control/Monad/Trans/Instances.hs",
+  ],
   src_strip_prefix = "src",
+  deps = [
+  ],
   prebuilt_dependencies = [
     "base",
     "ghc-prim",
@@ -80,7 +85,24 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 haskell_library(
   name = "colour",
   visibility = ["//visibility:public"],
-  srcs = glob(["*/**/*.hs"]),
+  srcs = [
+    "Data/Colour/Names.hs",
+    "Data/Colour/RGB.hs",
+    "Data/Colour/Matrix.hs",
+    "Data/Colour/Internal.hs",
+    "Data/Colour/CIE/Chromaticity.hs",
+    "Data/Colour/CIE/Illuminant.hs",
+    "Data/Colour/SRGB/Linear.hs",
+    "Data/Colour/RGBSpace.hs",
+    "Data/Colour/RGBSpace/HSV.hs",
+    "Data/Colour/RGBSpace/HSL.hs",
+    "Data/Colour/CIE.hs",
+    "Data/Colour/SRGB.hs",
+    "Data/Colour/Chan.hs",
+    "Data/Colour.hs",
+  ],
+  deps = [
+  ],
   prebuilt_dependencies = [
     "base",
   ],
@@ -106,19 +128,26 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 
 haskell_library(
   name = "ansi-terminal",
-  hdrs = glob(["includes/*.hs"]),
+  hdrs = [
+    "includes/Common-Include.hs",
+    "includes/Common-Include-Emulator.hs",
+    "includes/Common-Include-Enabled.hs",
+    "includes/Exports-Include.hs",
+  ],
+  visibility = ["//visibility:public"],
   srcs = [
-    "System/Console/ANSI/Unix.hs",
-    "System/Console/ANSI/Codes.hs",
+    "System/Console/ANSI.hs",
     "System/Console/ANSI/Types.hs",
+    "System/Console/ANSI/Codes.hs",
+    "System/Console/ANSI/Unix.hs",
   ],
   deps = [
     "@hackage_colour//:colour",
   ],
-  compiler_flags = ["-cpp", "-DUNIX"],
   prebuilt_dependencies = [
     "base",
   ],
+  compiler_flags = ["-DUNIX"],
 )
   """,
 )
@@ -141,7 +170,14 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 
 haskell_library(
   name = "ansi-wl-pprint",
-  srcs = glob(["*/**/*.hs"]),
+  visibility = ["//visibility:public"],
+  srcs = [
+    "Text/PrettyPrint/ANSI/Leijen.hs",
+    "Text/PrettyPrint/ANSI/Leijen/Internal.hs",
+  ],
+  deps = [
+    "@hackage_ansi_terminal//:ansi-terminal",
+  ],
   prebuilt_dependencies = [
     "base",
   ],
@@ -167,7 +203,29 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 
 haskell_library(
   name = "optparse-applicative",
-  srcs = glob(["*/**/*.hs"]),
+  visibility = ["//visibility:public"],
+  srcs = [
+    "Options/Applicative.hs",
+    "Options/Applicative/Arrows.hs",
+    "Options/Applicative/BashCompletion.hs",
+    "Options/Applicative/Builder.hs",
+    "Options/Applicative/Common.hs",
+    "Options/Applicative/Extra.hs",
+    "Options/Applicative/Help.hs",
+    "Options/Applicative/Internal.hs",
+    "Options/Applicative/Types.hs",
+    "Options/Applicative/Builder/Completer.hs",
+    "Options/Applicative/Builder/Internal.hs",
+    "Options/Applicative/Help/Chunk.hs",
+    "Options/Applicative/Help/Core.hs",
+    "Options/Applicative/Help/Levenshtein.hs",
+    "Options/Applicative/Help/Pretty.hs",
+    "Options/Applicative/Help/Types.hs",
+  ],
+  deps = [
+    "@hackage_ansi_wl_pprint//:ansi-wl-pprint",
+    "@hackage_transformers_compat//:transformers-compat",
+  ],
   prebuilt_dependencies = [
     "base",
     "process",

@@ -58,14 +58,58 @@ while todo:
     prebuilt_deps = [f'\n    "{dep}",' for dep in deps if dep in core_packages]
     prebuilt_deps_str = ''.join(prebuilt_deps)
 
+    hackage_deps = []
+    for dep in deps:
+        if dep in core_packages:
+            continue
+        dep_repo_name = dep.replace('-', '_').replace('.', '_')
+        hackage_deps.append(f'\n    "@hackage_{dep_repo_name}//:{dep}",')
+    hackage_deps_str = ''.join(hackage_deps)
+
     package_contents = list_package_contents(name, version)
-    # modules = package['description']['modules']
-    # sources = [mod.replace('.', '/') + '.hs' for mod in modules]
-    # sources = [f'\n    "{src}",' for src in sources]
+    modules = package['description']['modules']
+    root_modules = set(mod.split('.')[0] for mod in modules)
+    source_files = [src for src in package_contents if src.endswith('.hs')]
+
     if 'src' in package_contents:
-        sources = 'srcs = glob(["src/**/*.hs"]),\n  src_strip_prefix = "src",'
+        src_prefix = 'src/'
+        # If these is an 'src' directory, take *only* the src directory. This is
+        # to deal with the 'transformers-compat' package, which also has other
+        # directories that are unused.
+        source_files = [src for src in source_files if src.startswith('src/')]
     else:
-        sources = 'srcs = glob(["*/**/*.hs"]),"
+        src_prefix = ''
+
+    # Hack: try to find all hs files that define the module, but not tests or
+    # other auxillay hs files in the tarball.
+    sources = []
+    for src in source_files:
+        mod = src.split('/')[1 if src_prefix else 0]
+        if not mod in root_modules:
+            # Might have been a Setup.hs, a test file, or some other auxillary
+            # file.
+            continue
+        # Hack: ansi-terminal contains an example and Windows files that we
+        # exclude.
+        if ('Windows' in src) or (src.endswith('Example.hs')):
+            continue
+
+        sources.append(f'\n    "{src}",')
+
+    sources_str = 'srcs = [' + ''.join(sources) + '\n  ],'
+    if src_prefix:
+        sources_str += '\n  src_strip_prefix = "src",'
+
+    if 'includes' in package_contents:
+        # ansi-terminal has includes and needs defines. Hack it together like
+        # this, and hope that this does not mess up other packages too badly.
+        header_fnames = [f'\n    "{h}",' for h in package_contents
+                         if h.startswith('includes') and h.endswith('.hs')]
+        headers = '\n  hdrs = [' + ''.join(header_fnames) + '\n  ],'
+        cflags = '\n  compiler_flags = ["-DUNIX"],'
+    else:
+        headers = ''
+        cflags = ''
 
     print(version_name, '=>', '@' + repo_name)
 
@@ -87,10 +131,13 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 )
 
 haskell_library(
-  name = "{name}",
-  srcs = {sources}
-  prebuilt_dependencies = [{prebuilt_deps_str}
+  name = "{name}",{headers}
+  visibility = ["//visibility:public"],
+  {sources_str}
+  deps = [{hackage_deps_str}
   ],
+  prebuilt_dependencies = [{prebuilt_deps_str}
+  ],{cflags}
 )
   """,
 )'''

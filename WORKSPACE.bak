@@ -8,31 +8,15 @@ http_archive(
   sha256 = "2b2ce55757bf44fce050dc308fd33f5645a0c57415cbdce496d822bcea8bc987",
 )
 
-http_archive(
-  name = "io_tweag_rules_nixpkgs",
-  strip_prefix = "rules_nixpkgs-0.2.2",
-  urls = ["https://github.com/tweag/rules_nixpkgs/archive/v0.2.2.tar.gz"],
-)
-
 load("@io_tweag_rules_haskell//haskell:repositories.bzl", "haskell_repositories")
-load("@io_tweag_rules_nixpkgs//nixpkgs:nixpkgs.bzl",
-  "nixpkgs_package",
-  "nixpkgs_git_repository",
-)
 
 haskell_repositories()
 
-nixpkgs = nixpkgs_git_repository(
-  name = "nixpkgs",
-  revision = "86990d26bad0d1ffafc7295eec595dd0325576e9",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "ghc_bindist")
 
-# Take GHC from the nixpkgs package. Requires nix to be installed on the host
-# though.
-nixpkgs_package(
-  name = "ghc",
-  attribute_path = "haskell.compiler.ghc822",
-  repository = "@nixpkgs",
+ghc_bindist(
+  name    = "ghc",
+  version = "8.2.2",
 )
 
 register_toolchains("//:ghc")

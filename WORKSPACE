@@ -167,32 +167,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/hashable-1.2.6.1.tar.gz",
   ],
   strip_prefix = "hashable-1.2.6.1",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "hashable",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_text//:text",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "integer-gmp",
-    "ghc-prim",
-    "deepseq",
-  ],
-  srcs = [
-    "Data/Hashable.hs",
-    "Data/Hashable/Generic.hs",
-    "Data/Hashable/Class.hs",
-    "Data/Hashable/Lifted.hs",
-    "Data/Hashable/RandomSource.hs",
-    "Data/Hashable/SipHash.hs",
-  ],
-)
-""",
+  build_file = "hackage/hashable.BUILD",
 )
 
 new_http_archive(

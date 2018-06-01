@@ -48,11 +48,12 @@ haskell_library(
   srcs = glob(["src/**/*.hs"]),
   prebuilt_dependencies = [
     "base",
+    "ghc-prim",
+    "transformers",
   ],
 )
   """,
 )
-    
 
 new_http_archive(
   name = "hackage_colour",
@@ -79,7 +80,6 @@ haskell_library(
 )
   """,
 )
-    
 
 new_http_archive(
   name = "hackage_ansi_terminal",
@@ -106,7 +106,6 @@ haskell_library(
 )
   """,
 )
-    
 
 new_http_archive(
   name = "hackage_ansi_wl_pprint",
@@ -133,7 +132,6 @@ haskell_library(
 )
   """,
 )
-    
 
 new_http_archive(
   name = "hackage_optparse_applicative",
@@ -156,8 +154,9 @@ haskell_library(
   srcs = glob(["src/**/*.hs"]),
   prebuilt_dependencies = [
     "base",
+    "process",
+    "transformers",
   ],
 )
   """,
 )
-    

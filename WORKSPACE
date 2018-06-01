@@ -1017,24 +1017,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/network-uri-2.6.1.0.tar.gz",
   ],
   strip_prefix = "network-uri-2.6.1.0",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "network-uri",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_parsec//:parsec",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "deepseq",
-  ],
-  srcs = [
-    "Network/URI.hs",
-  ],
-)
-""",
+  build_file = "hackage/network_uri.BUILD",
 )
 
 new_http_archive(

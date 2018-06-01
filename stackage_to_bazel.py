@@ -8,7 +8,7 @@ import os.path
 
 build_plan = []
 
-stack_path = '/home/ruuda/.stack'
+stack_path = os.getenv('HOME') + '/.stack'
 
 def list_package_contents(name, version):
     prefix = f'{name}-{version}/'
@@ -93,9 +93,10 @@ while todo:
             # Might have been a Setup.hs, a test file, or some other auxillary
             # file.
             continue
-        # Hack: ansi-terminal contains an example and Windows files that we
-        # exclude.
-        if ('Windows' in src) or src.endswith('Example.hs') or src.endswith('Win.hs'):
+        # Hack: ansi-terminal contains an example that we exclude.
+        # Also exclude things intended for Windows.
+        is_win = ('Windows' in src) or src.endswith('Win.hs') or src.endswith('Win32.hs')
+        if src.endswith('Example.hs') or is_win:
             continue
 
         sources.append(f'\n    "{src}",')
@@ -112,11 +113,11 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "{name}",
   visibility = ["//visibility:public"],
-  {sources_str}
   deps = [{hackage_deps_str}
   ],
   prebuilt_dependencies = [{prebuilt_deps_str}
   ],
+  {sources_str}
 )
 '''
 

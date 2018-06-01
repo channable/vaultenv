@@ -50,16 +50,16 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "time-locale-compat",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/Data/Time/Locale/Compat.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
   ],
   prebuilt_dependencies = [
     "base",
     "time",
   ],
+  srcs = [
+    "src/Data/Time/Locale/Compat.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -77,6 +77,13 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "primitive",
   visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
+    "transformers",
+  ],
   srcs = [
     "Data/Primitive.hs",
     "Data/Primitive/Array.hs",
@@ -90,13 +97,6 @@ haskell_library(
     "Data/Primitive/Internal/Compat.hs",
     "Data/Primitive/Internal/Operations.hs",
     "Control/Monad/Primitive.hs",
-  ],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "ghc-prim",
-    "transformers",
   ],
 )
 """,
@@ -115,6 +115,14 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "vector",
   visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_primitive//:primitive",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
+    "deepseq",
+  ],
   srcs = [
     "Data/Vector.hs",
     "Data/Vector/Unboxed.hs",
@@ -138,14 +146,6 @@ haskell_library(
     "Data/Vector/Unboxed/Mutable.hs",
     "Data/Vector/Primitive/Mutable.hs",
   ],
-  deps = [
-    "@hackage_primitive//:primitive",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "ghc-prim",
-    "deepseq",
-  ],
 )
 """,
 )
@@ -163,6 +163,17 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "text",
   visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+    "array",
+    "integer-gmp",
+    "binary",
+    "ghc-prim",
+    "deepseq",
+  ],
   srcs = [
     "Data/Text.hs",
     "Data/Text/Array.hs",
@@ -209,17 +220,6 @@ haskell_library(
     "Data/Text/Lazy/Builder/Int.hs",
     "Data/Text/Lazy/Builder/RealFloat.hs",
   ],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "array",
-    "integer-gmp",
-    "binary",
-    "ghc-prim",
-    "deepseq",
-  ],
 )
 """,
 )
@@ -237,14 +237,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "hashable",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/Hashable.hs",
-    "Data/Hashable/Generic.hs",
-    "Data/Hashable/Class.hs",
-    "Data/Hashable/Lifted.hs",
-    "Data/Hashable/RandomSource.hs",
-    "Data/Hashable/SipHash.hs",
-  ],
   deps = [
     "@hackage_text//:text",
   ],
@@ -254,6 +246,14 @@ haskell_library(
     "integer-gmp",
     "ghc-prim",
     "deepseq",
+  ],
+  srcs = [
+    "Data/Hashable.hs",
+    "Data/Hashable/Generic.hs",
+    "Data/Hashable/Class.hs",
+    "Data/Hashable/Lifted.hs",
+    "Data/Hashable/RandomSource.hs",
+    "Data/Hashable/SipHash.hs",
   ],
 )
 """,
@@ -272,13 +272,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "integer-logarithms",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/GHC/Integer/Logarithms/Compat.hs",
-    "src/Math/NumberTheory/Logarithms.hs",
-    "src/Math/NumberTheory/Powers/Natural.hs",
-    "src/Math/NumberTheory/Powers/Integer.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
   ],
   prebuilt_dependencies = [
@@ -287,6 +280,13 @@ haskell_library(
     "integer-gmp",
     "ghc-prim",
   ],
+  srcs = [
+    "src/GHC/Integer/Logarithms/Compat.hs",
+    "src/Math/NumberTheory/Logarithms.hs",
+    "src/Math/NumberTheory/Powers/Natural.hs",
+    "src/Math/NumberTheory/Powers/Integer.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -304,12 +304,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "scientific",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/Data/Scientific.hs",
-    "src/Data/ByteString/Builder/Scientific.hs",
-    "src/Data/Text/Lazy/Builder/Scientific.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
     "@hackage_integer_logarithms//:integer-logarithms",
     "@hackage_text//:text",
@@ -324,6 +318,12 @@ haskell_library(
     "binary",
     "deepseq",
   ],
+  srcs = [
+    "src/Data/Scientific.hs",
+    "src/Data/ByteString/Builder/Scientific.hs",
+    "src/Data/Text/Lazy/Builder/Scientific.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -341,14 +341,14 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "random",
   visibility = ["//visibility:public"],
-  srcs = [
-    "System/Random.hs",
-  ],
   deps = [
   ],
   prebuilt_dependencies = [
     "base",
     "time",
+  ],
+  srcs = [
+    "System/Random.hs",
   ],
 )
 """,
@@ -367,11 +367,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "uuid-types",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/UUID/Types.hs",
-    "Data/UUID/Types/Internal.hs",
-    "Data/UUID/Types/Internal/Builder.hs",
-  ],
   deps = [
     "@hackage_text//:text",
     "@hackage_hashable//:hashable",
@@ -382,6 +377,11 @@ haskell_library(
     "base",
     "binary",
     "deepseq",
+  ],
+  srcs = [
+    "Data/UUID/Types.hs",
+    "Data/UUID/Types/Internal.hs",
+    "Data/UUID/Types/Internal/Builder.hs",
   ],
 )
 """,
@@ -400,6 +400,18 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "attoparsec",
   visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_text//:text",
+    "@hackage_scientific//:scientific",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+    "array",
+    "containers",
+    "transformers",
+    "deepseq",
+  ],
   srcs = [
     "Data/Attoparsec.hs",
     "Data/Attoparsec/Lazy.hs",
@@ -423,18 +435,6 @@ haskell_library(
     "Data/Attoparsec/Internal/Types.hs",
     "Data/Attoparsec/Internal/Fhthagn.hs",
   ],
-  deps = [
-    "@hackage_text//:text",
-    "@hackage_scientific//:scientific",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "array",
-    "containers",
-    "transformers",
-    "deepseq",
-  ],
 )
 """,
 )
@@ -452,6 +452,12 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "base-compat",
   visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "unix",
+    "base",
+  ],
   srcs = [
     "src/Text/Read/Compat.hs",
     "src/Control/Concurrent/Compat.hs",
@@ -495,12 +501,6 @@ haskell_library(
     "src/Debug/Trace/Compat.hs",
   ],
   src_strip_prefix = "src",
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "unix",
-    "base",
-  ],
 )
 """,
 )
@@ -518,10 +518,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "transformers-compat",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/Control/Monad/Trans/Instances.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
   ],
   prebuilt_dependencies = [
@@ -529,6 +525,10 @@ haskell_library(
     "ghc-prim",
     "transformers",
   ],
+  srcs = [
+    "src/Control/Monad/Trans/Instances.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -546,11 +546,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "tagged",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/Data/Tagged.hs",
-    "src/Data/Proxy/TH.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
     "@hackage_transformers_compat//:transformers-compat",
   ],
@@ -560,6 +555,11 @@ haskell_library(
     "deepseq",
     "template-haskell",
   ],
+  srcs = [
+    "src/Data/Tagged.hs",
+    "src/Data/Proxy/TH.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -577,11 +577,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "th-abstraction",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/Language/Haskell/TH/Datatype.hs",
-    "src/Language/Haskell/TH/Datatype/Internal.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
   ],
   prebuilt_dependencies = [
@@ -590,6 +585,11 @@ haskell_library(
     "ghc-prim",
     "template-haskell",
   ],
+  srcs = [
+    "src/Language/Haskell/TH/Datatype.hs",
+    "src/Language/Haskell/TH/Datatype/Internal.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -607,14 +607,14 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "dlist",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/DList.hs",
-  ],
   deps = [
   ],
   prebuilt_dependencies = [
     "base",
     "deepseq",
+  ],
+  srcs = [
+    "Data/DList.hs",
   ],
 )
 """,
@@ -633,6 +633,13 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "unordered-containers",
   visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_hashable//:hashable",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "deepseq",
+  ],
   srcs = [
     "Data/HashSet.hs",
     "Data/HashMap/Base.hs",
@@ -642,13 +649,6 @@ haskell_library(
     "Data/HashMap/PopCount.hs",
     "Data/HashMap/Unsafe.hs",
     "Data/HashMap/Array.hs",
-  ],
-  deps = [
-    "@hackage_hashable//:hashable",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "deepseq",
   ],
 )
 """,
@@ -667,29 +667,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "aeson",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/Aeson.hs",
-    "Data/Aeson/Compat.hs",
-    "Data/Aeson/Encode.hs",
-    "Data/Aeson/Encoding.hs",
-    "Data/Aeson/Internal.hs",
-    "Data/Aeson/Parser.hs",
-    "Data/Aeson/Text.hs",
-    "Data/Aeson/TH.hs",
-    "Data/Aeson/Types.hs",
-    "Data/Aeson/Encoding/Builder.hs",
-    "Data/Aeson/Encoding/Internal.hs",
-    "Data/Aeson/Internal/Functions.hs",
-    "Data/Aeson/Internal/Time.hs",
-    "Data/Aeson/Parser/Internal.hs",
-    "Data/Aeson/Parser/Time.hs",
-    "Data/Aeson/Parser/Unescape.hs",
-    "Data/Aeson/Types/Class.hs",
-    "Data/Aeson/Types/FromJSON.hs",
-    "Data/Aeson/Types/Generic.hs",
-    "Data/Aeson/Types/Internal.hs",
-    "Data/Aeson/Types/ToJSON.hs",
-  ],
   deps = [
     "@hackage_unordered_containers//:unordered-containers",
     "@hackage_text//:text",
@@ -713,6 +690,29 @@ haskell_library(
     "deepseq",
     "template-haskell",
   ],
+  srcs = [
+    "Data/Aeson.hs",
+    "Data/Aeson/Compat.hs",
+    "Data/Aeson/Encode.hs",
+    "Data/Aeson/Encoding.hs",
+    "Data/Aeson/Internal.hs",
+    "Data/Aeson/Parser.hs",
+    "Data/Aeson/Text.hs",
+    "Data/Aeson/TH.hs",
+    "Data/Aeson/Types.hs",
+    "Data/Aeson/Encoding/Builder.hs",
+    "Data/Aeson/Encoding/Internal.hs",
+    "Data/Aeson/Internal/Functions.hs",
+    "Data/Aeson/Internal/Time.hs",
+    "Data/Aeson/Parser/Internal.hs",
+    "Data/Aeson/Parser/Time.hs",
+    "Data/Aeson/Parser/Unescape.hs",
+    "Data/Aeson/Types/Class.hs",
+    "Data/Aeson/Types/FromJSON.hs",
+    "Data/Aeson/Types/Generic.hs",
+    "Data/Aeson/Types/Internal.hs",
+    "Data/Aeson/Types/ToJSON.hs",
+  ],
 )
 """,
 )
@@ -730,6 +730,14 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "blaze-builder",
   visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_text//:text",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+    "deepseq",
+  ],
   srcs = [
     "Blaze/ByteString/Builder.hs",
     "Blaze/ByteString/Builder/Word.hs",
@@ -741,14 +749,6 @@ haskell_library(
     "Blaze/ByteString/Builder/Char/Utf8.hs",
     "Blaze/ByteString/Builder/Compat/Write.hs",
     "Blaze/ByteString/Builder/Html/Utf8.hs",
-  ],
-  deps = [
-    "@hackage_text//:text",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "deepseq",
   ],
 )
 """,
@@ -767,11 +767,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "case-insensitive",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/CaseInsensitive.hs",
-    "Data/CaseInsensitive/Internal.hs",
-    "Data/CaseInsensitive/Unsafe.hs",
-  ],
   deps = [
     "@hackage_text//:text",
     "@hackage_hashable//:hashable",
@@ -780,6 +775,11 @@ haskell_library(
     "bytestring",
     "base",
     "deepseq",
+  ],
+  srcs = [
+    "Data/CaseInsensitive.hs",
+    "Data/CaseInsensitive/Internal.hs",
+    "Data/CaseInsensitive/Unsafe.hs",
   ],
 )
 """,
@@ -798,15 +798,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "http-types",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Network/HTTP/Types.hs",
-    "Network/HTTP/Types/QueryLike.hs",
-    "Network/HTTP/Types/Header.hs",
-    "Network/HTTP/Types/Method.hs",
-    "Network/HTTP/Types/URI.hs",
-    "Network/HTTP/Types/Status.hs",
-    "Network/HTTP/Types/Version.hs",
-  ],
   deps = [
     "@hackage_case_insensitive//:case-insensitive",
     "@hackage_text//:text",
@@ -816,6 +807,15 @@ haskell_library(
     "bytestring",
     "base",
     "array",
+  ],
+  srcs = [
+    "Network/HTTP/Types.hs",
+    "Network/HTTP/Types/QueryLike.hs",
+    "Network/HTTP/Types/Header.hs",
+    "Network/HTTP/Types/Method.hs",
+    "Network/HTTP/Types/URI.hs",
+    "Network/HTTP/Types/Status.hs",
+    "Network/HTTP/Types/Version.hs",
   ],
 )
 """,
@@ -834,6 +834,12 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "stm",
   visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "array",
+  ],
   srcs = [
     "Control/Concurrent/STM.hs",
     "Control/Concurrent/STM/TArray.hs",
@@ -845,12 +851,6 @@ haskell_library(
     "Control/Concurrent/STM/TSem.hs",
     "Control/Monad/STM.hs",
     "Control/Sequential/STM.hs",
-  ],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "array",
   ],
 )
 """,
@@ -869,10 +869,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "transformers-base",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/Control/Monad/Base.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
     "@hackage_stm//:stm",
     "@hackage_transformers_compat//:transformers-compat",
@@ -881,6 +877,10 @@ haskell_library(
     "base",
     "transformers",
   ],
+  srcs = [
+    "src/Control/Monad/Base.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -908,11 +908,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "mmorph",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/Control/Monad/Morph.hs",
-    "src/Control/Monad/Trans/Compose.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
     "@hackage_mtl//:mtl",
     "@hackage_transformers_compat//:transformers-compat",
@@ -921,6 +916,11 @@ haskell_library(
     "base",
     "transformers",
   ],
+  srcs = [
+    "src/Control/Monad/Morph.hs",
+    "src/Control/Monad/Trans/Compose.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -938,16 +938,16 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "unliftio-core",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/Control/Monad/IO/Unlift.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
   ],
   prebuilt_dependencies = [
     "base",
     "transformers",
   ],
+  srcs = [
+    "src/Control/Monad/IO/Unlift.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -965,9 +965,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "monad-control",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Control/Monad/Trans/Control.hs",
-  ],
   deps = [
     "@hackage_stm//:stm",
     "@hackage_transformers_base//:transformers-base",
@@ -976,6 +973,9 @@ haskell_library(
   prebuilt_dependencies = [
     "base",
     "transformers",
+  ],
+  srcs = [
+    "Control/Monad/Trans/Control.hs",
   ],
 )
 """,
@@ -994,6 +994,13 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "lifted-base",
   visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_monad_control//:monad-control",
+    "@hackage_transformers_base//:transformers-base",
+  ],
+  prebuilt_dependencies = [
+    "base",
+  ],
   srcs = [
     "Data/IORef/Lifted.hs",
     "Foreign/Marshal/Utils/Lifted.hs",
@@ -1005,13 +1012,6 @@ haskell_library(
     "Control/Concurrent/MVar/Lifted.hs",
     "Control/Concurrent/QSemN/Lifted.hs",
     "Control/Exception/Lifted.hs",
-  ],
-  deps = [
-    "@hackage_monad_control//:monad-control",
-    "@hackage_transformers_base//:transformers-base",
-  ],
-  prebuilt_dependencies = [
-    "base",
   ],
 )
 """,
@@ -1030,11 +1030,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "exceptions",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/Control/Monad/Catch.hs",
-    "src/Control/Monad/Catch/Pure.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
     "@hackage_stm//:stm",
     "@hackage_mtl//:mtl",
@@ -1045,6 +1040,11 @@ haskell_library(
     "transformers",
     "template-haskell",
   ],
+  srcs = [
+    "src/Control/Monad/Catch.hs",
+    "src/Control/Monad/Catch/Pure.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -1062,13 +1062,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "resourcet",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Control/Monad/Trans/Resource.hs",
-    "Control/Monad/Trans/Resource/Internal.hs",
-    "Data/Acquire.hs",
-    "Data/Acquire/Internal.hs",
-    "UnliftIO/Resource.hs",
-  ],
   deps = [
     "@hackage_exceptions//:exceptions",
     "@hackage_monad_control//:monad-control",
@@ -1083,6 +1076,13 @@ haskell_library(
     "base",
     "containers",
     "transformers",
+  ],
+  srcs = [
+    "Control/Monad/Trans/Resource.hs",
+    "Control/Monad/Trans/Resource/Internal.hs",
+    "Data/Acquire.hs",
+    "Data/Acquire/Internal.hs",
+    "UnliftIO/Resource.hs",
   ],
 )
 """,
@@ -1101,6 +1101,14 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "parsec",
   visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_text//:text",
+    "@hackage_mtl//:mtl",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+  ],
   srcs = [
     "src/Text/Parsec.hs",
     "src/Text/Parsec/String.hs",
@@ -1129,14 +1137,6 @@ haskell_library(
     "src/Text/ParserCombinators/Parsec/Token.hs",
   ],
   src_strip_prefix = "src",
-  deps = [
-    "@hackage_text//:text",
-    "@hackage_mtl//:mtl",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-  ],
 )
 """,
 )
@@ -1154,15 +1154,15 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "network-uri",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Network/URI.hs",
-  ],
   deps = [
     "@hackage_parsec//:parsec",
   ],
   prebuilt_dependencies = [
     "base",
     "deepseq",
+  ],
+  srcs = [
+    "Network/URI.hs",
   ],
 )
 """,
@@ -1221,14 +1221,14 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "byteable",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/Byteable.hs",
-  ],
   deps = [
   ],
   prebuilt_dependencies = [
     "bytestring",
     "base",
+  ],
+  srcs = [
+    "Data/Byteable.hs",
   ],
 )
 """,
@@ -1247,6 +1247,12 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "hourglass",
   visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "deepseq",
+  ],
   srcs = [
     "Time/Types.hs",
     "Time/System.hs",
@@ -1265,12 +1271,6 @@ haskell_library(
     "Data/Hourglass/Internal.hs",
     "Data/Hourglass/Utils.hs",
     "Data/Hourglass/Internal/Unix.hs",
-  ],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "deepseq",
   ],
 )
 """,
@@ -1299,6 +1299,14 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "asn1-encoding",
   visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_hourglass//:hourglass",
+    "@hackage_asn1_types//:asn1-types",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+  ],
   srcs = [
     "Data/ASN1/Error.hs",
     "Data/ASN1/BinaryEncoding.hs",
@@ -1312,14 +1320,6 @@ haskell_library(
     "Data/ASN1/Internal.hs",
     "Data/ASN1/Serialize.hs",
     "Data/ASN1/Get.hs",
-  ],
-  deps = [
-    "@hackage_hourglass//:hourglass",
-    "@hackage_asn1_types//:asn1-types",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
   ],
 )
 """,
@@ -1338,9 +1338,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "asn1-parse",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/ASN1/Parse.hs",
-  ],
   deps = [
     "@hackage_asn1_types//:asn1-types",
     "@hackage_asn1_encoding//:asn1-encoding",
@@ -1348,6 +1345,9 @@ haskell_library(
   prebuilt_dependencies = [
     "bytestring",
     "base",
+  ],
+  srcs = [
+    "Data/ASN1/Parse.hs",
   ],
 )
 """,
@@ -1366,18 +1366,18 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "base64-bytestring",
   visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+  ],
   srcs = [
     "Data/ByteString/Base64.hs",
     "Data/ByteString/Base64/Internal.hs",
     "Data/ByteString/Base64/Lazy.hs",
     "Data/ByteString/Base64/URL.hs",
     "Data/ByteString/Base64/URL/Lazy.hs",
-  ],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
   ],
 )
 """,
@@ -1396,12 +1396,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "pem",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/PEM.hs",
-    "Data/PEM/Parser.hs",
-    "Data/PEM/Types.hs",
-    "Data/PEM/Writer.hs",
-  ],
   deps = [
     "@hackage_base64_bytestring//:base64-bytestring",
     "@hackage_mtl//:mtl",
@@ -1409,6 +1403,12 @@ haskell_library(
   prebuilt_dependencies = [
     "bytestring",
     "base",
+  ],
+  srcs = [
+    "Data/PEM.hs",
+    "Data/PEM/Parser.hs",
+    "Data/PEM/Types.hs",
+    "Data/PEM/Writer.hs",
   ],
 )
 """,
@@ -1437,11 +1437,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "x509-store",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/X509/CertificateStore.hs",
-    "Data/X509/File.hs",
-    "Data/X509/Memory.hs",
-  ],
   deps = [
     "@hackage_pem//:pem",
     "@hackage_asn1_types//:asn1-types",
@@ -1456,6 +1451,11 @@ haskell_library(
     "filepath",
     "containers",
     "directory",
+  ],
+  srcs = [
+    "Data/X509/CertificateStore.hs",
+    "Data/X509/File.hs",
+    "Data/X509/Memory.hs",
   ],
 )
 """,
@@ -1474,12 +1474,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "x509-system",
   visibility = ["//visibility:public"],
-  srcs = [
-    "System/X509.hs",
-    "System/X509/Unix.hs",
-    "System/X509/MacOS.hs",
-    "System/X509/Win32.hs",
-  ],
   deps = [
     "@hackage_pem//:pem",
     "@hackage_x509_store//:x509-store",
@@ -1493,6 +1487,11 @@ haskell_library(
     "process",
     "containers",
     "directory",
+  ],
+  srcs = [
+    "System/X509.hs",
+    "System/X509/Unix.hs",
+    "System/X509/MacOS.hs",
   ],
 )
 """,
@@ -1521,14 +1520,14 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "async",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Control/Concurrent/Async.hs",
-  ],
   deps = [
     "@hackage_stm//:stm",
   ],
   prebuilt_dependencies = [
     "base",
+  ],
+  srcs = [
+    "Control/Concurrent/Async.hs",
   ],
 )
 """,
@@ -1547,13 +1546,13 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "data-default-class",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/Default/Class.hs",
-  ],
   deps = [
   ],
   prebuilt_dependencies = [
     "base",
+  ],
+  srcs = [
+    "Data/Default/Class.hs",
   ],
 )
 """,
@@ -1572,13 +1571,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "x509-validation",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/X509/Validation.hs",
-    "Data/X509/Validation/Signature.hs",
-    "Data/X509/Validation/Fingerprint.hs",
-    "Data/X509/Validation/Cache.hs",
-    "Data/X509/Validation/Types.hs",
-  ],
   deps = [
     "@hackage_hourglass//:hourglass",
     "@hackage_data_default_class//:data-default-class",
@@ -1597,6 +1589,13 @@ haskell_library(
     "base",
     "containers",
   ],
+  srcs = [
+    "Data/X509/Validation.hs",
+    "Data/X509/Validation/Signature.hs",
+    "Data/X509/Validation/Fingerprint.hs",
+    "Data/X509/Validation/Cache.hs",
+    "Data/X509/Validation/Types.hs",
+  ],
 )
 """,
 )
@@ -1614,13 +1613,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "cereal",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/Data/Serialize.hs",
-    "src/Data/Serialize/IEEE754.hs",
-    "src/Data/Serialize/Get.hs",
-    "src/Data/Serialize/Put.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
   ],
   prebuilt_dependencies = [
@@ -1630,6 +1622,13 @@ haskell_library(
     "containers",
     "ghc-prim",
   ],
+  srcs = [
+    "src/Data/Serialize.hs",
+    "src/Data/Serialize/IEEE754.hs",
+    "src/Data/Serialize/Get.hs",
+    "src/Data/Serialize/Put.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -1647,6 +1646,25 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "tls",
   visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_cereal//:cereal",
+    "@hackage_x509_validation//:x509-validation",
+    "@hackage_data_default_class//:data-default-class",
+    "@hackage_asn1_types//:asn1-types",
+    "@hackage_network//:network",
+    "@hackage_async//:async",
+    "@hackage_x509_store//:x509-store",
+    "@hackage_memory//:memory",
+    "@hackage_x509//:x509",
+    "@hackage_cryptonite//:cryptonite",
+    "@hackage_mtl//:mtl",
+    "@hackage_asn1_encoding//:asn1-encoding",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+    "transformers",
+  ],
   srcs = [
     "Network/TLS.hs",
     "Network/TLS/Cipher.hs",
@@ -1701,25 +1719,6 @@ haskell_library(
     "Network/TLS/Wire.hs",
     "Network/TLS/X509.hs",
   ],
-  deps = [
-    "@hackage_cereal//:cereal",
-    "@hackage_x509_validation//:x509-validation",
-    "@hackage_data_default_class//:data-default-class",
-    "@hackage_asn1_types//:asn1-types",
-    "@hackage_network//:network",
-    "@hackage_async//:async",
-    "@hackage_x509_store//:x509-store",
-    "@hackage_memory//:memory",
-    "@hackage_x509//:x509",
-    "@hackage_cryptonite//:cryptonite",
-    "@hackage_mtl//:mtl",
-    "@hackage_asn1_encoding//:asn1-encoding",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "transformers",
-  ],
 )
 """,
 )
@@ -1737,16 +1736,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "socks",
   visibility = ["//visibility:public"],
-  srcs = [
-    # TODO(ruuda): Extract to BUILD file.
-    # "Network/Socks5.hs",
-    "Network/Socks5/Lowlevel.hs",
-    "Network/Socks5/Types.hs",
-    "Network/Socks5/Wire.hs",
-    "Network/Socks5/Conf.hs",
-    "Network/Socks5/Command.hs",
-    "Network/Socks5/Parse.hs",
-  ],
   deps = [
     "@hackage_cereal//:cereal",
     "@hackage_network//:network",
@@ -1754,6 +1743,15 @@ haskell_library(
   prebuilt_dependencies = [
     "bytestring",
     "base",
+  ],
+  srcs = [
+    "Network/Socks5.hs",
+    "Network/Socks5/Lowlevel.hs",
+    "Network/Socks5/Types.hs",
+    "Network/Socks5/Wire.hs",
+    "Network/Socks5/Conf.hs",
+    "Network/Socks5/Command.hs",
+    "Network/Socks5/Parse.hs",
   ],
 )
 """,
@@ -1772,10 +1770,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "connection",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Network/Connection.hs",
-    "Network/Connection/Types.hs",
-  ],
   deps = [
     "@hackage_socks//:socks",
     "@hackage_x509_validation//:x509-validation",
@@ -1791,6 +1785,10 @@ haskell_library(
     "bytestring",
     "base",
     "containers",
+  ],
+  srcs = [
+    "Network/Connection.hs",
+    "Network/Connection/Types.hs",
   ],
 )
 """,
@@ -1809,9 +1807,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "mime-types",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Network/Mime.hs",
-  ],
   deps = [
     "@hackage_text//:text",
   ],
@@ -1819,6 +1814,9 @@ haskell_library(
     "bytestring",
     "base",
     "containers",
+  ],
+  srcs = [
+    "Network/Mime.hs",
   ],
 )
 """,
@@ -1837,18 +1835,18 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "zlib",
   visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+  ],
   srcs = [
     "Codec/Compression/GZip.hs",
     "Codec/Compression/Zlib.hs",
     "Codec/Compression/Zlib/Raw.hs",
     "Codec/Compression/Zlib/Internal.hs",
     "Codec/Compression/Zlib/Stream.hsc",
-  ],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
   ],
 )
 """,
@@ -1867,6 +1865,24 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "streaming-commons",
   visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_stm//:stm",
+    "@hackage_text//:text",
+    "@hackage_network//:network",
+    "@hackage_async//:async",
+    "@hackage_blaze_builder//:blaze-builder",
+    "@hackage_zlib//:zlib",
+    "@hackage_random//:random",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "unix",
+    "base",
+    "process",
+    "array",
+    "transformers",
+    "directory",
+  ],
   srcs = [
     "Data/Streaming/Blaze.hs",
     "Data/Streaming/ByteString/Builder.hs",
@@ -1887,24 +1903,6 @@ haskell_library(
     "Data/Text/Internal/Encoding/Utf16.hs",
     "Data/Text/Internal/Encoding/Utf32.hs",
   ],
-  deps = [
-    "@hackage_stm//:stm",
-    "@hackage_text//:text",
-    "@hackage_network//:network",
-    "@hackage_async//:async",
-    "@hackage_blaze_builder//:blaze-builder",
-    "@hackage_zlib//:zlib",
-    "@hackage_random//:random",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "unix",
-    "base",
-    "process",
-    "array",
-    "transformers",
-    "directory",
-  ],
 )
 """,
 )
@@ -1922,13 +1920,13 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "old-locale",
   visibility = ["//visibility:public"],
-  srcs = [
-    "System/Locale.hs",
-  ],
   deps = [
   ],
   prebuilt_dependencies = [
     "base",
+  ],
+  srcs = [
+    "System/Locale.hs",
   ],
 )
 """,
@@ -1947,9 +1945,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "cookie",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Web/Cookie.hs",
-  ],
   deps = [
     "@hackage_data_default_class//:data-default-class",
     "@hackage_text//:text",
@@ -1961,6 +1956,9 @@ haskell_library(
     "base",
     "time",
     "deepseq",
+  ],
+  srcs = [
+    "Web/Cookie.hs",
   ],
 )
 """,
@@ -1979,22 +1977,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "http-client",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Network/HTTP/Client.hs",
-    "Network/HTTP/Client/MultipartFormData.hs",
-    "Network/HTTP/Client/Internal.hs",
-    "Network/HTTP/Client/Body.hs",
-    "Network/HTTP/Client/Connection.hs",
-    "Network/HTTP/Client/Cookies.hs",
-    "Network/HTTP/Client/Core.hs",
-    "Network/HTTP/Client/Headers.hs",
-    "Network/HTTP/Client/Manager.hs",
-    "Network/HTTP/Client/Request.hs",
-    "Network/HTTP/Client/Response.hs",
-    "Network/HTTP/Client/Types.hs",
-    "Network/HTTP/Client/Util.hs",
-    "Network/HTTP/Proxy.hs",
-  ],
   deps = [
     "@hackage_cookie//:cookie",
     "@hackage_exceptions//:exceptions",
@@ -2021,6 +2003,22 @@ haskell_library(
     "transformers",
     "deepseq",
   ],
+  srcs = [
+    "Network/HTTP/Client.hs",
+    "Network/HTTP/Client/MultipartFormData.hs",
+    "Network/HTTP/Client/Internal.hs",
+    "Network/HTTP/Client/Body.hs",
+    "Network/HTTP/Client/Connection.hs",
+    "Network/HTTP/Client/Cookies.hs",
+    "Network/HTTP/Client/Core.hs",
+    "Network/HTTP/Client/Headers.hs",
+    "Network/HTTP/Client/Manager.hs",
+    "Network/HTTP/Client/Request.hs",
+    "Network/HTTP/Client/Response.hs",
+    "Network/HTTP/Client/Types.hs",
+    "Network/HTTP/Client/Util.hs",
+    "Network/HTTP/Proxy.hs",
+  ],
 )
 """,
 )
@@ -2038,9 +2036,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "http-client-tls",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Network/HTTP/Client/TLS.hs",
-  ],
   deps = [
     "@hackage_http_client//:http-client",
     "@hackage_exceptions//:exceptions",
@@ -2061,6 +2056,9 @@ haskell_library(
     "containers",
     "transformers",
   ],
+  srcs = [
+    "Network/HTTP/Client/TLS.hs",
+  ],
 )
 """,
 )
@@ -2078,10 +2076,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "typed-process",
   visibility = ["//visibility:public"],
-  srcs = [
-    "src/System/Process/Typed.hs",
-  ],
-  src_strip_prefix = "src",
   deps = [
     "@hackage_stm//:stm",
     "@hackage_async//:async",
@@ -2092,6 +2086,10 @@ haskell_library(
     "process",
     "transformers",
   ],
+  srcs = [
+    "src/System/Process/Typed.hs",
+  ],
+  src_strip_prefix = "src",
 )
 """,
 )
@@ -2109,16 +2107,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "conduit",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/Conduit.hs",
-    "Data/Conduit/List.hs",
-    "Data/Conduit/Internal.hs",
-    "Data/Conduit/Lift.hs",
-    "Data/Conduit/Internal/Fusion.hs",
-    "Data/Conduit/Internal/List/Stream.hs",
-    "Data/Conduit/Internal/Pipe.hs",
-    "Data/Conduit/Internal/Conduit.hs",
-  ],
   deps = [
     "@hackage_exceptions//:exceptions",
     "@hackage_monad_control//:monad-control",
@@ -2133,6 +2121,16 @@ haskell_library(
   prebuilt_dependencies = [
     "base",
     "transformers",
+  ],
+  srcs = [
+    "Data/Conduit.hs",
+    "Data/Conduit/List.hs",
+    "Data/Conduit/Internal.hs",
+    "Data/Conduit/Lift.hs",
+    "Data/Conduit/Internal/Fusion.hs",
+    "Data/Conduit/Internal/List/Stream.hs",
+    "Data/Conduit/Internal/Pipe.hs",
+    "Data/Conduit/Internal/Conduit.hs",
   ],
 )
 """,
@@ -2151,22 +2149,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "conduit-extra",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Data/Conduit/Attoparsec.hs",
-    "Data/Conduit/Binary.hs",
-    "Data/Conduit/Blaze.hs",
-    "Data/Conduit/ByteString/Builder.hs",
-    "Data/Conduit/Filesystem.hs",
-    "Data/Conduit/Foldl.hs",
-    "Data/Conduit/Lazy.hs",
-    "Data/Conduit/Network.hs",
-    "Data/Conduit/Network/UDP.hs",
-    "Data/Conduit/Process.hs",
-    "Data/Conduit/Text.hs",
-    "Data/Conduit/Zlib.hs",
-    "Data/Conduit/Network/Unix.hs",
-    "Data/Conduit/Process/Typed.hs",
-  ],
   deps = [
     "@hackage_exceptions//:exceptions",
     "@hackage_streaming_commons//:streaming-commons",
@@ -2192,6 +2174,22 @@ haskell_library(
     "transformers",
     "directory",
   ],
+  srcs = [
+    "Data/Conduit/Attoparsec.hs",
+    "Data/Conduit/Binary.hs",
+    "Data/Conduit/Blaze.hs",
+    "Data/Conduit/ByteString/Builder.hs",
+    "Data/Conduit/Filesystem.hs",
+    "Data/Conduit/Foldl.hs",
+    "Data/Conduit/Lazy.hs",
+    "Data/Conduit/Network.hs",
+    "Data/Conduit/Network/UDP.hs",
+    "Data/Conduit/Process.hs",
+    "Data/Conduit/Text.hs",
+    "Data/Conduit/Zlib.hs",
+    "Data/Conduit/Network/Unix.hs",
+    "Data/Conduit/Process/Typed.hs",
+  ],
 )
 """,
 )
@@ -2209,11 +2207,6 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "http-conduit",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Network/HTTP/Conduit.hs",
-    "Network/HTTP/Client/Conduit.hs",
-    "Network/HTTP/Simple.hs",
-  ],
   deps = [
     "@hackage_http_client//:http-client",
     "@hackage_exceptions//:exceptions",
@@ -2232,6 +2225,11 @@ haskell_library(
     "base",
     "transformers",
   ],
+  srcs = [
+    "Network/HTTP/Conduit.hs",
+    "Network/HTTP/Client/Conduit.hs",
+    "Network/HTTP/Simple.hs",
+  ],
 )
 """,
 )
@@ -2249,6 +2247,11 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "colour",
   visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+  ],
   srcs = [
     "Data/Colour/Names.hs",
     "Data/Colour/RGB.hs",
@@ -2264,11 +2267,6 @@ haskell_library(
     "Data/Colour/SRGB.hs",
     "Data/Colour/Chan.hs",
     "Data/Colour.hs",
-  ],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
   ],
 )
 """,
@@ -2297,15 +2295,15 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "ansi-wl-pprint",
   visibility = ["//visibility:public"],
-  srcs = [
-    "Text/PrettyPrint/ANSI/Leijen.hs",
-    "Text/PrettyPrint/ANSI/Leijen/Internal.hs",
-  ],
   deps = [
     "@hackage_ansi_terminal//:ansi-terminal",
   ],
   prebuilt_dependencies = [
     "base",
+  ],
+  srcs = [
+    "Text/PrettyPrint/ANSI/Leijen.hs",
+    "Text/PrettyPrint/ANSI/Leijen/Internal.hs",
   ],
 )
 """,
@@ -2324,6 +2322,15 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "optparse-applicative",
   visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_ansi_wl_pprint//:ansi-wl-pprint",
+    "@hackage_transformers_compat//:transformers-compat",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "process",
+    "transformers",
+  ],
   srcs = [
     "Options/Applicative.hs",
     "Options/Applicative/Arrows.hs",
@@ -2341,15 +2348,6 @@ haskell_library(
     "Options/Applicative/Help/Levenshtein.hs",
     "Options/Applicative/Help/Pretty.hs",
     "Options/Applicative/Help/Types.hs",
-  ],
-  deps = [
-    "@hackage_ansi_wl_pprint//:ansi-wl-pprint",
-    "@hackage_transformers_compat//:transformers-compat",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "process",
-    "transformers",
   ],
 )
 """,

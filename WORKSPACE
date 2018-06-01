@@ -40,10 +40,7 @@ new_http_archive(
   ],
   strip_prefix = "time-locale-compat-0.1.1.3",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "time-locale-compat",
@@ -70,10 +67,7 @@ new_http_archive(
   ],
   strip_prefix = "primitive-0.6.3.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "primitive",
@@ -111,10 +105,7 @@ new_http_archive(
   ],
   strip_prefix = "vector-0.12.0.1",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "vector",
@@ -162,10 +153,7 @@ new_http_archive(
   ],
   strip_prefix = "text-1.2.2.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "text",
@@ -239,10 +227,7 @@ new_http_archive(
   ],
   strip_prefix = "hashable-1.2.6.1",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "hashable",
@@ -277,10 +262,7 @@ new_http_archive(
   ],
   strip_prefix = "integer-logarithms-1.0.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "integer-logarithms",
@@ -312,10 +294,7 @@ new_http_archive(
   ],
   strip_prefix = "scientific-0.3.5.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "scientific",
@@ -352,10 +331,7 @@ new_http_archive(
   ],
   strip_prefix = "random-1.1",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "random",
@@ -381,10 +357,7 @@ new_http_archive(
   ],
   strip_prefix = "uuid-types-1.0.3",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "uuid-types",
@@ -417,10 +390,7 @@ new_http_archive(
   ],
   strip_prefix = "attoparsec-0.13.2.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "attoparsec",
@@ -472,10 +442,7 @@ new_http_archive(
   ],
   strip_prefix = "base-compat-0.9.3",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "base-compat",
@@ -541,10 +508,7 @@ new_http_archive(
   ],
   strip_prefix = "transformers-compat-0.5.1.4",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "transformers-compat",
@@ -572,10 +536,7 @@ new_http_archive(
   ],
   strip_prefix = "tagged-0.8.5",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "tagged",
@@ -606,10 +567,7 @@ new_http_archive(
   ],
   strip_prefix = "th-abstraction-0.2.6.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "th-abstraction",
@@ -639,10 +597,7 @@ new_http_archive(
   ],
   strip_prefix = "dlist-0.8.0.4",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "dlist",
@@ -668,10 +623,7 @@ new_http_archive(
   ],
   strip_prefix = "unordered-containers-0.2.8.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "unordered-containers",
@@ -705,10 +657,7 @@ new_http_archive(
   ],
   strip_prefix = "aeson-1.2.4.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "aeson",
@@ -771,10 +720,7 @@ new_http_archive(
   ],
   strip_prefix = "blaze-builder-0.4.0.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "blaze-builder",
@@ -811,10 +757,7 @@ new_http_archive(
   ],
   strip_prefix = "case-insensitive-1.2.0.10",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "case-insensitive",
@@ -845,10 +788,7 @@ new_http_archive(
   ],
   strip_prefix = "http-types-0.9.1",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "http-types",
@@ -884,10 +824,7 @@ new_http_archive(
   ],
   strip_prefix = "stm-2.4.5.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "stm",
@@ -922,10 +859,7 @@ new_http_archive(
   ],
   strip_prefix = "transformers-base-0.4.4",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "transformers-base",
@@ -954,10 +888,7 @@ new_http_archive(
   ],
   strip_prefix = "mtl-2.2.1",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "mtl",
@@ -1004,10 +935,7 @@ new_http_archive(
   ],
   strip_prefix = "mmorph-1.1.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "mmorph",
@@ -1037,10 +965,7 @@ new_http_archive(
   ],
   strip_prefix = "unliftio-core-0.1.1.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "unliftio-core",
@@ -1067,10 +992,7 @@ new_http_archive(
   ],
   strip_prefix = "monad-control-1.0.2.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "monad-control",
@@ -1099,10 +1021,7 @@ new_http_archive(
   ],
   strip_prefix = "lifted-base-0.2.3.11",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "lifted-base",
@@ -1138,10 +1057,7 @@ new_http_archive(
   ],
   strip_prefix = "exceptions-0.8.3",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "exceptions",
@@ -1173,10 +1089,7 @@ new_http_archive(
   ],
   strip_prefix = "resourcet-1.1.11",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "resourcet",
@@ -1215,10 +1128,7 @@ new_http_archive(
   ],
   strip_prefix = "parsec-3.1.13.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "parsec",
@@ -1271,10 +1181,7 @@ new_http_archive(
   ],
   strip_prefix = "network-uri-2.6.1.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "network-uri",
@@ -1301,10 +1208,7 @@ new_http_archive(
   ],
   strip_prefix = "basement-0.0.4",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "basement",
@@ -1408,10 +1312,7 @@ new_http_archive(
   ],
   strip_prefix = "foundation-0.0.17",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "foundation",
@@ -1537,10 +1438,7 @@ new_http_archive(
   ],
   strip_prefix = "memory-0.14.11",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "memory",
@@ -1597,10 +1495,7 @@ new_http_archive(
   ],
   strip_prefix = "cryptonite-0.24",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "cryptonite",
@@ -1750,10 +1645,7 @@ new_http_archive(
   ],
   strip_prefix = "byteable-0.1.1",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "byteable",
@@ -1779,10 +1671,7 @@ new_http_archive(
   ],
   strip_prefix = "hourglass-0.2.11",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "hourglass",
@@ -1825,10 +1714,7 @@ new_http_archive(
   ],
   strip_prefix = "asn1-types-0.3.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "asn1-types",
@@ -1861,10 +1747,7 @@ new_http_archive(
   ],
   strip_prefix = "asn1-encoding-0.9.5",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "asn1-encoding",
@@ -1903,10 +1786,7 @@ new_http_archive(
   ],
   strip_prefix = "asn1-parse-0.9.4",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "asn1-parse",
@@ -1934,10 +1814,7 @@ new_http_archive(
   ],
   strip_prefix = "base64-bytestring-1.0.0.1",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "base64-bytestring",
@@ -1967,10 +1844,7 @@ new_http_archive(
   ],
   strip_prefix = "pem-0.2.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "pem",
@@ -2001,10 +1875,7 @@ new_http_archive(
   ],
   strip_prefix = "x509-1.7.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "x509",
@@ -2052,10 +1923,7 @@ new_http_archive(
   ],
   strip_prefix = "x509-store-1.6.5",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "x509-store",
@@ -2092,10 +1960,7 @@ new_http_archive(
   ],
   strip_prefix = "x509-system-1.6.6",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "x509-system",
@@ -2131,36 +1996,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/network-2.6.3.3.tar.gz",
   ],
   strip_prefix = "network-2.6.3.3",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
-
-haskell_library(
-  name = "network",
-  visibility = ["//visibility:public"],
-  srcs = [
-    "Network/BSD.hsc",
-    "Network/Socket.hsc",
-    "Network/Socket/ByteString.hsc",
-    "Network/Socket/ByteString/Lazy.hs",
-    "Network/Socket/Internal.hsc",
-    "Network/Socket/ByteString/Internal.hs",
-    "Network/Socket/Types.hsc",
-    "Network/Socket/ByteString/IOVec.hsc",
-    "Network/Socket/ByteString/Lazy/Posix.hs",
-    "Network/Socket/ByteString/MsgHdr.hsc",
-  ],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "unix",
-    "base",
-  ],
-)
-""",
+  build_file = "hackage/network.BUILD",
 )
 
 new_http_archive(
@@ -2171,10 +2007,7 @@ new_http_archive(
   ],
   strip_prefix = "async-2.1.1.1",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "async",
@@ -2200,10 +2033,7 @@ new_http_archive(
   ],
   strip_prefix = "data-default-class-0.1.2.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "data-default-class",
@@ -2228,10 +2058,7 @@ new_http_archive(
   ],
   strip_prefix = "x509-validation-1.6.9",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "x509-validation",
@@ -2273,10 +2100,7 @@ new_http_archive(
   ],
   strip_prefix = "cereal-0.5.5.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "cereal",
@@ -2309,10 +2133,7 @@ new_http_archive(
   ],
   strip_prefix = "tls-1.4.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "tls",
@@ -2402,10 +2223,7 @@ new_http_archive(
   ],
   strip_prefix = "socks-0.5.6",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "socks",
@@ -2439,10 +2257,7 @@ new_http_archive(
   ],
   strip_prefix = "connection-0.2.8",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "connection",
@@ -2479,10 +2294,7 @@ new_http_archive(
   ],
   strip_prefix = "mime-types-0.1.0.7",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "mime-types",
@@ -2510,10 +2322,7 @@ new_http_archive(
   ],
   strip_prefix = "zlib-0.6.1.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "zlib",
@@ -2543,10 +2352,7 @@ new_http_archive(
   ],
   strip_prefix = "streaming-commons-0.1.19",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "streaming-commons",
@@ -2601,10 +2407,7 @@ new_http_archive(
   ],
   strip_prefix = "old-locale-1.0.0.7",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "old-locale",
@@ -2629,10 +2432,7 @@ new_http_archive(
   ],
   strip_prefix = "cookie-0.4.3",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "cookie",
@@ -2664,10 +2464,7 @@ new_http_archive(
   ],
   strip_prefix = "http-client-0.5.10",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "http-client",
@@ -2726,10 +2523,7 @@ new_http_archive(
   ],
   strip_prefix = "http-client-tls-0.3.5.3",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "http-client-tls",
@@ -2769,10 +2563,7 @@ new_http_archive(
   ],
   strip_prefix = "typed-process-0.2.1.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "typed-process",
@@ -2803,10 +2594,7 @@ new_http_archive(
   ],
   strip_prefix = "conduit-1.2.13",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "conduit",
@@ -2848,10 +2636,7 @@ new_http_archive(
   ],
   strip_prefix = "conduit-extra-1.2.3.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "conduit-extra",
@@ -2909,10 +2694,7 @@ new_http_archive(
   ],
   strip_prefix = "http-conduit-2.2.4",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "http-conduit",
@@ -2952,10 +2734,7 @@ new_http_archive(
   ],
   strip_prefix = "colour-2.3.4",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "colour",
@@ -3003,10 +2782,7 @@ new_http_archive(
   ],
   strip_prefix = "ansi-wl-pprint-0.6.8.2",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "ansi-wl-pprint",
@@ -3033,10 +2809,7 @@ new_http_archive(
   ],
   strip_prefix = "optparse-applicative-0.14.0.0",
   build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
   name = "optparse-applicative",

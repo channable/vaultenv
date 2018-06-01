@@ -20,7 +20,11 @@ EOF
 vault write secret/testing key=testing42 otherkey=testing8 &> /dev/null
 vault write secret/testing2 foo=val1 bar=val2 &> /dev/null
 
-prove --verbose $(find integration -type f -iname '*.sh' ! -name '_*')
+echo "running tests..."
+echo "NOTE: If you see any [ERROR] output from vaultenv in the log,"
+echo "that's fine. We're also testing error handling."
+
+prove $(find integration -type f -iname '*.sh' ! -name '_*')
 
 # Cleanup the vault dev server
 kill %%

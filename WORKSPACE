@@ -35,12 +35,9 @@ register_toolchains("//:ghc")
 new_http_archive(
   name = "hackage_time_locale_compat",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/time-locale-compat-0.1.1.3/time-locale-compat-0.1.1.3.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/time-locale-compat-0.1.1.3.tar.gz",
   ],
-  # sha256 = "3cda822de75ffaf6de9ff294ab91c7529b82463b7162bc67a1638f00ce8924e1",
   strip_prefix = "time-locale-compat-0.1.1.3",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -62,18 +59,15 @@ haskell_library(
     "time",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_primitive",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/primitive-0.6.3.0/primitive-0.6.3.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/primitive-0.6.3.0.tar.gz",
   ],
-  # sha256 = "97fe680ea7158dce999b54ea50865a10c5f907b4d416e6d88eb0f808f828cbdd",
   strip_prefix = "primitive-0.6.3.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -106,18 +100,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_vector",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/vector-0.12.0.1/vector-0.12.0.1.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/vector-0.12.0.1.tar.gz",
   ],
-  # sha256 = "ded8b0accf2e19bb936d344768380c6d3a25f0acd34e832e64568da3f244f96f",
   strip_prefix = "vector-0.12.0.1",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -160,18 +151,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_text",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/text-1.2.2.2/text-1.2.2.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/text-1.2.2.2.tar.gz",
   ],
-  # sha256 = "11efccd291fb4ab4de2a20ad63d550422d30a33ba7a5963d3b8aff66dcd6cc77",
   strip_prefix = "text-1.2.2.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -240,18 +228,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_hashable",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/hashable-1.2.6.1/hashable-1.2.6.1.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/hashable-1.2.6.1.tar.gz",
   ],
-  # sha256 = "56dadd02b530fceee46c5e9dc3c6fb3f81963c58dadb3df812d312a0b4298770",
   strip_prefix = "hashable-1.2.6.1",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -281,18 +266,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_integer_logarithms",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/integer-logarithms-1.0.2/integer-logarithms-1.0.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/integer-logarithms-1.0.2.tar.gz",
   ],
-  # sha256 = "086b6cfe58d0fbf5e6d4e417939c9da59607c8c6b4446b8f1a95656c1a688c69",
   strip_prefix = "integer-logarithms-1.0.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -319,18 +301,15 @@ haskell_library(
     "ghc-prim",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_scientific",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/scientific-0.3.5.2/scientific-0.3.5.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/scientific-0.3.5.2.tar.gz",
   ],
-  # sha256 = "8a2265b27b109060abbe1e2273c182cacc437ea949d18a4c265850c4d3321581",
   strip_prefix = "scientific-0.3.5.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -362,18 +341,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_random",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/random-1.1/random-1.1.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/random-1.1.tar.gz",
   ],
-  # sha256 = "7b67624fd76ddf97c206de0801dc7e888097e9d572974be9b9ea6551d76965df",
   strip_prefix = "random-1.1",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -394,18 +370,15 @@ haskell_library(
     "time",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_uuid_types",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/uuid-types-1.0.3/uuid-types-1.0.3.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/uuid-types-1.0.3.tar.gz",
   ],
-  # sha256 = "01887ed945e74c3c361b00700bd9aeead37d1124d39c0d4f190f89fb0e909c47",
   strip_prefix = "uuid-types-1.0.3",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -433,18 +406,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_attoparsec",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/attoparsec-0.13.2.2/attoparsec-0.13.2.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/attoparsec-0.13.2.2.tar.gz",
   ],
-  # sha256 = "69447dd3b077f7f89c2c25731e9c658a4f5a0121b77e41b6467a865143ff425b",
   strip_prefix = "attoparsec-0.13.2.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -491,18 +461,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_base_compat",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/base-compat-0.9.3/base-compat-0.9.3.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/base-compat-0.9.3.tar.gz",
   ],
-  # sha256 = "66691ca16b7ceb8c38bd2bac6ffe8e0eee25f408020cb8150a0444f8824e7458",
   strip_prefix = "base-compat-0.9.3",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -563,18 +530,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_transformers_compat",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/transformers-compat-0.5.1.4/transformers-compat-0.5.1.4.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/transformers-compat-0.5.1.4.tar.gz",
   ],
-  # sha256 = "1b4bfa8589afb1ca0e719129ab261bd90ef0cc3e6c0b9963f94970c082b61250",
   strip_prefix = "transformers-compat-0.5.1.4",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -597,18 +561,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_tagged",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/tagged-0.8.5/tagged-0.8.5.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/tagged-0.8.5.tar.gz",
   ],
-  # sha256 = "4545e05de52ad8f6c95d88cea4b260b30a463b77966eba45319a2c8099b35364",
   strip_prefix = "tagged-0.8.5",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -634,18 +595,15 @@ haskell_library(
     "template-haskell",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_th_abstraction",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/th-abstraction-0.2.6.0/th-abstraction-0.2.6.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/th-abstraction-0.2.6.0.tar.gz",
   ],
-  # sha256 = "f515457800ed884a4211753c85c9fe70fa7d73095c86d5da043f06a7f7935773",
   strip_prefix = "th-abstraction-0.2.6.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -670,18 +628,15 @@ haskell_library(
     "template-haskell",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_dlist",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/dlist-0.8.0.4/dlist-0.8.0.4.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/dlist-0.8.0.4.tar.gz",
   ],
-  # sha256 = "3ebbb7022246f446fc625b77d0e1f509d66eedf1deb22bbd6df5c8450aaf923a",
   strip_prefix = "dlist-0.8.0.4",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -702,18 +657,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_unordered_containers",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/unordered-containers-0.2.8.0/unordered-containers-0.2.8.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/unordered-containers-0.2.8.0.tar.gz",
   ],
-  # sha256 = "aea434c2e3a4c6de9c656451577d21eabf28acb44b7c4f033a8fe0187ba45667",
   strip_prefix = "unordered-containers-0.2.8.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -742,18 +694,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_aeson",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/aeson-1.2.4.0/aeson-1.2.4.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/aeson-1.2.4.0.tar.gz",
   ],
-  # sha256 = "2ff56812644c3e272fef6b19aaff1ddab81c9984b1c1f8969521cb856bc22eab",
   strip_prefix = "aeson-1.2.4.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -811,18 +760,15 @@ haskell_library(
     "template-haskell",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_blaze_builder",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/blaze-builder-0.4.0.2/blaze-builder-0.4.0.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/blaze-builder-0.4.0.2.tar.gz",
   ],
-  # sha256 = "a35663de7816bfc8faaee5fcd2b0fa400df4881d7a09f6511e6c74b4dcb019d4",
   strip_prefix = "blaze-builder-0.4.0.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -854,18 +800,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_case_insensitive",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/case-insensitive-1.2.0.10/case-insensitive-1.2.0.10.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/case-insensitive-1.2.0.10.tar.gz",
   ],
-  # sha256 = "d11db9c3854b28b816010110564c1e65cedadd262201479b879e1efe4e147d94",
   strip_prefix = "case-insensitive-1.2.0.10",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -891,18 +834,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_http_types",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/http-types-0.9.1/http-types-0.9.1.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/http-types-0.9.1.tar.gz",
   ],
-  # sha256 = "3fea670082117e235f03f79c6dd093710ee3482a3be9c98c50385dd057a0f1a9",
   strip_prefix = "http-types-0.9.1",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -933,18 +873,15 @@ haskell_library(
     "array",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_stm",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/stm-2.4.5.0/stm-2.4.5.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/stm-2.4.5.0.tar.gz",
   ],
-  # sha256 = "8a8a091e7113f9c07eb9ad4f58a67eb4a5ec58b2857c6ba80fa4d8d45015524c",
   strip_prefix = "stm-2.4.5.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -974,18 +911,15 @@ haskell_library(
     "array",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_transformers_base",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/transformers-base-0.4.4/transformers-base-0.4.4.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/transformers-base-0.4.4.tar.gz",
   ],
-  # sha256 = "fb1a305f29cbf6ac182af7e67efaae9fcb9664d8d9606bb8a7f3414ad4c8d7a4",
   strip_prefix = "transformers-base-0.4.4",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1009,18 +943,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_mtl",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/mtl-2.2.1/mtl-2.2.1.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/mtl-2.2.1.tar.gz",
   ],
-  # sha256 = "4b5a800fe9edf168fc7ae48c7a3fc2aab6b418ac15be2f1dad43c0f48a494a3b",
   strip_prefix = "mtl-2.2.1",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1062,18 +993,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_mmorph",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/mmorph-1.1.0/mmorph-1.1.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/mmorph-1.1.0.tar.gz",
   ],
-  # sha256 = "91a7b38d11f8031c0462a7e544c5bd282051c3a357e804948a353fba5834ee5e",
   strip_prefix = "mmorph-1.1.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1098,18 +1026,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_unliftio_core",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/unliftio-core-0.1.1.0/unliftio-core-0.1.1.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/unliftio-core-0.1.1.0.tar.gz",
   ],
-  # sha256 = "b6ff4083ed814ea85fce524628bdccaad8fcaf9ccf72b5f80850bf91af559453",
   strip_prefix = "unliftio-core-0.1.1.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1131,18 +1056,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_monad_control",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/monad-control-1.0.2.2/monad-control-1.0.2.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/monad-control-1.0.2.2.tar.gz",
   ],
-  # sha256 = "34a2b22c281bec66f231f00fb11dd68a6845be086000ff74e23126f0a77cc1ea",
   strip_prefix = "monad-control-1.0.2.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1166,18 +1088,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_lifted_base",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/lifted-base-0.2.3.11/lifted-base-0.2.3.11.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/lifted-base-0.2.3.11.tar.gz",
   ],
-  # sha256 = "dd6eb5346fa0d79394ccfa2d4b1f271f0d84cf92473997cab95eec1e2498316f",
   strip_prefix = "lifted-base-0.2.3.11",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1208,18 +1127,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_exceptions",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/exceptions-0.8.3/exceptions-0.8.3.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/exceptions-0.8.3.tar.gz",
   ],
-  # sha256 = "968ef0124d3a79b63bd4728232ad92d59fb0c9eb2f01679f0c375be7b8b931a2",
   strip_prefix = "exceptions-0.8.3",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1246,18 +1162,15 @@ haskell_library(
     "template-haskell",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_resourcet",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/resourcet-1.1.11/resourcet-1.1.11.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/resourcet-1.1.11.tar.gz",
   ],
-  # sha256 = "68177bf60e8db0c96049e0c47047da19cb196b6fee9a6eef4378f98220a5c3bd",
   strip_prefix = "resourcet-1.1.11",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1291,18 +1204,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_parsec",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/parsec-3.1.13.0/parsec-3.1.13.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/parsec-3.1.13.0.tar.gz",
   ],
-  # sha256 = "8dbd67e16adff703c48d69414f88bd86f59dccb1fdd509358905bdddfe09d705",
   strip_prefix = "parsec-3.1.13.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1350,18 +1260,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_network_uri",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/network-uri-2.6.1.0/network-uri-2.6.1.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/network-uri-2.6.1.0.tar.gz",
   ],
-  # sha256 = "62cc45c66023e37ef921d5fb546aca56a9c786615e05925fb193a70bf0913690",
   strip_prefix = "network-uri-2.6.1.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1383,18 +1290,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_basement",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/basement-0.0.4/basement-0.0.4.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/basement-0.0.4.tar.gz",
   ],
-  # sha256 = "9ec7a99ce237f064496b33db57cbf8c690ea2116a07f869486a644b5b1de5eaf",
   strip_prefix = "basement-0.0.4",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1493,18 +1397,15 @@ haskell_library(
     "ghc-prim",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_foundation",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/foundation-0.0.17/foundation-0.0.17.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/foundation-0.0.17.tar.gz",
   ],
-  # sha256 = "ebad15af9c6829cf5aa682a22945d08da7709252780e309c7957c71e52055b15",
   strip_prefix = "foundation-0.0.17",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1625,18 +1526,15 @@ haskell_library(
     "ghc-prim",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_memory",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/memory-0.14.11/memory-0.14.11.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/memory-0.14.11.tar.gz",
   ],
-  # sha256 = "46ccc4016c39379955137e13c1a386e2a232924d063c650e2e0c219c3a8c3b78",
   strip_prefix = "memory-0.14.11",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1688,18 +1586,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_cryptonite",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/cryptonite-0.24/cryptonite-0.24.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/cryptonite-0.24.tar.gz",
   ],
-  # sha256 = "4f0865ceb2b6e99f37cb2243831a63ac76b53960c20c75f890f729635551c7d7",
   strip_prefix = "cryptonite-0.24",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1844,18 +1739,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_byteable",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/byteable-0.1.1/byteable-0.1.1.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/byteable-0.1.1.tar.gz",
   ],
-  # sha256 = "12eeda93251d4b5d510ac95cf578f5c89d4a399b14ca73116deaf4921a516fdf",
   strip_prefix = "byteable-0.1.1",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1876,18 +1768,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_hourglass",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/hourglass-0.2.11/hourglass-0.2.11.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/hourglass-0.2.11.tar.gz",
   ],
-  # sha256 = "7b20d78cbe0f08f994d4b4d0fdde184e1ae4d111bf7f13bdb25ccee81e7e628f",
   strip_prefix = "hourglass-0.2.11",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1925,18 +1814,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_asn1_types",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/asn1-types-0.3.2/asn1-types-0.3.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/asn1-types-0.3.2.tar.gz",
   ],
-  # sha256 = "2fc0d64079e9ac9ec7f349aa65c1775acb060f19601deee129a9769fdcf8f07a",
   strip_prefix = "asn1-types-0.3.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -1964,18 +1850,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_asn1_encoding",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/asn1-encoding-0.9.5/asn1-encoding-0.9.5.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/asn1-encoding-0.9.5.tar.gz",
   ],
-  # sha256 = "7d4acf178ef17aad650f2073dd2ed94febb1e468fddb0d5ca65c1a54caffcfb8",
   strip_prefix = "asn1-encoding-0.9.5",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2009,18 +1892,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_asn1_parse",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/asn1-parse-0.9.4/asn1-parse-0.9.4.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/asn1-parse-0.9.4.tar.gz",
   ],
-  # sha256 = "748249e23024dde8fed1d99e85e7e952576ce51b3ce460b9d131b2e91ff9c5a4",
   strip_prefix = "asn1-parse-0.9.4",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2043,18 +1923,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_base64_bytestring",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/base64-bytestring-1.0.0.1/base64-bytestring-1.0.0.1.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/base64-bytestring-1.0.0.1.tar.gz",
   ],
-  # sha256 = "40e088e357790fe3709ff7b9dd18d79b866e2936b13ade184bc9355315fb3ab5",
   strip_prefix = "base64-bytestring-1.0.0.1",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2079,18 +1956,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_pem",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/pem-0.2.2/pem-0.2.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/pem-0.2.2.tar.gz",
   ],
-  # sha256 = "65aa6d6b87a33e9562602ed4d103a734834a0b7325882cd4277e5280d26a3089",
   strip_prefix = "pem-0.2.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2116,18 +1990,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_x509",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/x509-1.7.2/x509-1.7.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/x509-1.7.2.tar.gz",
   ],
-  # sha256 = "c6b0cae6628398bb1e6ba71457fd9b64046ef051a0f472e1af657e22eb85b71e",
   strip_prefix = "x509-1.7.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2170,18 +2041,15 @@ haskell_library(
     "containers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_x509_store",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/x509-store-1.6.5/x509-store-1.6.5.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/x509-store-1.6.5.tar.gz",
   ],
-  # sha256 = "4b5dbe9205e9ca16ba3eb5c64a0162babb21b67386c7eab5c2df9bb7337f5a36",
   strip_prefix = "x509-store-1.6.5",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2213,18 +2081,15 @@ haskell_library(
     "directory",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_x509_system",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/x509-system-1.6.6/x509-system-1.6.6.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/x509-system-1.6.6.tar.gz",
   ],
-  # sha256 = "3a1b9cc26715d7cb3cd1a3f8b6153f12c2d42187ac5df305c3973c78a061db05",
   strip_prefix = "x509-system-1.6.6",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2256,18 +2121,15 @@ haskell_library(
     "directory",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_network",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/network-2.6.3.3/network-2.6.3.3.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/network-2.6.3.3.tar.gz",
   ],
-  # sha256 = "ffae5599d1224fea4b434f2382f9f0dcb74ad8505d3bb7bca84d0ee9d7d2095a",
   strip_prefix = "network-2.6.3.3",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2279,7 +2141,7 @@ haskell_library(
   name = "network",
   visibility = ["//visibility:public"],
   srcs = [
-    #"Network/BSD.hsc",
+    "Network/BSD.hsc",
     "Network/Socket.hsc",
     "Network/Socket/ByteString.hsc",
     "Network/Socket/ByteString/Lazy.hs",
@@ -2289,12 +2151,6 @@ haskell_library(
     "Network/Socket/ByteString/IOVec.hsc",
     "Network/Socket/ByteString/Lazy/Posix.hs",
     "Network/Socket/ByteString/MsgHdr.hsc",
-    "include/HsNet.h",
-    "include/HsNetworkConfig.h",
-  ],
-  hdrs = [
-    "include/HsNet.h",
-    "include/HsNetworkConfig.h",
   ],
   deps = [
   ],
@@ -2304,18 +2160,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_async",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/async-2.1.1.1/async-2.1.1.1.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/async-2.1.1.1.tar.gz",
   ],
-  # sha256 = "2ce05388bbd8d78e17f130acfe60b2bd2b5a09b995c9f4eb7c2d1ae41a8b1652",
   strip_prefix = "async-2.1.1.1",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2336,18 +2189,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_data_default_class",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/data-default-class-0.1.2.0/data-default-class-0.1.2.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/data-default-class-0.1.2.0.tar.gz",
   ],
-  # sha256 = "63e62120b7efd733a5a17cf59ceb43268e9a929c748127172d7d42f4a336e327",
   strip_prefix = "data-default-class-0.1.2.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2367,18 +2217,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_x509_validation",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/x509-validation-1.6.9/x509-validation-1.6.9.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/x509-validation-1.6.9.tar.gz",
   ],
-  # sha256 = "5d49e8f75a5b3b6a19c064ccf647cfcb4a89aff28ce868f48e9cc41f39d0c90a",
   strip_prefix = "x509-validation-1.6.9",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2415,18 +2262,15 @@ haskell_library(
     "containers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_cereal",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/cereal-0.5.5.0/cereal-0.5.5.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/cereal-0.5.5.0.tar.gz",
   ],
-  # sha256 = "2222b2c7f0bd281527eb404a656116de8e6199d5d0c15c7cead9c1cea4d84414",
   strip_prefix = "cereal-0.5.5.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2454,18 +2298,15 @@ haskell_library(
     "ghc-prim",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_tls",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/tls-1.4.0/tls-1.4.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/tls-1.4.0.tar.gz",
   ],
-  # sha256 = "c17d9ae9a5e82ecfdc3a16ea7271277624ba719446e81c76d58d42ca6ddcd9cb",
   strip_prefix = "tls-1.4.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2550,18 +2391,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_socks",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/socks-0.5.6/socks-0.5.6.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/socks-0.5.6.tar.gz",
   ],
-  # sha256 = "074bad28bedd0b3924b6fb2cea04fd2ed330d1dbd0dea3c87dbb4173c9dcffa1",
   strip_prefix = "socks-0.5.6",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2590,18 +2428,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_connection",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/connection-0.2.8/connection-0.2.8.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/connection-0.2.8.tar.gz",
   ],
-  # sha256 = "80671b805383147d41bc099a2b591442da5659d075b17f528c4729a39c99d6d8",
   strip_prefix = "connection-0.2.8",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2633,18 +2468,15 @@ haskell_library(
     "containers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_mime_types",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/mime-types-0.1.0.7/mime-types-0.1.0.7.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/mime-types-0.1.0.7.tar.gz",
   ],
-  # sha256 = "a8129da584bf7da6396b66f81263291778d6ce03a82c10b5edb8f0bc8a902328",
   strip_prefix = "mime-types-0.1.0.7",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2667,18 +2499,15 @@ haskell_library(
     "containers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_zlib",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/zlib-0.6.1.2/zlib-0.6.1.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/zlib-0.6.1.2.tar.gz",
   ],
-  # sha256 = "a0ac2b650ec3c38ff041e4da5a3b6969c1ca68a730fcd95d9ed78294305c6768",
   strip_prefix = "zlib-0.6.1.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2703,18 +2532,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_streaming_commons",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/streaming-commons-0.1.19/streaming-commons-0.1.19.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/streaming-commons-0.1.19.tar.gz",
   ],
-  # sha256 = "3a02f84578f75eac1425dca877f8d697b68d379a21970c1dad96196620404803",
   strip_prefix = "streaming-commons-0.1.19",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2764,18 +2590,15 @@ haskell_library(
     "directory",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_old_locale",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/old-locale-1.0.0.7/old-locale-1.0.0.7.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/old-locale-1.0.0.7.tar.gz",
   ],
-  # sha256 = "fa998be2c7e00cd26a6e9075bea790caaf3932caa3e9497ad69bc20380dd6911",
   strip_prefix = "old-locale-1.0.0.7",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2795,18 +2618,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_cookie",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/cookie-0.4.3/cookie-0.4.3.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/cookie-0.4.3.tar.gz",
   ],
-  # sha256 = "ab1e74e8fc7d96f8d67ed9f490e330cafe4fa42b3f7821213934023b075008a9",
   strip_prefix = "cookie-0.4.3",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2833,18 +2653,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_http_client",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/http-client-0.5.10/http-client-0.5.10.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/http-client-0.5.10.tar.gz",
   ],
-  # sha256 = "a2e8f6f5617e7eed02ad3ff4e89ef2ebed525bc969114be14b6182a493cafe77",
   strip_prefix = "http-client-0.5.10",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2898,18 +2715,15 @@ haskell_library(
     "deepseq",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_http_client_tls",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/http-client-tls-0.3.5.3/http-client-tls-0.3.5.3.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/http-client-tls-0.3.5.3.tar.gz",
   ],
-  # sha256 = "25d3b7c42198d0e1d193c0bb323b9a0071d56aacb41960ff448eb663055e15bf",
   strip_prefix = "http-client-tls-0.3.5.3",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2944,18 +2758,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_typed_process",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/typed-process-0.2.1.0/typed-process-0.2.1.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/typed-process-0.2.1.0.tar.gz",
   ],
-  # sha256 = "5731c4b4417797ce3a0d27a86785c29b2cc80dcccb3f2875e191a3299d3a0d5d",
   strip_prefix = "typed-process-0.2.1.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -2981,18 +2792,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_conduit",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/conduit-1.2.13/conduit-1.2.13.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/conduit-1.2.13.tar.gz",
   ],
-  # sha256 = "05a1d74350f7f69f3774bf4ecb64e0a494b196113760a323c49f9cb7d2141f9e",
   strip_prefix = "conduit-1.2.13",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -3029,18 +2837,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_conduit_extra",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/conduit-extra-1.2.3.2/conduit-extra-1.2.3.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/conduit-extra-1.2.3.2.tar.gz",
   ],
-  # sha256 = "b46582425fb30993f1a2e1172c4cea1358cdb2a55d342971927055117615447f",
   strip_prefix = "conduit-extra-1.2.3.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -3093,18 +2898,15 @@ haskell_library(
     "directory",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_http_conduit",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/http-conduit-2.2.4/http-conduit-2.2.4.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/http-conduit-2.2.4.tar.gz",
   ],
-  # sha256 = "0e1e8e6f9675ae3c2f17108614b2c2f792e0647f794d713db97403b664ae5a24",
   strip_prefix = "http-conduit-2.2.4",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -3139,18 +2941,15 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_colour",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/colour-2.3.4/colour-2.3.4.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/colour-2.3.4.tar.gz",
   ],
-  # sha256 = "90257dac3d9149b2b384184638b610bf95d7d180e1e4d3a329e038f18c6b7859",
   strip_prefix = "colour-2.3.4",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -3183,60 +2982,25 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_ansi_terminal",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/ansi-terminal-0.7.1.1/ansi-terminal-0.7.1.1.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/ansi-terminal-0.7.1.1.tar.gz",
   ],
-  # sha256 = "ba1735bd76ff3ee3861e7b66aae453eafc0be84b3383e89100748808109fd4f8",
   strip_prefix = "ansi-terminal-0.7.1.1",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
-
-haskell_library(
-  name = "ansi-terminal",
-  hdrs = [
-    "includes/Common-Include.hs",
-    "includes/Common-Include-Emulator.hs",
-    "includes/Common-Include-Enabled.hs",
-    "includes/Exports-Include.hs",
-  ],
-  visibility = ["//visibility:public"],
-  srcs = [
-    "System/Console/ANSI.hs",
-    "System/Console/ANSI/Types.hs",
-    "System/Console/ANSI/Codes.hs",
-    "System/Console/ANSI/Unix.hs",
-  ],
-  deps = [
-    "@hackage_colour//:colour",
-  ],
-  prebuilt_dependencies = [
-    "base",
-  ],
-  compiler_flags = ["-DUNIX"],
-)
-  """,
+  build_file = "hackage/ansi_terminal.BUILD",
 )
 
 new_http_archive(
   name = "hackage_ansi_wl_pprint",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/ansi-wl-pprint-0.6.8.2/ansi-wl-pprint-0.6.8.2.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/ansi-wl-pprint-0.6.8.2.tar.gz",
   ],
-  # sha256 = "8cb4b04401948c08feafa49e7ee0982b8492d599163107b6934093f1a912f54e",
   strip_prefix = "ansi-wl-pprint-0.6.8.2",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -3258,18 +3022,15 @@ haskell_library(
     "base",
   ],
 )
-  """,
+""",
 )
 
 new_http_archive(
   name = "hackage_optparse_applicative",
   urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
     "https://hackage.haskell.org/package/optparse-applicative-0.14.0.0/optparse-applicative-0.14.0.0.tar.gz",
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/optparse-applicative-0.14.0.0.tar.gz",
   ],
-  # sha256 = "28f55d5d1dd190a0b48377ba014acb0bd6e9eb117a3f69af26556b9f74609715",
   strip_prefix = "optparse-applicative-0.14.0.0",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl",
@@ -3308,5 +3069,5 @@ haskell_library(
     "transformers",
   ],
 )
-  """,
+""",
 )

@@ -3,6 +3,8 @@
 import yaml
 import sys
 import tarfile
+import os
+import os.path
 
 build_plan = []
 
@@ -53,7 +55,6 @@ while todo:
     version_name = name + '-' + version
     target_name = name.replace('-', '_').replace('.', '_')
     repo_name = 'hackage_' + target_name
-    sha256 = package['cabal-file-info']['hashes']['SHA256']
 
     prebuilt_deps = [f'\n    "{dep}",' for dep in deps if dep in core_packages]
     prebuilt_deps_str = ''.join(prebuilt_deps)
@@ -88,7 +89,7 @@ while todo:
     sources = []
     for src in source_files:
         mod = src.split('/')[1 if src_prefix else 0]
-        if not (mod in root_modules or mod == 'include'):
+        if not (mod in root_modules):
             # Might have been a Setup.hs, a test file, or some other auxillary
             # file.
             continue
@@ -103,45 +104,36 @@ while todo:
     if src_prefix:
         sources_str += '\n  src_strip_prefix = "src",'
 
-    if 'includes' in package_contents:
-        # ansi-terminal has includes and needs defines. Hack it together like
-        # this, and hope that this does not mess up other packages too badly.
-        header_fnames = [f'\n    "{h}",' for h in package_contents
-                         if h.startswith('includes') and h.endswith('.hs')]
-        headers = '\n  hdrs = [' + ''.join(header_fnames) + '\n  ],'
-        cflags = '\n  compiler_flags = ["-DUNIX"],'
-    else:
-        headers = ''
-        cflags = ''
-
     print(version_name, '=>', '@' + repo_name)
 
-    build_def = f'''
-new_http_archive(
-  name = "{repo_name}",
-  urls = [
-    # Note: Hackage can serve a file with a different hash than what the
-    # Stackage snapshot specifies. But fpco mirrors time out.
-    "https://hackage.haskell.org/package/{version_name}/{version_name}.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/{version_name}.tar.gz",
-  ],
-  # sha256 = "{sha256}",
-  strip_prefix = "{version_name}",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl",
-  "haskell_library",
-  "haskell_toolchain",
-)
+    build_file_content = f'''
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
-  name = "{name}",{headers}
+  name = "{name}",
   visibility = ["//visibility:public"],
   {sources_str}
   deps = [{hackage_deps_str}
   ],
   prebuilt_dependencies = [{prebuilt_deps_str}
-  ],{cflags}
+  ],
 )
-  """,
+'''
+
+    build_fname = f'hackage/{target_name}.BUILD'
+    if os.path.exists(build_fname):
+        build_file = f'build_file = "{build_fname}",'
+    else:
+        build_file = f'build_file_content = """{build_file_content}""",'
+
+    build_def = f'''
+new_http_archive(
+  name = "{repo_name}",
+  urls = [
+    "https://hackage.haskell.org/package/{version_name}/{version_name}.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/{version_name}.tar.gz",
+  ],
+  strip_prefix = "{version_name}",
+  {build_file}
 )'''
     print(build_def, file=f)

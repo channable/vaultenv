@@ -46,10 +46,14 @@ import Config
 --
 
 data Secret = Secret
-  { sPath    :: String
+  { sMount   :: String
+  , sPath    :: String
   , sKey     :: String
   , sVarName :: String
   } deriving (Eq, Show)
+
+secretRequestPath :: Secret -> String
+secretRequestPath secret = "/v1/" <> sMount secret <> "/" <> sPath secret
 
 type EnvVar = (String, String)
 
@@ -174,7 +178,8 @@ parseSecret line =
       varName = if name == ""
         then varNameFromKey path key
         else name
-    pure Secret { sPath = path
+    pure Secret { sMount = "secret"
+                , sPath = path
                 , sKey = key
                 , sVarName = varName
                 }
@@ -213,10 +218,9 @@ requestSecret :: Context -> String -> IO (Either VaultError VaultData)
 requestSecret context secretPath =
   let
     cliOptions = cCliOptions context
-    requestPath = "/v1/secret/" <> secretPath
     request = setRequestManager (cHttpManager context)
             $ setRequestHeader "x-vault-token" [SBS.pack (oVaultToken cliOptions)]
-            $ setRequestPath (SBS.pack requestPath)
+            $ setRequestPath (SBS.pack secretPath)
             $ setRequestPort (oVaultPort cliOptions)
             $ setRequestHost (SBS.pack (oVaultHost cliOptions))
             $ setRequestSecure (oConnectTls cliOptions)
@@ -232,14 +236,15 @@ requestSecret context secretPath =
 -- order to avoid unnecessary round trips and DNS requets.
 requestSecrets :: Context -> [Secret] -> (ExceptT VaultError IO) [EnvVar]
 requestSecrets context secrets = do
-  let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap sPath secrets
+  let
+    secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap secretRequestPath secrets
   secretDataOrErr <- liftIO $ Async.mapConcurrently (requestSecret context) secretPaths
   either throwError return $ sequence secretDataOrErr >>= lookupSecrets secrets
 
 -- | Look for the requested keys in the secret data that has been previously fetched.
 lookupSecrets :: [Secret] -> Map.Map String VaultData -> Either VaultError [EnvVar]
 lookupSecrets secrets vaultData = forM secrets $ \secret ->
-  let secretData = Map.lookup (sPath secret) vaultData
+  let secretData = Map.lookup (secretRequestPath secret) vaultData
       secretValue = secretData >>= Map.lookup (sKey secret)
       toEnvVar val = (sVarName secret, val)
   in maybe (Left $ KeyNotFound secret) (Right . toEnvVar) $ secretValue

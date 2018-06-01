@@ -335,23 +335,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/random-1.1.tar.gz",
   ],
   strip_prefix = "random-1.1",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "random",
-  visibility = ["//visibility:public"],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "time",
-  ],
-  srcs = [
-    "System/Random.hs",
-  ],
-)
-""",
+  build_file = "hackage/random.BUILD",
 )
 
 new_http_archive(

@@ -1,8 +1,13 @@
-http_archive(
+# http_archive(
+#   name = "io_tweag_rules_haskell",
+#   strip_prefix = "rules_haskell-0.5",
+#   urls = ["https://github.com/tweag/rules_haskell/archive/v0.5.tar.gz"],
+#   sha256 = "0296c56ddca2dae172eccdecded815aea45985fa3cdd6d66ab392011beb89cdd",
+# )
+
+local_repository(
   name = "io_tweag_rules_haskell",
-  strip_prefix = "rules_haskell-0.5",
-  urls = ["https://github.com/tweag/rules_haskell/archive/v0.5.tar.gz"],
-  sha256 = "0296c56ddca2dae172eccdecded815aea45985fa3cdd6d66ab392011beb89cdd",
+  path = "../../repos/rules_haskell",
 )
 
 http_archive(
@@ -74,6 +79,7 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 
 haskell_library(
   name = "colour",
+  visibility = ["//visibility:public"],
   srcs = glob(["*/**/*.hs"]),
   prebuilt_dependencies = [
     "base",
@@ -100,7 +106,16 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 
 haskell_library(
   name = "ansi-terminal",
-  srcs = glob(["*/**/*.hs"]),
+  hdrs = glob(["includes/*.hs"]),
+  srcs = [
+    "System/Console/ANSI/Unix.hs",
+    "System/Console/ANSI/Codes.hs",
+    "System/Console/ANSI/Types.hs",
+  ],
+  deps = [
+    "@hackage_colour//:colour",
+  ],
+  compiler_flags = ["-cpp", "-DUNIX"],
   prebuilt_dependencies = [
     "base",
   ],

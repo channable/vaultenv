@@ -1,18 +1,27 @@
 load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
-# Dummy target to propagate required preprocessor defines.
 cc_library(
-  name = "network_defines",
+  name = "includes",
   defines = ["_GNU_SOURCE", "CALLCONV=ccall"],
+  includes = ["include"],
+  hdrs = [
+    "include/HsNet.h",
+    "include/HsNetworkConfig.h",
+  ],
 )
 
 haskell_library(
   name = "network",
   visibility = ["//visibility:public"],
-  hdrs = [
-    "include/HsNet.h",
-    "include/HsNetworkConfig.h",
+  deps = [
+    ":includes",
   ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "unix",
+    "base",
+  ],
+  compiler_flags = ["-cpp"],
   srcs = [
     "Network/BSD.hsc",
     "Network/Socket.hsc",
@@ -25,13 +34,4 @@ haskell_library(
     "Network/Socket/ByteString/Lazy/Posix.hs",
     "Network/Socket/ByteString/MsgHdr.hsc",
   ],
-  deps = [
-    ":network_defines",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "unix",
-    "base",
-  ],
-  compiler_flags = ["-cpp"],
 )

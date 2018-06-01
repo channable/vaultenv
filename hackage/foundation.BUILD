@@ -1,12 +1,32 @@
 load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
-haskell_library(
-  name = "foundation",
-  visibility = ["//visibility:public"],
+cc_library(
+  name = "cbits",
+  includes = ["cbits"],
   hdrs = [
     "cbits/foundation_prim.h",
     "cbits/foundation_bits.h",
     "cbits/foundation_system.h",
+  ],
+)
+
+haskell_library(
+  name = "foundation",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":cbits",
+    "@hackage_basement//:basement",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
+  ],
+  compiler_flags = [
+    "-XNoImplicitPrelude",
+    "-XRebindableSyntax",
+    "-XTypeFamilies",
+    "-XBangPatterns",
+    "-XDeriveDataTypeable",
   ],
   srcs = [
     "Foundation.hs",
@@ -109,20 +129,6 @@ haskell_library(
     "Foundation/System/Bindings/Hs.hs",
     "Foundation/Foreign/MemoryMap/Posix.hsc",
     "Foundation/System/Entropy/Unix.hs",
-  ],
-  deps = [
-    "@hackage_basement//:basement",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "ghc-prim",
-  ],
-  compiler_flags = [
-    "-XNoImplicitPrelude",
-    "-XRebindableSyntax",
-    "-XTypeFamilies",
-    "-XBangPatterns",
-    "-XDeriveDataTypeable",
   ],
 )
 

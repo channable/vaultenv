@@ -1,11 +1,31 @@
 load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
-haskell_library(
-  name = "basement",
-  visibility = ["//visibility:public"],
+cc_library(
+  name = "cbits",
+  includes = ["cbits"],
   hdrs = [
     "cbits/foundation_prim.h",
     "cbits/foundation_system.h",
+  ],
+)
+
+haskell_library(
+  name = "basement",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":cbits",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
+  ],
+  compiler_flags = [
+    "-XNoImplicitPrelude",
+    "-XRebindableSyntax",
+    "-XTypeFamilies",
+    "-XBangPatterns",
+    "-XDeriveDataTypeable",
+    "-DARCH_IS_LITTLE_ENDIAN",
   ],
   srcs = [
     "Basement/Imports.hs",
@@ -87,19 +107,5 @@ haskell_library(
     "Basement/String/Encoding/ASCII7.hs",
     "Basement/String/Encoding/ISO_8859_1.hs",
     "Basement/Terminal/Size.hsc",
-  ],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "ghc-prim",
-  ],
-  compiler_flags = [
-    "-XNoImplicitPrelude",
-    "-XRebindableSyntax",
-    "-XTypeFamilies",
-    "-XBangPatterns",
-    "-XDeriveDataTypeable",
-    "-DARCH_IS_LITTLE_ENDIAN",
   ],
 )

@@ -3,6 +3,16 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 haskell_library(
   name = "mtl",
   visibility = ["//visibility:public"],
+  prebuilt_dependencies = [
+    "base",
+    "transformers",
+  ],
+  compiler_flags = [
+    "-XFlexibleInstances",
+    "-XFunctionalDependencies",
+    "-XMultiParamTypeClasses",
+    "-XUndecidableInstances",
+  ],
   srcs = [
     "Control/Monad/Cont.hs",
     "Control/Monad/Error.hs",
@@ -26,17 +36,5 @@ haskell_library(
     "Control/Monad/Writer/Class.hs",
     "Control/Monad/Writer/Lazy.hs",
     "Control/Monad/Writer/Strict.hs",
-  ],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "transformers",
-  ],
-  compiler_flags = [
-    "-XFlexibleInstances",
-    "-XFunctionalDependencies",
-    "-XMultiParamTypeClasses",
-    "-XUndecidableInstances",
   ],
 )

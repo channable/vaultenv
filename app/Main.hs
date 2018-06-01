@@ -5,9 +5,8 @@
 import Control.Monad          (forM)
 import Control.Lens           (reindexed, to)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Char              (toUpper)
+import Data.Bifunctor         (first)
 import Data.Either            (isLeft)
-import Data.List              (findIndex)
 import Data.Monoid            ((<>))
 import Network.Connection     (TLSSettings(..))
 import Network.HTTP.Client    (defaultManagerSettings)
@@ -20,7 +19,7 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
 import System.Environment     (getEnvironment)
 import System.Posix.Process   (executeFile)
 import System.IO              (stderr, hPutStrLn)
-import Control.Monad.Except   (ExceptT, MonadError, runExceptT, throwError)
+import Control.Monad.Except   (ExceptT, MonadError, runExceptT, mapExceptT, throwError)
 
 import qualified Control.Concurrent.Async   as Async
 import qualified Control.Exception          as Exception
@@ -35,22 +34,8 @@ import qualified Data.Map                   as Map
 import qualified Data.Map.Lens              as Lens (toMapOf)
 import qualified Data.Text                  as Text
 
---
--- Internal imports
---
-
 import Config
-
---
--- Datatypes
---
-
-data Secret = Secret
-  { sMount   :: String
-  , sPath    :: String
-  , sKey     :: String
-  , sVarName :: String
-  } deriving (Eq, Show)
+import SecretsFile
 
 secretRequestPath :: Secret -> String
 secretRequestPath secret = "/v1/" <> sMount secret <> "/" <> sPath secret
@@ -68,8 +53,7 @@ type VaultData = Map.Map String String
 
 data VaultError
   = SecretNotFound    String
-  | IOError           FilePath
-  | ParseError        FilePath
+  | SecretFileErr     SecretFileErr
   | KeyNotFound       Secret
   | BadRequest        LBS.ByteString
   | Forbidden
@@ -136,7 +120,7 @@ getHttpManager opts = newManager managerSettings
 -- throw HTTP exceptions.
 vaultEnv :: Context -> ExceptT VaultError IO [EnvVar]
 vaultEnv context = do
-  secrets <- readSecretList (oSecretFile . cCliOptions $ context)
+  secrets <- mapExceptT (fmap $ first SecretFileErr)  $ readSecretList (oSecretFile . cCliOptions $ context)
   secretEnv <- requestSecrets context secrets
   checkNoDuplicates (buildEnv secretEnv)
     where
@@ -162,43 +146,6 @@ vaultEnv context = do
         if (oInheritEnv . cCliOptions $ context)
         then secretsEnv ++ (cLocalEnvVars context)
         else secretsEnv
-
-
-parseSecret :: String -> Either String Secret
-parseSecret line =
-  let
-    (name, pathAndKey) = case findIndex (== '=') line of
-      Just index -> cutAt index line
-      Nothing -> ("", line)
-  in do
-    (path, key) <- case findIndex (== '#') pathAndKey of
-      Just index -> Right (cutAt index pathAndKey)
-      Nothing -> Left $ "Secret path '" ++ pathAndKey ++ "' does not contain '#' separator."
-    let
-      varName = if name == ""
-        then varNameFromKey path key
-        else name
-    pure Secret { sMount = "secret"
-                , sPath = path
-                , sKey = key
-                , sVarName = varName
-                }
-
-
-readSecretList :: (MonadError VaultError m, MonadIO m) => FilePath -> m [Secret]
-readSecretList fname = do
-  mfile <- liftIO $ safeReadFile
-  maybe (throwError $ IOError fname) parseSecrets mfile
-  where
-    parseSecrets file =
-      let
-        esecrets = traverse parseSecret . lines $ file
-      in
-        either (throwError . ParseError) return esecrets
-
-    safeReadFile =
-      Exception.catch (Just <$> readFile fname)
-        ((\_ -> return Nothing) :: Exception.IOException -> IO (Maybe String))
 
 
 runCommand :: Options -> [EnvVar] -> IO a
@@ -294,10 +241,7 @@ vaultErrorLogMessage vaultError =
     description = case vaultError of
       (SecretNotFound secretPath) ->
         "Secret not found: " <> secretPath
-      (IOError fp) ->
-        "An I/O error happened while opening: " <> fp
-      (ParseError fp) ->
-        "File " <> fp <> " could not be parsed"
+      (SecretFileErr sfe) -> show sfe
       (KeyNotFound secret) ->
         "Key " <> (sKey secret) <> " not found for path " <> (sPath secret)
       (DuplicateVar varName) ->
@@ -320,21 +264,3 @@ vaultErrorLogMessage vaultError =
         <> "): " <> (LBS.unpack resp)
   in
     "[ERROR] " <> description
-
-
--- | Convert a secret name into the name of the environment variable that it
--- will be available under.
-varNameFromKey :: String -> String -> String
-varNameFromKey path key = fmap format (path ++ "_" ++ key)
-  where underscore '/' = '_'
-        underscore '-' = '_'
-        underscore c   = c
-        format         = toUpper . underscore
-
--- | Like @splitAt@, but also removes the character at the split position.
-cutAt :: Int -> [a] -> ([a], [a])
-cutAt index xs =
-  let
-    (first, second) = splitAt index xs
-  in
-    (first, drop 1 second)

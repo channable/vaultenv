@@ -43,6 +43,22 @@ cc_library(
 haskell_library(
   name = "cryptonite",
   visibility = ["//visibility:public"],
+  deps = [
+    ":cbits",
+    "@hackage_foundation//:foundation",
+    "@hackage_memory//:memory",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+    "integer-gmp",
+    "ghc-prim",
+    "deepseq",
+  ],
+  compiler_flags = [
+    "-optc-O3",
+    "-DSUPPORT_SSE",
+  ],
   srcs = [
     "Crypto/Cipher/AES.hs",
     "Crypto/Cipher/Blowfish.hs",
@@ -164,22 +180,6 @@ haskell_library(
     "Crypto/Internal/Nat.hs",
     "Crypto/Random/Entropy/RDRand.hs",
     "Crypto/Random/Entropy/Unix.hs",
-  ],
-  deps = [
-    ":cbits",
-    "@hackage_foundation//:foundation",
-    "@hackage_memory//:memory",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "integer-gmp",
-    "ghc-prim",
-    "deepseq",
-  ],
-  compiler_flags = [
-    "-optc-O3",
-    "-DSUPPORT_SSE",
   ],
 )
 

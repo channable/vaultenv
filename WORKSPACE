@@ -1195,54 +1195,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/memory-0.14.11.tar.gz",
   ],
   strip_prefix = "memory-0.14.11",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "memory",
-  visibility = ["//visibility:public"],
-  srcs = [
-    "Data/ByteArray.hs",
-    "Data/ByteArray/Encoding.hs",
-    "Data/ByteArray/Mapping.hs",
-    "Data/ByteArray/Pack.hs",
-    "Data/ByteArray/Parse.hs",
-    "Data/ByteArray/Hash.hs",
-    "Data/Memory/Endian.hs",
-    "Data/Memory/PtrMethods.hs",
-    "Data/Memory/ExtendedWords.hs",
-    "Data/Memory/Encoding/Base16.hs",
-    "Data/Memory/Encoding/Base32.hs",
-    "Data/Memory/Encoding/Base64.hs",
-    "Data/Memory/Internal/Compat.hs",
-    "Data/Memory/Internal/CompatPrim.hs",
-    "Data/Memory/Internal/CompatPrim64.hs",
-    "Data/Memory/Internal/DeepSeq.hs",
-    "Data/Memory/Internal/Imports.hs",
-    "Data/Memory/Internal/Scrubber.hs",
-    "Data/Memory/Hash/SipHash.hs",
-    "Data/Memory/Hash/FNV.hs",
-    "Data/ByteArray/Pack/Internal.hs",
-    "Data/ByteArray/Types.hs",
-    "Data/ByteArray/Bytes.hs",
-    "Data/ByteArray/ScrubbedBytes.hs",
-    "Data/ByteArray/Methods.hs",
-    "Data/ByteArray/MemView.hs",
-    "Data/ByteArray/View.hs",
-    "Data/Memory/MemMap/Posix.hsc",
-  ],
-  deps = [
-    "@hackage_basement//:basement",
-    "@hackage_foundation//:foundation",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "ghc-prim",
-    "deepseq",
-  ],
-)
-""",
+  build_file = "hackage/memory.BUILD",
 )
 
 new_http_archive(
@@ -1330,32 +1283,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/asn1-types-0.3.2.tar.gz",
   ],
   strip_prefix = "asn1-types-0.3.2",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "asn1-types",
-  visibility = ["//visibility:public"],
-  srcs = [
-    "Data/ASN1/BitArray.hs",
-    "Data/ASN1/OID.hs",
-    # TODO(ruuda): Exclude create a custom BUILD file.
-    # "Data/ASN1/Pretty.hs",
-    "Data/ASN1/Types.hs",
-    "Data/ASN1/Types/Lowlevel.hs",
-    "Data/ASN1/Types/String.hs",
-  ],
-  deps = [
-    "@hackage_hourglass//:hourglass",
-    "@hackage_memory//:memory",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-  ],
-  compiler_flags = ["-Wall"],
-)
-""",
+  build_file = "hackage/asn1_types.BUILD",
 )
 
 new_http_archive(
@@ -1493,45 +1421,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/x509-1.7.2.tar.gz",
   ],
   strip_prefix = "x509-1.7.2",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "x509",
-  visibility = ["//visibility:public"],
-  srcs = [
-    "Data/X509.hs",
-    "Data/X509/EC.hs",
-    "Data/X509/Internal.hs",
-    "Data/X509/CertificateChain.hs",
-    "Data/X509/AlgorithmIdentifier.hs",
-    "Data/X509/DistinguishedName.hs",
-    "Data/X509/Cert.hs",
-    "Data/X509/PublicKey.hs",
-    "Data/X509/PrivateKey.hs",
-    "Data/X509/Ext.hs",
-    "Data/X509/ExtensionRaw.hs",
-    "Data/X509/CRL.hs",
-    "Data/X509/OID.hs",
-    "Data/X509/Signed.hs",
-  ],
-  deps = [
-    "@hackage_hourglass//:hourglass",
-    "@hackage_pem//:pem",
-    "@hackage_asn1_types//:asn1-types",
-    "@hackage_memory//:memory",
-    "@hackage_cryptonite//:cryptonite",
-    "@hackage_mtl//:mtl",
-    "@hackage_asn1_parse//:asn1-parse",
-    "@hackage_asn1_encoding//:asn1-encoding",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "containers",
-  ],
-)
-""",
+  build_file = "hackage/x509.BUILD",
 )
 
 new_http_archive(

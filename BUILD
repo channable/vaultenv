@@ -13,6 +13,9 @@ haskell_toolchain(
 haskell_library(
   name = "vaultenv_config",
   srcs = ["src/Config.hs"],
+  deps = [
+    "@hackage_optparse_applicative",
+  ],
   prebuilt_dependencies = [
     "base",
     "bytestring",

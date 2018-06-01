@@ -21,5 +21,5 @@ haskell_library(
   prebuilt_dependencies = [
     "base",
   ],
-  compiler_flags = ["-DUNIX"],
+  compiler_flags = ["-cpp", "-DUNIX"],
 )

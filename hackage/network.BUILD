@@ -33,4 +33,5 @@ haskell_library(
     "unix",
     "base",
   ],
+  compiler_flags = ["-cpp"],
 )

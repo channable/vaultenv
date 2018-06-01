@@ -21,13 +21,17 @@ load("@io_tweag_rules_haskell//haskell:repositories.bzl", "haskell_repositories"
 
 haskell_repositories()
 
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "ghc_bindist")
+nixpkgs = nixpkgs_git_repository(
+  name = "nixpkgs",
+  revision = "86990d26bad0d1ffafc7295eec595dd0325576e9",
+)
 
 # Take GHC from the nixpkgs package. Requires nix to be installed on the host
 # though.
 nixpkgs_package(
   name = "ghc",
-  attribute_path = "haskell.compiler.ghc822"
+  attribute_path = "haskell.compiler.ghc822",
+  repository = "@nixpkgs",
 )
 
 register_toolchains("//:ghc")

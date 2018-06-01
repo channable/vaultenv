@@ -1671,52 +1671,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/streaming-commons-0.1.19.tar.gz",
   ],
   strip_prefix = "streaming-commons-0.1.19",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "streaming-commons",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_stm//:stm",
-    "@hackage_text//:text",
-    "@hackage_network//:network",
-    "@hackage_async//:async",
-    "@hackage_blaze_builder//:blaze-builder",
-    "@hackage_zlib//:zlib",
-    "@hackage_random//:random",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "unix",
-    "base",
-    "process",
-    "array",
-    "transformers",
-    "directory",
-  ],
-  srcs = [
-    "Data/Streaming/Blaze.hs",
-    "Data/Streaming/ByteString/Builder.hs",
-    "Data/Streaming/ByteString/Builder/Buffer.hs",
-    "Data/Streaming/ByteString/Builder/Class.hs",
-    "Data/Streaming/FileRead.hs",
-    "Data/Streaming/Filesystem.hs",
-    "Data/Streaming/Network.hs",
-    "Data/Streaming/Network/Internal.hs",
-    "Data/Streaming/Process.hs",
-    "Data/Streaming/Process/Internal.hs",
-    "Data/Streaming/Text.hs",
-    "Data/Streaming/Zlib.hs",
-    "Data/Streaming/Zlib/Lowlevel.hs",
-    "Data/Text/Internal/Unsafe/Char.hs",
-    "Data/Text/Internal/Unsafe/Shift.hs",
-    "Data/Text/Internal/Encoding/Utf8.hs",
-    "Data/Text/Internal/Encoding/Utf16.hs",
-    "Data/Text/Internal/Encoding/Utf32.hs",
-  ],
-)
-""",
+  build_file = "hackage/streaming_commons.BUILD",
 )
 
 new_http_archive(

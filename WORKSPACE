@@ -55,35 +55,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/primitive-0.6.3.0.tar.gz",
   ],
   strip_prefix = "primitive-0.6.3.0",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "primitive",
-  visibility = ["//visibility:public"],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "ghc-prim",
-    "transformers",
-  ],
-  srcs = [
-    "Data/Primitive.hs",
-    "Data/Primitive/Array.hs",
-    "Data/Primitive/MutVar.hs",
-    "Data/Primitive/Addr.hs",
-    "Data/Primitive/UnliftedArray.hs",
-    "Data/Primitive/Types.hs",
-    "Data/Primitive/ByteArray.hs",
-    "Data/Primitive/SmallArray.hs",
-    "Data/Primitive/MachDeps.hs",
-    "Data/Primitive/Internal/Compat.hs",
-    "Data/Primitive/Internal/Operations.hs",
-    "Control/Monad/Primitive.hs",
-  ],
-)
-""",
+  build_file = "hackage/primitive.BUILD",
 )
 
 new_http_archive(
@@ -475,60 +447,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/aeson-1.2.4.0.tar.gz",
   ],
   strip_prefix = "aeson-1.2.4.0",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "aeson",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_unordered_containers//:unordered-containers",
-    "@hackage_text//:text",
-    "@hackage_dlist//:dlist",
-    "@hackage_th_abstraction//:th-abstraction",
-    "@hackage_tagged//:tagged",
-    "@hackage_base_compat//:base-compat",
-    "@hackage_hashable//:hashable",
-    "@hackage_attoparsec//:attoparsec",
-    "@hackage_uuid_types//:uuid-types",
-    "@hackage_scientific//:scientific",
-    "@hackage_vector//:vector",
-    "@hackage_time_locale_compat//:time-locale-compat",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "time",
-    "containers",
-    "ghc-prim",
-    "deepseq",
-    "template-haskell",
-  ],
-  srcs = [
-    "Data/Aeson.hs",
-    "Data/Aeson/Compat.hs",
-    "Data/Aeson/Encode.hs",
-    "Data/Aeson/Encoding.hs",
-    "Data/Aeson/Internal.hs",
-    "Data/Aeson/Parser.hs",
-    "Data/Aeson/Text.hs",
-    "Data/Aeson/TH.hs",
-    "Data/Aeson/Types.hs",
-    "Data/Aeson/Encoding/Builder.hs",
-    "Data/Aeson/Encoding/Internal.hs",
-    "Data/Aeson/Internal/Functions.hs",
-    "Data/Aeson/Internal/Time.hs",
-    "Data/Aeson/Parser/Internal.hs",
-    "Data/Aeson/Parser/Time.hs",
-    "Data/Aeson/Parser/Unescape.hs",
-    "Data/Aeson/Types/Class.hs",
-    "Data/Aeson/Types/FromJSON.hs",
-    "Data/Aeson/Types/Generic.hs",
-    "Data/Aeson/Types/Internal.hs",
-    "Data/Aeson/Types/ToJSON.hs",
-  ],
-)
-""",
+  build_file = "hackage/aeson.BUILD",
 )
 
 new_http_archive(

@@ -28,7 +28,6 @@ haskell_library(
     "Data/Hashable/Generic.hs",
     "Data/Hashable/Class.hs",
     "Data/Hashable/Lifted.hs",
-    "Data/Hashable/RandomSource.hs",
     "Data/Hashable/SipHash.hs",
   ],
 )

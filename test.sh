@@ -21,6 +21,19 @@ testing2#foo
 testing2#bar
 EOF
 
+export VAULT_SEEDS_V2="$(mktemp)"
+cat > ${VAULT_SEEDS_V2} <<EOF
+VERSION 2
+
+MOUNT secret
+testing#key
+testing#otherkey
+
+MOUNT secret
+testing2#foo
+testing2#bar
+EOF
+
 vault write secret/testing key=testing42 otherkey=testing8 &> /dev/null
 vault write secret/testing2 foo=val1 bar=val2 &> /dev/null
 

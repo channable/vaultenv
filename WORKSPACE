@@ -109,45 +109,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/vector-0.12.0.1.tar.gz",
   ],
   strip_prefix = "vector-0.12.0.1",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "vector",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_primitive//:primitive",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "ghc-prim",
-    "deepseq",
-  ],
-  srcs = [
-    "Data/Vector.hs",
-    "Data/Vector/Unboxed.hs",
-    "Data/Vector/Generic.hs",
-    "Data/Vector/Primitive.hs",
-    "Data/Vector/Storable.hs",
-    "Data/Vector/Mutable.hs",
-    "Data/Vector/Storable/Internal.hs",
-    "Data/Vector/Storable/Mutable.hs",
-    "Data/Vector/Fusion/Bundle.hs",
-    "Data/Vector/Fusion/Util.hs",
-    "Data/Vector/Fusion/Bundle/Monadic.hs",
-    "Data/Vector/Fusion/Bundle/Size.hs",
-    "Data/Vector/Fusion/Stream/Monadic.hs",
-    "Data/Vector/Generic/New.hs",
-    "Data/Vector/Generic/Base.hs",
-    "Data/Vector/Generic/Mutable.hs",
-    "Data/Vector/Generic/Mutable/Base.hs",
-    "Data/Vector/Internal/Check.hs",
-    "Data/Vector/Unboxed/Base.hs",
-    "Data/Vector/Unboxed/Mutable.hs",
-    "Data/Vector/Primitive/Mutable.hs",
-  ],
-)
-""",
+  build_file = "hackage/vector.BUILD",
 )
 
 new_http_archive(

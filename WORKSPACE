@@ -622,33 +622,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/http-types-0.9.1.tar.gz",
   ],
   strip_prefix = "http-types-0.9.1",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "http-types",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_case_insensitive//:case-insensitive",
-    "@hackage_text//:text",
-    "@hackage_blaze_builder//:blaze-builder",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "array",
-  ],
-  srcs = [
-    "Network/HTTP/Types.hs",
-    "Network/HTTP/Types/QueryLike.hs",
-    "Network/HTTP/Types/Header.hs",
-    "Network/HTTP/Types/Method.hs",
-    "Network/HTTP/Types/URI.hs",
-    "Network/HTTP/Types/Status.hs",
-    "Network/HTTP/Types/Version.hs",
-  ],
-)
-""",
+  build_file = "hackage/http_types.BUILD",
 )
 
 new_http_archive(
@@ -1656,56 +1630,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/http-client-0.5.10.tar.gz",
   ],
   strip_prefix = "http-client-0.5.10",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "http-client",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_cookie//:cookie",
-    "@hackage_exceptions//:exceptions",
-    "@hackage_streaming_commons//:streaming-commons",
-    "@hackage_case_insensitive//:case-insensitive",
-    "@hackage_stm//:stm",
-    "@hackage_base64_bytestring//:base64-bytestring",
-    "@hackage_text//:text",
-    "@hackage_network//:network",
-    "@hackage_blaze_builder//:blaze-builder",
-    "@hackage_mime_types//:mime-types",
-    "@hackage_network_uri//:network-uri",
-    "@hackage_random//:random",
-    "@hackage_http_types//:http-types",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "time",
-    "filepath",
-    "array",
-    "containers",
-    "ghc-prim",
-    "transformers",
-    "deepseq",
-  ],
-  srcs = [
-    "Network/HTTP/Client.hs",
-    "Network/HTTP/Client/MultipartFormData.hs",
-    "Network/HTTP/Client/Internal.hs",
-    "Network/HTTP/Client/Body.hs",
-    "Network/HTTP/Client/Connection.hs",
-    "Network/HTTP/Client/Cookies.hs",
-    "Network/HTTP/Client/Core.hs",
-    "Network/HTTP/Client/Headers.hs",
-    "Network/HTTP/Client/Manager.hs",
-    "Network/HTTP/Client/Request.hs",
-    "Network/HTTP/Client/Response.hs",
-    "Network/HTTP/Client/Types.hs",
-    "Network/HTTP/Client/Util.hs",
-    "Network/HTTP/Proxy.hs",
-  ],
-)
-""",
+  build_file = "hackage/http_client.BUILD",
 )
 
 new_http_archive(

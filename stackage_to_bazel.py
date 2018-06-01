@@ -2,10 +2,19 @@
 
 import yaml
 import sys
+import tarfile
 
 build_plan = []
 
-with open('/home/ruuda/.stack/build-plan/lts-10.5.yaml', 'r') as lts_file:
+stack_path = '/home/ruuda/.stack'
+
+def list_package_contents(name, version):
+    prefix = f'{name}-{version}/'
+    with tarfile.open(f'{stack_path}/indices/Hackage/packages/{name}/{version}/{name}-{version}.tar.gz') as tar:
+        return [m.name[len(prefix):] for m in tar.getmembers()]
+
+
+with open(stack_path + '/build-plan/lts-10.5.yaml', 'r') as lts_file:
     build_plan = yaml.load(lts_file)
 
 core_packages = set(build_plan['system-info']['core-packages'].keys())
@@ -40,13 +49,23 @@ while todo:
 
     done.add(name)
 
-    version_name = name + '-' + package['version']
+    version = package['version']
+    version_name = name + '-' + version
     target_name = name.replace('-', '_').replace('.', '_')
     repo_name = 'hackage_' + target_name
     sha256 = package['cabal-file-info']['hashes']['SHA256']
 
     prebuilt_deps = [f'\n    "{dep}",' for dep in deps if dep in core_packages]
     prebuilt_deps_str = ''.join(prebuilt_deps)
+
+    package_contents = list_package_contents(name, version)
+    # modules = package['description']['modules']
+    # sources = [mod.replace('.', '/') + '.hs' for mod in modules]
+    # sources = [f'\n    "{src}",' for src in sources]
+    if 'src' in package_contents:
+        sources = 'srcs = glob(["src/**/*.hs"]),\n  src_strip_prefix = "src",'
+    else:
+        sources = 'srcs = glob(["*/**/*.hs"]),"
 
     print(version_name, '=>', '@' + repo_name)
 
@@ -68,8 +87,8 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 )
 
 haskell_library(
-  name = "{target_name}",
-  srcs = glob(["src/**/*.hs"]),
+  name = "{name}",
+  srcs = {sources}
   prebuilt_dependencies = [{prebuilt_deps_str}
   ],
 )

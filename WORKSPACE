@@ -44,8 +44,9 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 )
 
 haskell_library(
-  name = "transformers_compat",
+  name = "transformers-compat",
   srcs = glob(["src/**/*.hs"]),
+  src_strip_prefix = "src",
   prebuilt_dependencies = [
     "base",
     "ghc-prim",
@@ -73,7 +74,7 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 
 haskell_library(
   name = "colour",
-  srcs = glob(["src/**/*.hs"]),
+  srcs = glob(["*/**/*.hs"]),
   prebuilt_dependencies = [
     "base",
   ],
@@ -98,8 +99,8 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 )
 
 haskell_library(
-  name = "ansi_terminal",
-  srcs = glob(["src/**/*.hs"]),
+  name = "ansi-terminal",
+  srcs = glob(["*/**/*.hs"]),
   prebuilt_dependencies = [
     "base",
   ],
@@ -124,8 +125,8 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 )
 
 haskell_library(
-  name = "ansi_wl_pprint",
-  srcs = glob(["src/**/*.hs"]),
+  name = "ansi-wl-pprint",
+  srcs = glob(["*/**/*.hs"]),
   prebuilt_dependencies = [
     "base",
   ],
@@ -150,8 +151,8 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl",
 )
 
 haskell_library(
-  name = "optparse_applicative",
-  srcs = glob(["src/**/*.hs"]),
+  name = "optparse-applicative",
+  srcs = glob(["*/**/*.hs"]),
   prebuilt_dependencies = [
     "base",
     "process",

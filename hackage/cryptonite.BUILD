@@ -182,4 +182,3 @@ haskell_library(
     "Crypto/Random/Entropy/Unix.hs",
   ],
 )
-

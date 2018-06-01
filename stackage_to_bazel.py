@@ -95,7 +95,7 @@ while todo:
             continue
         # Hack: ansi-terminal contains an example and Windows files that we
         # exclude.
-        if ('Windows' in src) or (src.endswith('Example.hs')):
+        if ('Windows' in src) or src.endswith('Example.hs') or src.endswith('Win.hs'):
             continue
 
         sources.append(f'\n    "{src}",')

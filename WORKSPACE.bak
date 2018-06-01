@@ -16,8 +16,11 @@ http_archive(
   urls = ["https://github.com/tweag/rules_nixpkgs/archive/v0.2.2.tar.gz"],
 )
 
-load("@io_tweag_rules_nixpkgs//nixpkgs:nixpkgs.bzl", "nixpkgs_package")
 load("@io_tweag_rules_haskell//haskell:repositories.bzl", "haskell_repositories")
+load("@io_tweag_rules_nixpkgs//nixpkgs:nixpkgs.bzl",
+  "nixpkgs_package",
+  "nixpkgs_git_repository",
+)
 
 haskell_repositories()
 

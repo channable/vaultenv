@@ -37,11 +37,16 @@ EOF
 vault write secret/testing key=testing42 otherkey=testing8 &> /dev/null
 vault write secret/testing2 foo=val1 bar=val2 &> /dev/null
 
-echo "running tests..."
-echo "NOTE: If you see any [ERROR] output from vaultenv in the log,"
-echo "that's fine. We're also testing error handling."
-
-prove $(find integration -type f -iname '*.sh' ! -name '_*')
+# Run all tests if we didn't get any arguments.
+if [ $# -eq 0 ]; then
+  echo "Running all tests"
+  echo "NOTE: You might see errors in the log. That's part of what we test."
+  echo "Look at the test summary report to see if there's anything wrong."
+  prove $(find integration -type f -iname '*.sh' ! -name '_*')
+else
+  echo "Running only $1"
+  $1
+fi
 
 # Cleanup the vault dev server
 kill %%

@@ -8,6 +8,13 @@ cc_library(
 
 haskell_library(
   name = "conduit",
+  # Normally we prefer to avoid setting the version in a library definition,
+  # because it makes the build definition less portable. For many updates, the
+  # build definition does not need to be changed, specifying the version causes
+  # unnecessary churn. But for conduit, the conduit-extra package depends on it
+  # and uses a MIN_VERSION_conduit macro for conditional compilation. So in
+  # this case we do need an accurate version.
+  version = "1.2.13",
   visibility = ["//visibility:public"],
   deps = [
     ":cbits",

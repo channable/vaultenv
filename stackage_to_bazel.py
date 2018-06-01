@@ -69,7 +69,10 @@ while todo:
     package_contents = list_package_contents(name, version)
     modules = package['description']['modules']
     root_modules = set(mod.split('.')[0] for mod in modules)
-    source_files = [src for src in package_contents if src.endswith('.hs')]
+    source_files = [src for src in package_contents
+                    if src.endswith('.hs')
+                    or src.endswith('.hsc')
+                    or src.endswith('.h')]
 
     if 'src' in package_contents:
         src_prefix = 'src/'
@@ -85,7 +88,7 @@ while todo:
     sources = []
     for src in source_files:
         mod = src.split('/')[1 if src_prefix else 0]
-        if not mod in root_modules:
+        if not (mod in root_modules or mod == 'include'):
             # Might have been a Setup.hs, a test file, or some other auxillary
             # file.
             continue

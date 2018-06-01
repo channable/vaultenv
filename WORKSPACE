@@ -171,34 +171,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/scientific-0.3.5.2.tar.gz",
   ],
   strip_prefix = "scientific-0.3.5.2",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "scientific",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_integer_logarithms//:integer-logarithms",
-    "@hackage_text//:text",
-    "@hackage_hashable//:hashable",
-    "@hackage_primitive//:primitive",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "integer-gmp",
-    "containers",
-    "binary",
-    "deepseq",
-  ],
-  srcs = [
-    "src/Data/Scientific.hs",
-    "src/Data/ByteString/Builder/Scientific.hs",
-    "src/Data/Text/Lazy/Builder/Scientific.hs",
-  ],
-  src_strip_prefix = "src",
-)
-""",
+  build_file = "hackage/scientific.BUILD",
 )
 
 new_http_archive(

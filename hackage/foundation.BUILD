@@ -22,7 +22,15 @@ haskell_library(
   visibility = ["//visibility:public"],
   deps = [
     ":cbits",
-    "@hackage_basement//:basement",
+    "@hackage_basement//:ascii",
+    "@hackage_basement//:compat_and_numerical",
+    "@hackage_basement//:compat_misc",
+    "@hackage_basement//:core",
+    "@hackage_basement//:encoding",
+    "@hackage_basement//:memory",
+    "@hackage_basement//:misc",
+    "@hackage_basement//:sized",
+    "@hackage_basement//:terminal",
   ],
   prebuilt_dependencies = [
     "base",

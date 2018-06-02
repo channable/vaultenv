@@ -1,10 +1,28 @@
 load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
+# HACK: The "memory" package hard-codes a MIN_VERSION_basement preprocessor
+# check for conditional compilation, but we split up that package into multiple
+# smaller ones with different names, hence the macro breaks. Work around that by
+# creating a dependency with the same name and version. We have to put a file in
+# there as well. It is gross, I am sorry.
+haskell_library(
+  name = "basement",
+  version = "0.0.4",
+  prebuilt_dependencies = ["base"],
+  srcs = [
+    "Data/Memory/MemMap/Posix.hsc",
+  ],
+)
+
 haskell_library(
   name = "memory",
   visibility = ["//visibility:public"],
   deps = [
-    "@hackage_basement//:basement",
+    ":basement",
+    "@hackage_basement//:compat_and_numerical",
+    "@hackage_basement//:core",
+    "@hackage_basement//:encoding",
+    "@hackage_basement//:memory",
     "@hackage_foundation//:foundation",
   ],
   prebuilt_dependencies = [
@@ -46,7 +64,6 @@ haskell_library(
     "Data/ByteArray/Methods.hs",
     "Data/ByteArray/MemView.hs",
     "Data/ByteArray/View.hs",
-    "Data/Memory/MemMap/Posix.hsc",
   ],
 )
 

@@ -22,26 +22,254 @@ ghc_bindist(
 register_toolchains("//:ghc")
 
 new_http_archive(
-  name = "hackage_time_locale_compat",
+  name = "hackage_utf8_string",
   urls = [
-    "https://hackage.haskell.org/package/time-locale-compat-0.1.1.3/time-locale-compat-0.1.1.3.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/time-locale-compat-0.1.1.3.tar.gz",
+    "https://hackage.haskell.org/package/utf8-string-1.0.1.1/utf8-string-1.0.1.1.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/utf8-string-1.0.1.1.tar.gz",
   ],
-  strip_prefix = "time-locale-compat-0.1.1.3",
+  strip_prefix = "utf8-string-1.0.1.1",
   build_file_content = """
 load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 haskell_library(
-  name = "time-locale-compat",
+  name = "utf8-string",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+  ],
+  srcs = [
+    "Codec/Binary/UTF8/Generic.hs",
+    "Codec/Binary/UTF8/String.hs",
+    "Data/ByteString/UTF8.hs",
+    "Data/ByteString/Lazy/UTF8.hs",
+    "Data/String/UTF8.hs",
+  ],
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_text",
+  urls = [
+    "https://hackage.haskell.org/package/text-1.2.2.2/text-1.2.2.2.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/text-1.2.2.2.tar.gz",
+  ],
+  strip_prefix = "text-1.2.2.2",
+  build_file = "hackage/text.BUILD",
+)
+
+new_http_archive(
+  name = "hackage_hashable",
+  urls = [
+    "https://hackage.haskell.org/package/hashable-1.2.6.1/hashable-1.2.6.1.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/hashable-1.2.6.1.tar.gz",
+  ],
+  strip_prefix = "hashable-1.2.6.1",
+  build_file = "hackage/hashable.BUILD",
+)
+
+new_http_archive(
+  name = "hackage_unordered_containers",
+  urls = [
+    "https://hackage.haskell.org/package/unordered-containers-0.2.8.0/unordered-containers-0.2.8.0.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/unordered-containers-0.2.8.0.tar.gz",
+  ],
+  strip_prefix = "unordered-containers-0.2.8.0",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "unordered-containers",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_hashable//:hashable",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "deepseq",
+  ],
+  srcs = [
+    "Data/HashSet.hs",
+    "Data/HashMap/Base.hs",
+    "Data/HashMap/Lazy.hs",
+    "Data/HashMap/UnsafeShift.hs",
+    "Data/HashMap/Strict.hs",
+    "Data/HashMap/PopCount.hs",
+    "Data/HashMap/Unsafe.hs",
+    "Data/HashMap/Array.hs",
+  ],
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_random",
+  urls = [
+    "https://hackage.haskell.org/package/random-1.1/random-1.1.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/random-1.1.tar.gz",
+  ],
+  strip_prefix = "random-1.1",
+  build_file = "hackage/random.BUILD",
+)
+
+new_http_archive(
+  name = "hackage_data_default_class",
+  urls = [
+    "https://hackage.haskell.org/package/data-default-class-0.1.2.0/data-default-class-0.1.2.0.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/data-default-class-0.1.2.0.tar.gz",
+  ],
+  strip_prefix = "data-default-class-0.1.2.0",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "data-default-class",
   visibility = ["//visibility:public"],
   deps = [
   ],
   prebuilt_dependencies = [
     "base",
-    "time",
   ],
   srcs = [
-    "src/Data/Time/Locale/Compat.hs",
+    "Data/Default/Class.hs",
+  ],
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_transformers_compat",
+  urls = [
+    "https://hackage.haskell.org/package/transformers-compat-0.5.1.4/transformers-compat-0.5.1.4.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/transformers-compat-0.5.1.4.tar.gz",
+  ],
+  strip_prefix = "transformers-compat-0.5.1.4",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "transformers-compat",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
+    "transformers",
+  ],
+  srcs = [
+    "src/Control/Monad/Trans/Instances.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_mtl",
+  urls = [
+    "https://hackage.haskell.org/package/mtl-2.2.1/mtl-2.2.1.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/mtl-2.2.1.tar.gz",
+  ],
+  strip_prefix = "mtl-2.2.1",
+  build_file = "hackage/mtl.BUILD",
+)
+
+new_http_archive(
+  name = "hackage_stm",
+  urls = [
+    "https://hackage.haskell.org/package/stm-2.4.5.0/stm-2.4.5.0.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/stm-2.4.5.0.tar.gz",
+  ],
+  strip_prefix = "stm-2.4.5.0",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "stm",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "array",
+  ],
+  srcs = [
+    "Control/Concurrent/STM.hs",
+    "Control/Concurrent/STM/TArray.hs",
+    "Control/Concurrent/STM/TVar.hs",
+    "Control/Concurrent/STM/TChan.hs",
+    "Control/Concurrent/STM/TMVar.hs",
+    "Control/Concurrent/STM/TQueue.hs",
+    "Control/Concurrent/STM/TBQueue.hs",
+    "Control/Concurrent/STM/TSem.hs",
+    "Control/Monad/STM.hs",
+    "Control/Sequential/STM.hs",
+  ],
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_exceptions",
+  urls = [
+    "https://hackage.haskell.org/package/exceptions-0.8.3/exceptions-0.8.3.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/exceptions-0.8.3.tar.gz",
+  ],
+  strip_prefix = "exceptions-0.8.3",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "exceptions",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_stm//:stm",
+    "@hackage_mtl//:mtl",
+    "@hackage_transformers_compat//:transformers-compat",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "transformers",
+    "template-haskell",
+  ],
+  srcs = [
+    "src/Control/Monad/Catch.hs",
+    "src/Control/Monad/Catch/Pure.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_retry",
+  urls = [
+    "https://hackage.haskell.org/package/retry-0.7.6.0/retry-0.7.6.0.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/retry-0.7.6.0.tar.gz",
+  ],
+  strip_prefix = "retry-0.7.6.0",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "retry",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_exceptions//:exceptions",
+    "@hackage_data_default_class//:data-default-class",
+    "@hackage_random//:random",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
+    "transformers",
+  ],
+  srcs = [
+    "src/Control/Retry.hs",
   ],
   src_strip_prefix = "src",
 )
@@ -69,23 +297,30 @@ new_http_archive(
 )
 
 new_http_archive(
-  name = "hackage_text",
+  name = "hackage_time_locale_compat",
   urls = [
-    "https://hackage.haskell.org/package/text-1.2.2.2/text-1.2.2.2.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/text-1.2.2.2.tar.gz",
+    "https://hackage.haskell.org/package/time-locale-compat-0.1.1.3/time-locale-compat-0.1.1.3.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/time-locale-compat-0.1.1.3.tar.gz",
   ],
-  strip_prefix = "text-1.2.2.2",
-  build_file = "hackage/text.BUILD",
-)
+  strip_prefix = "time-locale-compat-0.1.1.3",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
-new_http_archive(
-  name = "hackage_hashable",
-  urls = [
-    "https://hackage.haskell.org/package/hashable-1.2.6.1/hashable-1.2.6.1.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/hashable-1.2.6.1.tar.gz",
+haskell_library(
+  name = "time-locale-compat",
+  visibility = ["//visibility:public"],
+  deps = [
   ],
-  strip_prefix = "hashable-1.2.6.1",
-  build_file = "hackage/hashable.BUILD",
+  prebuilt_dependencies = [
+    "base",
+    "time",
+  ],
+  srcs = [
+    "src/Data/Time/Locale/Compat.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
 )
 
 new_http_archive(
@@ -128,16 +363,6 @@ new_http_archive(
   ],
   strip_prefix = "scientific-0.3.5.2",
   build_file = "hackage/scientific.BUILD",
-)
-
-new_http_archive(
-  name = "hackage_random",
-  urls = [
-    "https://hackage.haskell.org/package/random-1.1/random-1.1.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/random-1.1.tar.gz",
-  ],
-  strip_prefix = "random-1.1",
-  build_file = "hackage/random.BUILD",
 )
 
 new_http_archive(
@@ -292,34 +517,6 @@ haskell_library(
 )
 
 new_http_archive(
-  name = "hackage_transformers_compat",
-  urls = [
-    "https://hackage.haskell.org/package/transformers-compat-0.5.1.4/transformers-compat-0.5.1.4.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/transformers-compat-0.5.1.4.tar.gz",
-  ],
-  strip_prefix = "transformers-compat-0.5.1.4",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "transformers-compat",
-  visibility = ["//visibility:public"],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "ghc-prim",
-    "transformers",
-  ],
-  srcs = [
-    "src/Control/Monad/Trans/Instances.hs",
-  ],
-  src_strip_prefix = "src",
-)
-""",
-)
-
-new_http_archive(
   name = "hackage_tagged",
   urls = [
     "https://hackage.haskell.org/package/tagged-0.8.5/tagged-0.8.5.tar.gz",
@@ -407,40 +604,6 @@ haskell_library(
 )
 
 new_http_archive(
-  name = "hackage_unordered_containers",
-  urls = [
-    "https://hackage.haskell.org/package/unordered-containers-0.2.8.0/unordered-containers-0.2.8.0.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/unordered-containers-0.2.8.0.tar.gz",
-  ],
-  strip_prefix = "unordered-containers-0.2.8.0",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "unordered-containers",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_hashable//:hashable",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "deepseq",
-  ],
-  srcs = [
-    "Data/HashSet.hs",
-    "Data/HashMap/Base.hs",
-    "Data/HashMap/Lazy.hs",
-    "Data/HashMap/UnsafeShift.hs",
-    "Data/HashMap/Strict.hs",
-    "Data/HashMap/PopCount.hs",
-    "Data/HashMap/Unsafe.hs",
-    "Data/HashMap/Array.hs",
-  ],
-)
-""",
-)
-
-new_http_archive(
   name = "hackage_aeson",
   urls = [
     "https://hackage.haskell.org/package/aeson-1.2.4.0/aeson-1.2.4.0.tar.gz",
@@ -448,6 +611,1086 @@ new_http_archive(
   ],
   strip_prefix = "aeson-1.2.4.0",
   build_file = "hackage/aeson.BUILD",
+)
+
+new_http_archive(
+  name = "hackage_Cabal",
+  urls = [
+    "https://hackage.haskell.org/package/Cabal-2.0.1.1/Cabal-2.0.1.1.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/Cabal-2.0.1.1.tar.gz",
+  ],
+  strip_prefix = "Cabal-2.0.1.1",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "Cabal",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "unix",
+    "base",
+    "time",
+    "filepath",
+    "process",
+    "array",
+    "containers",
+    "binary",
+    "deepseq",
+    "pretty",
+    "directory",
+  ],
+  srcs = [
+    "Distribution/Verbosity.hs",
+    "Distribution/Simple/Test/Log.hs",
+    "Distribution/Simple/Test/LibV09.hs",
+    "Distribution/Simple/Test/ExeV10.hs",
+    "Distribution/Simple/Haddock.hs",
+    "Distribution/Simple/Build.hs",
+    "Distribution/Simple/PackageIndex.hs",
+    "Distribution/Simple/UserHooks.hs",
+    "Distribution/Simple/Program.hs",
+    "Distribution/Simple/Program/Internal.hs",
+    "Distribution/Simple/Program/Ld.hs",
+    "Distribution/Simple/Program/Strip.hs",
+    "Distribution/Simple/Program/Run.hs",
+    "Distribution/Simple/Program/Db.hs",
+    "Distribution/Simple/Program/Hpc.hs",
+    "Distribution/Simple/Program/Ar.hs",
+    "Distribution/Simple/Program/Builtin.hs",
+    "Distribution/Simple/Program/Script.hs",
+    "Distribution/Simple/Program/GHC.hs",
+    "Distribution/Simple/Program/Find.hs",
+    "Distribution/Simple/Program/HcPkg.hs",
+    "Distribution/Simple/Program/Types.hs",
+    "Distribution/Simple/Command.hs",
+    "Distribution/Simple/Utils.hs",
+    "Distribution/Simple/BuildPaths.hs",
+    "Distribution/Simple/PreProcess.hs",
+    "Distribution/Simple/Install.hs",
+    "Distribution/Simple/InstallDirs.hs",
+    "Distribution/Simple/Compiler.hs",
+    "Distribution/Simple/Hpc.hs",
+    "Distribution/Simple/BuildToolDepends.hs",
+    "Distribution/Simple/Doctest.hs",
+    "Distribution/Simple/BuildTarget.hs",
+    "Distribution/Simple/HaskellSuite.hs",
+    "Distribution/Simple/Test.hs",
+    "Distribution/Simple/GHC/Internal.hs",
+    "Distribution/Simple/GHC/IPI642.hs",
+    "Distribution/Simple/GHC/IPIConvert.hs",
+    "Distribution/Simple/GHC/ImplInfo.hs",
+    "Distribution/Simple/Setup.hs",
+    "Distribution/Simple/PreProcess/Unlit.hs",
+    "Distribution/Simple/GHCJS.hs",
+    "Distribution/Simple/Build/Macros.hs",
+    "Distribution/Simple/Build/PathsModule.hs",
+    "Distribution/Simple/SrcDist.hs",
+    "Distribution/Simple/LocalBuildInfo.hs",
+    "Distribution/Simple/GHC.hs",
+    "Distribution/Simple/Configure.hs",
+    "Distribution/Simple/JHC.hs",
+    "Distribution/Simple/LHC.hs",
+    "Distribution/Simple/CCompiler.hs",
+    "Distribution/Simple/Bench.hs",
+    "Distribution/Simple/UHC.hs",
+    "Distribution/Simple/Register.hs",
+    "Distribution/PackageDescription.hs",
+    "Distribution/Utils/ShortText.hs",
+    "Distribution/Utils/MapAccum.hs",
+    "Distribution/Utils/NubList.hs",
+    "Distribution/Utils/String.hs",
+    "Distribution/Utils/Base62.hs",
+    "Distribution/Utils/Generic.hs",
+    "Distribution/Utils/UnionFind.hs",
+    "Distribution/Utils/Progress.hs",
+    "Distribution/Utils/LogProgress.hs",
+    "Distribution/PrettyUtils.hs",
+    "Distribution/ModuleName.hs",
+    "Distribution/Package.hs",
+    "Distribution/Lex.hs",
+    "Distribution/System.hs",
+    "Distribution/Version.hs",
+    "Distribution/Compiler.hs",
+    "Distribution/Simple.hs",
+    "Distribution/TestSuite.hs",
+    "Distribution/GetOpt.hs",
+    "Distribution/PackageDescription/Utils.hs",
+    "Distribution/PackageDescription/PrettyPrint.hs",
+    "Distribution/PackageDescription/Check.hs",
+    "Distribution/PackageDescription/Parsec.hs",
+    "Distribution/PackageDescription/Parse.hs",
+    "Distribution/PackageDescription/Parsec/FieldDescr.hs",
+    "Distribution/PackageDescription/Configuration.hs",
+    "Distribution/ReadE.hs",
+    "Distribution/ParseUtils.hs",
+    "Distribution/InstalledPackageInfo.hs",
+    "Distribution/Backpack/ConfiguredComponent.hs",
+    "Distribution/Backpack/Id.hs",
+    "Distribution/Backpack/FullUnitId.hs",
+    "Distribution/Backpack/MixLink.hs",
+    "Distribution/Backpack/DescribeUnitId.hs",
+    "Distribution/Backpack/LinkedComponent.hs",
+    "Distribution/Backpack/ComponentsGraph.hs",
+    "Distribution/Backpack/PreExistingComponent.hs",
+    "Distribution/Backpack/ModuleShape.hs",
+    "Distribution/Backpack/UnifyM.hs",
+    "Distribution/Backpack/ModuleScope.hs",
+    "Distribution/Backpack/Configure.hs",
+    "Distribution/Backpack/ModSubst.hs",
+    "Distribution/Backpack/ReadyComponent.hs",
+    "Distribution/Make.hs",
+    "Distribution/Types/PackageDescription.hs",
+    "Distribution/Types/GenericPackageDescription.hs",
+    "Distribution/Types/ExeDependency.hs",
+    "Distribution/Types/BuildType.hs",
+    "Distribution/Types/ComponentRequestedSpec.hs",
+    "Distribution/Types/PkgconfigDependency.hs",
+    "Distribution/Types/ModuleRenaming.hs",
+    "Distribution/Types/Condition.hs",
+    "Distribution/Types/LegacyExeDependency.hs",
+    "Distribution/Types/TestSuiteInterface.hs",
+    "Distribution/Types/Mixin.hs",
+    "Distribution/Types/SetupBuildInfo.hs",
+    "Distribution/Types/Module.hs",
+    "Distribution/Types/BenchmarkInterface.hs",
+    "Distribution/Types/Executable.hs",
+    "Distribution/Types/Library.hs",
+    "Distribution/Types/ForeignLib.hs",
+    "Distribution/Types/BenchmarkType.hs",
+    "Distribution/Types/ExecutableScope.hs",
+    "Distribution/Types/ComponentLocalBuildInfo.hs",
+    "Distribution/Types/ForeignLibType.hs",
+    "Distribution/Types/TestSuite.hs",
+    "Distribution/Types/PackageId.hs",
+    "Distribution/Types/ComponentInclude.hs",
+    "Distribution/Types/PackageName.hs",
+    "Distribution/Types/TargetInfo.hs",
+    "Distribution/Types/SourceRepo.hs",
+    "Distribution/Types/UnqualComponentName.hs",
+    "Distribution/Types/CondTree.hs",
+    "Distribution/Types/UnitId.hs",
+    "Distribution/Types/Dependency.hs",
+    "Distribution/Types/PkgconfigName.hs",
+    "Distribution/Types/ForeignLibOption.hs",
+    "Distribution/Types/DependencyMap.hs",
+    "Distribution/Types/Benchmark.hs",
+    "Distribution/Types/HookedBuildInfo.hs",
+    "Distribution/Types/LocalBuildInfo.hs",
+    "Distribution/Types/IncludeRenaming.hs",
+    "Distribution/Types/ComponentName.hs",
+    "Distribution/Types/MungedPackageName.hs",
+    "Distribution/Types/ComponentId.hs",
+    "Distribution/Types/ModuleReexport.hs",
+    "Distribution/Types/Component.hs",
+    "Distribution/Types/AbiHash.hs",
+    "Distribution/Types/TestType.hs",
+    "Distribution/Types/MungedPackageId.hs",
+    "Distribution/Types/BuildInfo.hs",
+    "Distribution/Types/AnnotatedId.hs",
+    "Distribution/License.hs",
+    "Distribution/Backpack.hs",
+    "Distribution/Compat/DList.hs",
+    "Distribution/Compat/Prelude.hs",
+    "Distribution/Compat/Stack.hs",
+    "Distribution/Compat/Binary.hs",
+    "Distribution/Compat/Binary/Generic.hs",
+    "Distribution/Compat/Binary/Class.hs",
+    "Distribution/Compat/Exception.hs",
+    "Distribution/Compat/GetShortPathName.hs",
+    "Distribution/Compat/Graph.hs",
+    "Distribution/Compat/Internal/TempFile.hs",
+    "Distribution/Compat/Prelude/Internal.hs",
+    "Distribution/Compat/MonadFail.hs",
+    "Distribution/Compat/Parsec.hs",
+    "Distribution/Compat/Map/Strict.hs",
+    "Distribution/Compat/CopyFile.hs",
+    "Distribution/Compat/ReadP.hs",
+    "Distribution/Compat/Semigroup.hs",
+    "Distribution/Compat/Environment.hs",
+    "Distribution/Compat/Time.hs",
+    "Distribution/Compat/SnocList.hs",
+    "Distribution/Compat/CreatePipe.hs",
+    "Distribution/Parsec/LexerMonad.hs",
+    "Distribution/Parsec/ConfVar.hs",
+    "Distribution/Parsec/Parser.hs",
+    "Distribution/Parsec/Types/Field.hs",
+    "Distribution/Parsec/Types/Common.hs",
+    "Distribution/Parsec/Types/FieldDescr.hs",
+    "Distribution/Parsec/Types/ParseResult.hs",
+    "Distribution/Parsec/Class.hs",
+    "Distribution/Text.hs",
+    "Language/Haskell/Extension.hs",
+  ],
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_cabal_doctest",
+  urls = [
+    "https://hackage.haskell.org/package/cabal-doctest-1.0.6/cabal-doctest-1.0.6.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/cabal-doctest-1.0.6.tar.gz",
+  ],
+  strip_prefix = "cabal-doctest-1.0.6",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "cabal-doctest",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_Cabal//:Cabal",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "filepath",
+    "directory",
+  ],
+  srcs = [
+    "src/Distribution/Extra/Doctest.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_StateVar",
+  urls = [
+    "https://hackage.haskell.org/package/StateVar-1.1.0.4/StateVar-1.1.0.4.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/StateVar-1.1.0.4.tar.gz",
+  ],
+  strip_prefix = "StateVar-1.1.0.4",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "StateVar",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_stm//:stm",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "transformers",
+  ],
+  srcs = [
+    "src/Data/StateVar.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_contravariant",
+  urls = [
+    "https://hackage.haskell.org/package/contravariant-1.4.1/contravariant-1.4.1.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/contravariant-1.4.1.tar.gz",
+  ],
+  strip_prefix = "contravariant-1.4.1",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "contravariant",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_StateVar//:StateVar",
+    "@hackage_transformers_compat//:transformers-compat",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "transformers",
+  ],
+  srcs = [
+    "src/Data/Functor/Contravariant.hs",
+    "src/Data/Functor/Contravariant/Compose.hs",
+    "src/Data/Functor/Contravariant/Divisible.hs",
+    "src/Data/Functor/Contravariant/Generic.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_base_orphans",
+  urls = [
+    "https://hackage.haskell.org/package/base-orphans-0.6/base-orphans-0.6.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/base-orphans-0.6.tar.gz",
+  ],
+  strip_prefix = "base-orphans-0.6",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "base-orphans",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
+  ],
+  srcs = [
+    "src/Data/Orphans.hs",
+    "src/Data/Orphans/Prelude.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_semigroups",
+  urls = [
+    "https://hackage.haskell.org/package/semigroups-0.18.4/semigroups-0.18.4.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/semigroups-0.18.4.tar.gz",
+  ],
+  strip_prefix = "semigroups-0.18.4",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "semigroups",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+  ],
+  srcs = [
+    "src/Data/Semigroup/Generic.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_distributive",
+  urls = [
+    "https://hackage.haskell.org/package/distributive-0.5.3/distributive-0.5.3.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/distributive-0.5.3.tar.gz",
+  ],
+  strip_prefix = "distributive-0.5.3",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "distributive",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_Cabal//:Cabal",
+    "@hackage_base_orphans//:base-orphans",
+    "@hackage_tagged//:tagged",
+    "@hackage_cabal_doctest//:cabal-doctest",
+    "@hackage_transformers_compat//:transformers-compat",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "transformers",
+  ],
+  srcs = [
+    "src/Data/Distributive.hs",
+    "src/Data/Distributive/Generic.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_comonad",
+  urls = [
+    "https://hackage.haskell.org/package/comonad-5.0.3/comonad-5.0.3.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/comonad-5.0.3.tar.gz",
+  ],
+  strip_prefix = "comonad-5.0.3",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "comonad",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_Cabal//:Cabal",
+    "@hackage_distributive//:distributive",
+    "@hackage_semigroups//:semigroups",
+    "@hackage_tagged//:tagged",
+    "@hackage_contravariant//:contravariant",
+    "@hackage_cabal_doctest//:cabal-doctest",
+    "@hackage_transformers_compat//:transformers-compat",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "containers",
+    "transformers",
+  ],
+  srcs = [
+    "src/Control/Comonad.hs",
+    "src/Control/Comonad/Identity.hs",
+    "src/Control/Comonad/Env.hs",
+    "src/Control/Comonad/Store.hs",
+    "src/Control/Comonad/Traced.hs",
+    "src/Control/Comonad/Store/Class.hs",
+    "src/Control/Comonad/Trans/Identity.hs",
+    "src/Control/Comonad/Trans/Env.hs",
+    "src/Control/Comonad/Trans/Class.hs",
+    "src/Control/Comonad/Trans/Store.hs",
+    "src/Control/Comonad/Trans/Traced.hs",
+    "src/Control/Comonad/Traced/Class.hs",
+    "src/Control/Comonad/Hoist/Class.hs",
+    "src/Control/Comonad/Env/Class.hs",
+    "src/Data/Functor/Composition.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_bifunctors",
+  urls = [
+    "https://hackage.haskell.org/package/bifunctors-5.5.2/bifunctors-5.5.2.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/bifunctors-5.5.2.tar.gz",
+  ],
+  strip_prefix = "bifunctors-5.5.2",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "bifunctors",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_comonad//:comonad",
+    "@hackage_semigroups//:semigroups",
+    "@hackage_base_orphans//:base-orphans",
+    "@hackage_th_abstraction//:th-abstraction",
+    "@hackage_tagged//:tagged",
+    "@hackage_transformers_compat//:transformers-compat",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "containers",
+    "transformers",
+    "template-haskell",
+  ],
+  srcs = [
+    "src/Data/Biapplicative.hs",
+    "src/Data/Bifunctor/TH.hs",
+    "src/Data/Bifunctor/Flip.hs",
+    "src/Data/Bifunctor/Wrapped.hs",
+    "src/Data/Bifunctor/Joker.hs",
+    "src/Data/Bifunctor/Product.hs",
+    "src/Data/Bifunctor/Clown.hs",
+    "src/Data/Bifunctor/Biff.hs",
+    "src/Data/Bifunctor/Join.hs",
+    "src/Data/Bifunctor/Fix.hs",
+    "src/Data/Bifunctor/Tannen.hs",
+    "src/Data/Bifunctor/Functor.hs",
+    "src/Data/Bifunctor/Sum.hs",
+    "src/Data/Bifunctor/TH/Internal.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_profunctors",
+  urls = [
+    "https://hackage.haskell.org/package/profunctors-5.2.2/profunctors-5.2.2.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/profunctors-5.2.2.tar.gz",
+  ],
+  strip_prefix = "profunctors-5.2.2",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "profunctors",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_comonad//:comonad",
+    "@hackage_distributive//:distributive",
+    "@hackage_semigroups//:semigroups",
+    "@hackage_base_orphans//:base-orphans",
+    "@hackage_tagged//:tagged",
+    "@hackage_bifunctors//:bifunctors",
+    "@hackage_contravariant//:contravariant",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "transformers",
+  ],
+  srcs = [
+    "src/Data/Profunctor.hs",
+    "src/Data/Profunctor/Choice.hs",
+    "src/Data/Profunctor/Cayley.hs",
+    "src/Data/Profunctor/Ran.hs",
+    "src/Data/Profunctor/Sieve.hs",
+    "src/Data/Profunctor/Traversing.hs",
+    "src/Data/Profunctor/Unsafe.hs",
+    "src/Data/Profunctor/Yoneda.hs",
+    "src/Data/Profunctor/Rep.hs",
+    "src/Data/Profunctor/Adjunction.hs",
+    "src/Data/Profunctor/Types.hs",
+    "src/Data/Profunctor/Strong.hs",
+    "src/Data/Profunctor/Closed.hs",
+    "src/Data/Profunctor/Composition.hs",
+    "src/Data/Profunctor/Monad.hs",
+    "src/Data/Profunctor/Mapping.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_call_stack",
+  urls = [
+    "https://hackage.haskell.org/package/call-stack-0.1.0/call-stack-0.1.0.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/call-stack-0.1.0.tar.gz",
+  ],
+  strip_prefix = "call-stack-0.1.0",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "call-stack",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+  ],
+  srcs = [
+    "src/Data/SrcLoc.hs",
+    "src/Data/CallStack.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_parallel",
+  urls = [
+    "https://hackage.haskell.org/package/parallel-3.2.1.1/parallel-3.2.1.1.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/parallel-3.2.1.1.tar.gz",
+  ],
+  strip_prefix = "parallel-3.2.1.1",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "parallel",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "array",
+    "containers",
+    "deepseq",
+  ],
+  srcs = [
+    "Control/Seq.hs",
+    "Control/Parallel.hs",
+    "Control/Parallel/Strategies.hs",
+  ],
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_void",
+  urls = [
+    "https://hackage.haskell.org/package/void-0.7.2/void-0.7.2.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/void-0.7.2.tar.gz",
+  ],
+  strip_prefix = "void-0.7.2",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "void",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+  ],
+  srcs = [
+    "src/Data/Void/Unsafe.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_prelude_extras",
+  urls = [
+    "https://hackage.haskell.org/package/prelude-extras-0.4.0.3/prelude-extras-0.4.0.3.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/prelude-extras-0.4.0.3.tar.gz",
+  ],
+  strip_prefix = "prelude-extras-0.4.0.3",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "prelude-extras",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+  ],
+  srcs = [
+    "src/Prelude/Extras.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_semigroupoids",
+  urls = [
+    "https://hackage.haskell.org/package/semigroupoids-5.2.1/semigroupoids-5.2.1.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/semigroupoids-5.2.1.tar.gz",
+  ],
+  strip_prefix = "semigroupoids-5.2.1",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "semigroupoids",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_Cabal//:Cabal",
+    "@hackage_comonad//:comonad",
+    "@hackage_unordered_containers//:unordered-containers",
+    "@hackage_distributive//:distributive",
+    "@hackage_semigroups//:semigroups",
+    "@hackage_base_orphans//:base-orphans",
+    "@hackage_tagged//:tagged",
+    "@hackage_bifunctors//:bifunctors",
+    "@hackage_contravariant//:contravariant",
+    "@hackage_hashable//:hashable",
+    "@hackage_cabal_doctest//:cabal-doctest",
+    "@hackage_transformers_compat//:transformers-compat",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "containers",
+    "transformers",
+  ],
+  srcs = [
+    "src/Data/Isomorphism.hs",
+    "src/Data/Semigroupoid.hs",
+    "src/Data/Groupoid.hs",
+    "src/Data/Semigroupoid/Dual.hs",
+    "src/Data/Semigroupoid/Static.hs",
+    "src/Data/Semigroupoid/Ob.hs",
+    "src/Data/Bifunctor/Apply.hs",
+    "src/Data/Functor/Bind.hs",
+    "src/Data/Functor/Apply.hs",
+    "src/Data/Functor/Alt.hs",
+    "src/Data/Functor/Extend.hs",
+    "src/Data/Functor/Plus.hs",
+    "src/Data/Functor/Bind/Class.hs",
+    "src/Data/Functor/Bind/Trans.hs",
+    "src/Data/Traversable/Instances.hs",
+    "src/Data/Semigroup/Bifoldable.hs",
+    "src/Data/Semigroup/Foldable.hs",
+    "src/Data/Semigroup/Bitraversable.hs",
+    "src/Data/Semigroup/Traversable.hs",
+    "src/Data/Semigroup/Traversable/Class.hs",
+    "src/Data/Semigroup/Foldable/Class.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_free",
+  urls = [
+    "https://hackage.haskell.org/package/free-4.12.4/free-4.12.4.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/free-4.12.4.tar.gz",
+  ],
+  strip_prefix = "free-4.12.4",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "free",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_semigroupoids//:semigroupoids",
+    "@hackage_exceptions//:exceptions",
+    "@hackage_comonad//:comonad",
+    "@hackage_distributive//:distributive",
+    "@hackage_semigroups//:semigroups",
+    "@hackage_bifunctors//:bifunctors",
+    "@hackage_mtl//:mtl",
+    "@hackage_prelude_extras//:prelude-extras",
+    "@hackage_transformers_compat//:transformers-compat",
+    "@hackage_profunctors//:profunctors",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "containers",
+    "transformers",
+    "template-haskell",
+  ],
+  srcs = [
+    "src/Control/Alternative/Free.hs",
+    "src/Control/Alternative/Free/Final.hs",
+    "src/Control/Applicative/Free.hs",
+    "src/Control/Applicative/Free/Final.hs",
+    "src/Control/Applicative/Trans/Free.hs",
+    "src/Control/Comonad/Cofree.hs",
+    "src/Control/Comonad/Cofree/Class.hs",
+    "src/Control/Comonad/Trans/Cofree.hs",
+    "src/Control/Comonad/Trans/Coiter.hs",
+    "src/Control/Monad/Free.hs",
+    "src/Control/Monad/Free/Church.hs",
+    "src/Control/Monad/Free/Class.hs",
+    "src/Control/Monad/Free/TH.hs",
+    "src/Control/Monad/Trans/Free.hs",
+    "src/Control/Monad/Trans/Iter.hs",
+    "src/Control/Monad/Trans/Free/Church.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_adjunctions",
+  urls = [
+    "https://hackage.haskell.org/package/adjunctions-4.3/adjunctions-4.3.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/adjunctions-4.3.tar.gz",
+  ],
+  strip_prefix = "adjunctions-4.3",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "adjunctions",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_semigroupoids//:semigroupoids",
+    "@hackage_free//:free",
+    "@hackage_void//:void",
+    "@hackage_comonad//:comonad",
+    "@hackage_distributive//:distributive",
+    "@hackage_semigroups//:semigroups",
+    "@hackage_tagged//:tagged",
+    "@hackage_contravariant//:contravariant",
+    "@hackage_mtl//:mtl",
+    "@hackage_transformers_compat//:transformers-compat",
+    "@hackage_profunctors//:profunctors",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "array",
+    "containers",
+    "transformers",
+  ],
+  srcs = [
+    "src/Control/Comonad/Representable/Store.hs",
+    "src/Control/Comonad/Trans/Adjoint.hs",
+    "src/Control/Monad/Representable/Reader.hs",
+    "src/Control/Monad/Representable/State.hs",
+    "src/Control/Monad/Trans/Adjoint.hs",
+    "src/Control/Monad/Trans/Conts.hs",
+    "src/Control/Monad/Trans/Contravariant/Adjoint.hs",
+    "src/Data/Functor/Adjunction.hs",
+    "src/Data/Functor/Rep.hs",
+    "src/Data/Functor/Contravariant/Adjunction.hs",
+    "src/Data/Functor/Contravariant/Rep.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_fail",
+  urls = [
+    "https://hackage.haskell.org/package/fail-4.9.0.0/fail-4.9.0.0.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/fail-4.9.0.0.tar.gz",
+  ],
+  strip_prefix = "fail-4.9.0.0",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "fail",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+  ],
+  srcs = [
+  ],
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_kan_extensions",
+  urls = [
+    "https://hackage.haskell.org/package/kan-extensions-5.0.2/kan-extensions-5.0.2.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/kan-extensions-5.0.2.tar.gz",
+  ],
+  strip_prefix = "kan-extensions-5.0.2",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "kan-extensions",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_semigroupoids//:semigroupoids",
+    "@hackage_free//:free",
+    "@hackage_fail//:fail",
+    "@hackage_comonad//:comonad",
+    "@hackage_adjunctions//:adjunctions",
+    "@hackage_distributive//:distributive",
+    "@hackage_tagged//:tagged",
+    "@hackage_contravariant//:contravariant",
+    "@hackage_mtl//:mtl",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "array",
+    "containers",
+    "transformers",
+  ],
+  srcs = [
+    "src/Control/Comonad/Density.hs",
+    "src/Control/Monad/Co.hs",
+    "src/Control/Monad/Codensity.hs",
+    "src/Data/Functor/Coyoneda.hs",
+    "src/Data/Functor/Day.hs",
+    "src/Data/Functor/Yoneda.hs",
+    "src/Data/Functor/Contravariant/Coyoneda.hs",
+    "src/Data/Functor/Contravariant/Day.hs",
+    "src/Data/Functor/Contravariant/Yoneda.hs",
+    "src/Data/Functor/Day/Curried.hs",
+    "src/Data/Functor/Kan/Lan.hs",
+    "src/Data/Functor/Kan/Ran.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_reflection",
+  urls = [
+    "https://hackage.haskell.org/package/reflection-2.1.3/reflection-2.1.3.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/reflection-2.1.3.tar.gz",
+  ],
+  strip_prefix = "reflection-2.1.3",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "reflection",
+  visibility = ["//visibility:public"],
+  deps = [
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "template-haskell",
+  ],
+  srcs = [
+  ],
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_lens",
+  urls = [
+    "https://hackage.haskell.org/package/lens-4.15.4/lens-4.15.4.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/lens-4.15.4.tar.gz",
+  ],
+  strip_prefix = "lens-4.15.4",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "lens",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_semigroupoids//:semigroupoids",
+    "@hackage_exceptions//:exceptions",
+    "@hackage_free//:free",
+    "@hackage_void//:void",
+    "@hackage_reflection//:reflection",
+    "@hackage_Cabal//:Cabal",
+    "@hackage_comonad//:comonad",
+    "@hackage_unordered_containers//:unordered-containers",
+    "@hackage_text//:text",
+    "@hackage_distributive//:distributive",
+    "@hackage_kan_extensions//:kan-extensions",
+    "@hackage_semigroups//:semigroups",
+    "@hackage_base_orphans//:base-orphans",
+    "@hackage_th_abstraction//:th-abstraction",
+    "@hackage_tagged//:tagged",
+    "@hackage_bifunctors//:bifunctors",
+    "@hackage_contravariant//:contravariant",
+    "@hackage_mtl//:mtl",
+    "@hackage_hashable//:hashable",
+    "@hackage_parallel//:parallel",
+    "@hackage_cabal_doctest//:cabal-doctest",
+    "@hackage_call_stack//:call-stack",
+    "@hackage_transformers_compat//:transformers-compat",
+    "@hackage_profunctors//:profunctors",
+    "@hackage_vector//:vector",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+    "filepath",
+    "array",
+    "containers",
+    "ghc-prim",
+    "transformers",
+    "template-haskell",
+  ],
+  srcs = [
+    "src/GHC/Generics/Lens.hs",
+    "src/Control/Lens.hs",
+    "src/Control/Lens/Prism.hs",
+    "src/Control/Lens/Traversal.hs",
+    "src/Control/Lens/Tuple.hs",
+    "src/Control/Lens/Equality.hs",
+    "src/Control/Lens/TH.hs",
+    "src/Control/Lens/Wrapped.hs",
+    "src/Control/Lens/Combinators.hs",
+    "src/Control/Lens/Review.hs",
+    "src/Control/Lens/Getter.hs",
+    "src/Control/Lens/Fold.hs",
+    "src/Control/Lens/Each.hs",
+    "src/Control/Lens/Empty.hs",
+    "src/Control/Lens/Type.hs",
+    "src/Control/Lens/Extras.hs",
+    "src/Control/Lens/Lens.hs",
+    "src/Control/Lens/Zoom.hs",
+    "src/Control/Lens/Cons.hs",
+    "src/Control/Lens/Plated.hs",
+    "src/Control/Lens/At.hs",
+    "src/Control/Lens/Level.hs",
+    "src/Control/Lens/Iso.hs",
+    "src/Control/Lens/Operators.hs",
+    "src/Control/Lens/Setter.hs",
+    "src/Control/Lens/Reified.hs",
+    "src/Control/Lens/Indexed.hs",
+    "src/Control/Lens/Internal.hs",
+    "src/Control/Lens/Internal/Prism.hs",
+    "src/Control/Lens/Internal/TH.hs",
+    "src/Control/Lens/Internal/FieldTH.hs",
+    "src/Control/Lens/Internal/Review.hs",
+    "src/Control/Lens/Internal/Getter.hs",
+    "src/Control/Lens/Internal/Fold.hs",
+    "src/Control/Lens/Internal/Instances.hs",
+    "src/Control/Lens/Internal/Magma.hs",
+    "src/Control/Lens/Internal/ByteString.hs",
+    "src/Control/Lens/Internal/Zoom.hs",
+    "src/Control/Lens/Internal/Deque.hs",
+    "src/Control/Lens/Internal/Bazaar.hs",
+    "src/Control/Lens/Internal/Level.hs",
+    "src/Control/Lens/Internal/Iso.hs",
+    "src/Control/Lens/Internal/Exception.hs",
+    "src/Control/Lens/Internal/CTypes.hs",
+    "src/Control/Lens/Internal/PrismTH.hs",
+    "src/Control/Lens/Internal/Coerce.hs",
+    "src/Control/Lens/Internal/Setter.hs",
+    "src/Control/Lens/Internal/Indexed.hs",
+    "src/Control/Lens/Internal/List.hs",
+    "src/Control/Lens/Internal/Context.hs",
+    "src/Control/Parallel/Strategies/Lens.hs",
+    "src/Control/Exception/Lens.hs",
+    "src/Control/Monad/Error/Lens.hs",
+    "src/Control/Seq/Lens.hs",
+    "src/Data/Bits/Lens.hs",
+    "src/Data/Complex/Lens.hs",
+    "src/Data/ByteString/Lens.hs",
+    "src/Data/ByteString/Lazy/Lens.hs",
+    "src/Data/ByteString/Strict/Lens.hs",
+    "src/Data/Text/Lens.hs",
+    "src/Data/Text/Lazy/Lens.hs",
+    "src/Data/Text/Strict/Lens.hs",
+    "src/Data/Typeable/Lens.hs",
+    "src/Data/Vector/Lens.hs",
+    "src/Data/Vector/Generic/Lens.hs",
+    "src/Data/List/Lens.hs",
+    "src/Data/Map/Lens.hs",
+    "src/Data/Set/Lens.hs",
+    "src/Data/Data/Lens.hs",
+    "src/Data/Sequence/Lens.hs",
+    "src/Data/IntSet/Lens.hs",
+    "src/Data/Array/Lens.hs",
+    "src/Data/Tree/Lens.hs",
+    "src/Data/HashSet/Lens.hs",
+    "src/Data/Dynamic/Lens.hs",
+    "src/Numeric/Lens.hs",
+    "src/System/IO/Error/Lens.hs",
+    "src/System/FilePath/Lens.hs",
+    "src/System/Exit/Lens.hs",
+    "src/Language/Haskell/TH/Lens.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
+)
+
+new_http_archive(
+  name = "hackage_lens_aeson",
+  urls = [
+    "https://hackage.haskell.org/package/lens-aeson-1.0.2/lens-aeson-1.0.2.tar.gz",
+    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/lens-aeson-1.0.2.tar.gz",
+  ],
+  strip_prefix = "lens-aeson-1.0.2",
+  build_file_content = """
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "lens-aeson",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_Cabal//:Cabal",
+    "@hackage_unordered_containers//:unordered-containers",
+    "@hackage_text//:text",
+    "@hackage_lens//:lens",
+    "@hackage_attoparsec//:attoparsec",
+    "@hackage_scientific//:scientific",
+    "@hackage_cabal_doctest//:cabal-doctest",
+    "@hackage_aeson//:aeson",
+    "@hackage_vector//:vector",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+  ],
+  srcs = [
+    "src/Data/Aeson/Lens.hs",
+  ],
+  src_strip_prefix = "src",
+)
+""",
 )
 
 new_http_archive(
@@ -529,41 +1772,6 @@ new_http_archive(
 )
 
 new_http_archive(
-  name = "hackage_stm",
-  urls = [
-    "https://hackage.haskell.org/package/stm-2.4.5.0/stm-2.4.5.0.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/stm-2.4.5.0.tar.gz",
-  ],
-  strip_prefix = "stm-2.4.5.0",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "stm",
-  visibility = ["//visibility:public"],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "array",
-  ],
-  srcs = [
-    "Control/Concurrent/STM.hs",
-    "Control/Concurrent/STM/TArray.hs",
-    "Control/Concurrent/STM/TVar.hs",
-    "Control/Concurrent/STM/TChan.hs",
-    "Control/Concurrent/STM/TMVar.hs",
-    "Control/Concurrent/STM/TQueue.hs",
-    "Control/Concurrent/STM/TBQueue.hs",
-    "Control/Concurrent/STM/TSem.hs",
-    "Control/Monad/STM.hs",
-    "Control/Sequential/STM.hs",
-  ],
-)
-""",
-)
-
-new_http_archive(
   name = "hackage_transformers_base",
   urls = [
     "https://hackage.haskell.org/package/transformers-base-0.4.4/transformers-base-0.4.4.tar.gz",
@@ -590,16 +1798,6 @@ haskell_library(
   src_strip_prefix = "src",
 )
 """,
-)
-
-new_http_archive(
-  name = "hackage_mtl",
-  urls = [
-    "https://hackage.haskell.org/package/mtl-2.2.1/mtl-2.2.1.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/mtl-2.2.1.tar.gz",
-  ],
-  strip_prefix = "mtl-2.2.1",
-  build_file = "hackage/mtl.BUILD",
 )
 
 new_http_archive(
@@ -696,38 +1894,6 @@ new_http_archive(
   ],
   strip_prefix = "lifted-base-0.2.3.11",
   build_file = "hackage/lifted_base.BUILD",
-)
-
-new_http_archive(
-  name = "hackage_exceptions",
-  urls = [
-    "https://hackage.haskell.org/package/exceptions-0.8.3/exceptions-0.8.3.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/exceptions-0.8.3.tar.gz",
-  ],
-  strip_prefix = "exceptions-0.8.3",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "exceptions",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_stm//:stm",
-    "@hackage_mtl//:mtl",
-    "@hackage_transformers_compat//:transformers-compat",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "transformers",
-    "template-haskell",
-  ],
-  srcs = [
-    "src/Control/Monad/Catch.hs",
-    "src/Control/Monad/Catch/Pure.hs",
-  ],
-  src_strip_prefix = "src",
-)
-""",
 )
 
 new_http_archive(
@@ -1215,31 +2381,6 @@ haskell_library(
   ],
   srcs = [
     "Control/Concurrent/Async.hs",
-  ],
-)
-""",
-)
-
-new_http_archive(
-  name = "hackage_data_default_class",
-  urls = [
-    "https://hackage.haskell.org/package/data-default-class-0.1.2.0/data-default-class-0.1.2.0.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/data-default-class-0.1.2.0.tar.gz",
-  ],
-  strip_prefix = "data-default-class-0.1.2.0",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "data-default-class",
-  visibility = ["//visibility:public"],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-  ],
-  srcs = [
-    "Data/Default/Class.hs",
   ],
 )
 """,

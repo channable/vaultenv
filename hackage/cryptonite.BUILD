@@ -7,6 +7,8 @@ cc_library(
     "cbits/cryptonite_cpu.h",
     "cbits/cryptonite_bitfn.h",
     "cbits/cryptonite_align.h",
+    "cbits/cryptonite_sha3.h",
+    "cbits/cryptonite_sha512.h",
   ],
 )
 
@@ -35,12 +37,16 @@ cc_library(
 
 cc_library(
   name = "blake2",
-  includes = ["cbits/blake2/sse"],
+  includes = ["cbits", "cbits/blake2/sse"],
   srcs = [
     "cbits/blake2/sse/blake2s.c",
     "cbits/blake2/sse/blake2sp.c",
     "cbits/blake2/sse/blake2b.c",
     "cbits/blake2/sse/blake2bp.c",
+    "cbits/cryptonite_blake2s.c",
+    "cbits/cryptonite_blake2sp.c",
+    "cbits/cryptonite_blake2b.c",
+    "cbits/cryptonite_blake2bp.c",
   ],
   hdrs = [
     "cbits/blake2/sse/blake2-config.h",
@@ -53,6 +59,10 @@ cc_library(
     "cbits/blake2/sse/blake2s-load-sse41.h",
     "cbits/blake2/sse/blake2s-load-xop.h",
     "cbits/blake2/sse/blake2s-round.h",
+    "cbits/cryptonite_blake2s.h",
+    "cbits/cryptonite_blake2sp.h",
+    "cbits/cryptonite_blake2b.h",
+    "cbits/cryptonite_blake2bp.h",
   ],
 )
 
@@ -77,25 +87,84 @@ cc_library(
 )
 
 cc_library(
-  name = "cbits",
-  deps = [
-    ":blake2",
-    ":argon2",
-    ":aes",
+  name = "curve25519",
+  deps = [":cryptonite_headers"],
+  includes = [
+    "cbits/curve25519",
+    "cbits/ed25519",
   ],
+  srcs = [
+    "cbits/curve25519/curve25519-donna-c64.c",
+    "cbits/ed25519/ed25519.c",
+  ],
+  hdrs = [
+    "cbits/cryptonite_curve25519.h",
+    "cbits/ed25519/curve25519-donna-64bit.h",
+    "cbits/ed25519/curve25519-donna-helpers.h",
+    "cbits/ed25519/ed25519-donna-64bit-tables.h",
+    "cbits/ed25519/ed25519-donna-64bit-x86-32bit.h",
+    "cbits/ed25519/ed25519-donna-64bit-x86.h",
+    "cbits/ed25519/ed25519-donna-basepoint-table.h",
+    "cbits/ed25519/ed25519-donna-batchverify.h",
+    "cbits/ed25519/ed25519-donna-impl-base.h",
+    "cbits/ed25519/ed25519-donna-portable-identify.h",
+    "cbits/ed25519/ed25519-donna-portable.h",
+    "cbits/ed25519/ed25519-donna.h",
+    "cbits/ed25519/ed25519-hash.h",
+    "cbits/ed25519/ed25519-randombytes.h",
+    "cbits/ed25519/ed25519.h",
+    "cbits/ed25519/modm-donna-64bit.h",
+  ],
+)
+
+cc_library(
+  name = "decaf",
+  deps = [":cryptonite_headers"],
+  includes = [
+    "cbits/decaf/include",
+    "cbits/decaf/include/arch_ref64",
+    "cbits/decaf/p448",
+    "cbits/decaf/p448/arch_ref64",
+  ],
+  srcs = [
+    "cbits/decaf/p448/arch_ref64/f_impl.c",
+    "cbits/decaf/p448/f_generic.c",
+    "cbits/decaf/p448/f_arithmetic.c",
+    "cbits/decaf/utils.c",
+    "cbits/decaf/ed448goldilocks/scalar.c",
+    "cbits/decaf/ed448goldilocks/decaf_tables.c",
+    "cbits/decaf/ed448goldilocks/decaf.c",
+    "cbits/decaf/ed448goldilocks/eddsa.c",
+  ],
+  hdrs = [
+    "cbits/decaf/include/arch_ref64/arch_intrinsics.h",
+    "cbits/decaf/include/constant_time.h",
+    "cbits/decaf/include/decaf.h",
+    "cbits/decaf/include/decaf/common.h",
+    "cbits/decaf/include/decaf/ed448.h",
+    "cbits/decaf/include/decaf/point_255.h",
+    "cbits/decaf/include/decaf/point_448.h",
+    "cbits/decaf/include/decaf/sha512.h",
+    "cbits/decaf/include/decaf/shake.h",
+    "cbits/decaf/include/field.h",
+    "cbits/decaf/include/portable_endian.h",
+    "cbits/decaf/include/word.h",
+    "cbits/decaf/p448/arch_ref64/f_impl.h",
+    "cbits/decaf/p448/f_field.h",
+  ],
+)
+
+cc_library(
+  name = "cbits",
   srcs = [
     "cbits/cryptonite_chacha.c",
     "cbits/cryptonite_salsa.c",
     "cbits/cryptonite_xsalsa.c",
     "cbits/cryptonite_rc4.c",
     "cbits/cryptonite_cpu.c",
-    "cbits/ed25519/ed25519.c",
+    "cbits/cryptonite_rdrand.c",
     "cbits/p256/p256.c",
     "cbits/p256/p256_ec.c",
-    "cbits/cryptonite_blake2s.c",
-    "cbits/cryptonite_blake2sp.c",
-    "cbits/cryptonite_blake2b.c",
-    "cbits/cryptonite_blake2bp.c",
     "cbits/cryptonite_poly1305.c",
     "cbits/cryptonite_sha1.c",
     "cbits/cryptonite_sha256.c",
@@ -112,6 +181,7 @@ cc_library(
     "cbits/cryptonite_scrypt.c",
     "cbits/cryptonite_pbkdf2.c",
   ],
+  # TODO(ruuda): Clean this up, the glob causes duplicate headers.
   hdrs = glob(["cbits/**/*.h"]),
   includes = [
     "cbits",
@@ -123,7 +193,12 @@ haskell_library(
   name = "cryptonite",
   visibility = ["//visibility:public"],
   deps = [
+    ":aes",
+    ":argon2",
+    ":blake2",
     ":cbits",
+    ":curve25519",
+    ":decaf",
     "@hackage_foundation//:foundation",
     "@hackage_memory//:memory",
   ],

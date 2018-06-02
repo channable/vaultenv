@@ -24,6 +24,7 @@ packages = build_plan['packages']
 
 roots = sys.argv[1:]
 
+exclude = set()
 done = set(list(core_packages))
 todo = roots
 
@@ -61,7 +62,7 @@ while todo:
 
     hackage_deps = []
     for dep in deps:
-        if dep in core_packages:
+        if dep in core_packages or dep in exclude:
             continue
         dep_repo_name = dep.replace('-', '_').replace('.', '_')
         hackage_deps.append(f'\n    "@hackage_{dep_repo_name}//:{dep}",')
@@ -69,6 +70,14 @@ while todo:
 
     package_contents = list_package_contents(name, version)
     modules = package['description']['modules']
+
+    if not modules:
+        # Exclude empty packages, Bazel does not deal with empty targets.
+        # These can occur in Stackage due to conditional compilation in Cabal
+        # files.
+        exclude.add(name)
+        continue
+
     root_modules = set(mod.split('.')[0] for mod in modules)
     source_files = [src for src in package_contents
                     if src.endswith('.hs')

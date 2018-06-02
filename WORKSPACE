@@ -1424,29 +1424,6 @@ haskell_library(
 )
 
 new_http_archive(
-  name = "hackage_fail",
-  urls = [
-    "https://hackage.haskell.org/package/fail-4.9.0.0/fail-4.9.0.0.tar.gz",
-    "https://s3.amazonaws.com/hackage.fpcomplete.com/package/fail-4.9.0.0.tar.gz",
-  ],
-  strip_prefix = "fail-4.9.0.0",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "fail",
-  visibility = ["//visibility:public"],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-  ],
-  srcs = [
-  ],
-)
-""",
-)
-
-new_http_archive(
   name = "hackage_kan_extensions",
   urls = [
     "https://hackage.haskell.org/package/kan-extensions-5.0.2/kan-extensions-5.0.2.tar.gz",
@@ -1462,7 +1439,6 @@ haskell_library(
   deps = [
     "@hackage_semigroupoids//:semigroupoids",
     "@hackage_free//:free",
-    "@hackage_fail//:fail",
     "@hackage_comonad//:comonad",
     "@hackage_adjunctions//:adjunctions",
     "@hackage_distributive//:distributive",

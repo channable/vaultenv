@@ -12,14 +12,15 @@ haskell_toolchain(
 
 haskell_library(
   name = "vaultenv_config",
-  srcs = ["src/Config.hs"],
   deps = [
-    "@hackage_optparse_applicative",
+    "@hackage_optparse_applicative//:optparse-applicative",
   ],
   prebuilt_dependencies = [
     "base",
     "bytestring",
   ],
+  srcs = ["src/Config.hs"],
+  src_strip_prefix = "src",
 )
 
 haskell_binary(

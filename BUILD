@@ -25,10 +25,24 @@ haskell_library(
 
 haskell_binary(
   name = "vaultenv",
-  srcs = ["app/Main.hs"],
-  deps = [":vaultenv_config"],
+  deps = [
+    ":vaultenv_config",
+    "@hackage_async//:async",
+    "@hackage_connection//:connection",
+    "@hackage_http_client//:http-client",
+    "@hackage_http_conduit//:http-conduit",
+    "@hackage_lens//:control_lens",
+    "@hackage_lens//:map_set",
+    "@hackage_lens_aeson//:lens-aeson",
+    "@hackage_mtl//:mtl",
+    "@hackage_retry//:retry",
+    "@hackage_text//:text",
+  ],
   prebuilt_dependencies = [
     "base",
-    "bytestring"
+    "bytestring",
+    "containers",
   ],
+  srcs = ["app/Main.hs"],
+  src_strip_prefix = "app",
 )

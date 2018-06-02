@@ -1207,31 +1207,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/lens-aeson-1.0.2.tar.gz",
   ],
   strip_prefix = "lens-aeson-1.0.2",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "lens-aeson",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_unordered_containers//:unordered-containers",
-    "@hackage_text//:text",
-    "@hackage_lens//:lens",
-    "@hackage_attoparsec//:attoparsec",
-    "@hackage_scientific//:scientific",
-    "@hackage_aeson//:aeson",
-    "@hackage_vector//:vector",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-  ],
-  srcs = [
-    "src/Data/Aeson/Lens.hs",
-  ],
-  src_strip_prefix = "src",
-)
-""",
+  build_file = "hackage/lens_aeson.BUILD",
 )
 
 new_http_archive(

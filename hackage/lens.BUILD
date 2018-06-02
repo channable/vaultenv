@@ -12,9 +12,12 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 # targets is based on the build order determined by Cabal, and it is still very
 # sequential. There are some modules cross-referencing each other that look like
 # this could be accidental (like Vector and At needing to be in the same
-# library), but like I said, I know nothing about the Lens package. It would be
-# nice of dependents could depend on more granular targets as well, but for now
-# we just expose a ":lens" target as the main catch-all target.
+# library), but like I said, I know nothing about the Lens package.
+
+# Note also that because of the more granular targets, dependents need to depend
+# on all of the targets that they need, so the Lens dependents cannot use the
+# automatically generated BUILD files any more. In the end this is for the
+# better as it creates a more fine-grained mesh of targets, but is also tedious.
 
 haskell_library(
   name = "internal",

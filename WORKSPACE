@@ -1478,22 +1478,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/reflection-2.1.3.tar.gz",
   ],
   strip_prefix = "reflection-2.1.3",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "reflection",
-  visibility = ["//visibility:public"],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "template-haskell",
-  ],
-  srcs = [
-  ],
-)
-""",
+  build_file = "hackage/reflection.BUILD",
 )
 
 new_http_archive(

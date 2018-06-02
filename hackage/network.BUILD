@@ -5,7 +5,8 @@ cc_library(
   defines = ["_GNU_SOURCE", "CALLCONV=ccall"],
   includes = ["include"],
   srcs = [
-    "cbits/HsNet.c"
+    "cbits/HsNet.c",
+    "cbits/ancilData.c",
   ],
   hdrs = [
     "include/HsNet.h",

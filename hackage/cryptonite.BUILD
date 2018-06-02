@@ -1,7 +1,88 @@
 load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 
 cc_library(
+  name = "cryptonite_headers",
+  includes = ["cbits"],
+  hdrs = [
+    "cbits/cryptonite_cpu.h",
+    "cbits/cryptonite_bitfn.h",
+    "cbits/cryptonite_align.h",
+  ],
+)
+
+cc_library(
+  name = "aes",
+  deps = [":cryptonite_headers"],
+  includes = ["cbits/aes"],
+  # Note: could also define -WITH_PCLMUL if that instuction is available.
+  copts = ["-mssse3", "-maes"],
+  defines = ["WITH_AESNI"],
+  srcs = [
+    "cbits/aes/generic.c",
+    "cbits/aes/gf.c",
+    "cbits/aes/x86ni.c",
+    "cbits/cryptonite_aes.c",
+  ],
+  hdrs = [
+    "cbits/aes/block128.h",
+    "cbits/aes/generic.h",
+    "cbits/aes/gf.h",
+    "cbits/aes/x86ni.h",
+    "cbits/aes/x86ni_impl.c",
+    "cbits/cryptonite_aes.h",
+  ],
+)
+
+cc_library(
+  name = "blake2",
+  includes = ["cbits/blake2/sse"],
+  srcs = [
+    "cbits/blake2/sse/blake2s.c",
+    "cbits/blake2/sse/blake2sp.c",
+    "cbits/blake2/sse/blake2b.c",
+    "cbits/blake2/sse/blake2bp.c",
+  ],
+  hdrs = [
+    "cbits/blake2/sse/blake2-config.h",
+    "cbits/blake2/sse/blake2-impl.h",
+    "cbits/blake2/sse/blake2.h",
+    "cbits/blake2/sse/blake2b-load-sse2.h",
+    "cbits/blake2/sse/blake2b-load-sse41.h",
+    "cbits/blake2/sse/blake2b-round.h",
+    "cbits/blake2/sse/blake2s-load-sse2.h",
+    "cbits/blake2/sse/blake2s-load-sse41.h",
+    "cbits/blake2/sse/blake2s-load-xop.h",
+    "cbits/blake2/sse/blake2s-round.h",
+  ],
+)
+
+cc_library(
+  name = "argon2",
+  deps = [":blake2"],
+  includes = ["cbits/argon2"],
+  srcs = ["cbits/argon2/argon2.c"],
+  hdrs = [
+    "cbits/argon2/core.c",
+    "cbits/argon2/core.h",
+    "cbits/argon2/opt.c",
+    "cbits/argon2/opt.h",
+    "cbits/argon2/ref.c",
+    "cbits/argon2/ref.h",
+    "cbits/argon2/thread.c",
+    "cbits/argon2/thread.h",
+    "cbits/argon2/blamka-round-opt.h",
+    "cbits/argon2/blamka-round-ref.h",
+    "cbits/argon2/argon2.h",
+  ],
+)
+
+cc_library(
   name = "cbits",
+  deps = [
+    ":blake2",
+    ":argon2",
+    ":aes",
+  ],
   srcs = [
     "cbits/cryptonite_chacha.c",
     "cbits/cryptonite_salsa.c",
@@ -34,8 +115,6 @@ cc_library(
   hdrs = glob(["cbits/**/*.h"]),
   includes = [
     "cbits",
-    "cbits/blake2/argon2",
-    "cbits/blake2/sse",
     "cbits/decaf/include/arch_ref64",
   ],
 )

@@ -3,10 +3,17 @@ load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
 cc_library(
   name = "cbits",
   includes = ["cbits"],
+  deps = ["@ghc//:threaded-rts"],
   hdrs = [
     "cbits/foundation_prim.h",
     "cbits/foundation_bits.h",
     "cbits/foundation_system.h",
+  ],
+  srcs = [
+    "cbits/foundation_random.c",
+    "cbits/foundation_network.c",
+    "cbits/foundation_time.c",
+    "cbits/foundation_utf8.c",
   ],
 )
 

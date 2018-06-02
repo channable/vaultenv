@@ -2062,27 +2062,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/zlib-0.6.1.2.tar.gz",
   ],
   strip_prefix = "zlib-0.6.1.2",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "zlib",
-  visibility = ["//visibility:public"],
-  deps = [
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-  ],
-  srcs = [
-    "Codec/Compression/GZip.hs",
-    "Codec/Compression/Zlib.hs",
-    "Codec/Compression/Zlib/Raw.hs",
-    "Codec/Compression/Zlib/Internal.hs",
-    "Codec/Compression/Zlib/Stream.hsc",
-  ],
-)
-""",
+  build_file = "hackage/zlib.BUILD",
 )
 
 new_http_archive(

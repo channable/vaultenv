@@ -24,8 +24,12 @@ packages = build_plan['packages']
 
 roots = sys.argv[1:]
 
-exclude = set()
-done = set(list(core_packages))
+# Cabal is a very nasty dependency, and the packages that depend on it don't
+# *actually* depend on it, it is just for some doctest stuff. Fine for
+# development, but not something we want to build.
+exclude = set(['Cabal', 'cabal-doctest'])
+
+done = set(list(core_packages)).union(exclude)
 todo = roots
 
 f = open('stackage.bzl', 'w')

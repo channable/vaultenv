@@ -14,16 +14,27 @@ haskell_library(
   ],
 )
 
+# HACK: Same as above. :(
+haskell_library(
+  name = "foundation",
+  version = "0.0.17",
+  prebuilt_dependencies = ["base"],
+  srcs = [
+    "Data/Memory/Internal/Compat.hs",
+  ],
+)
+
 haskell_library(
   name = "memory",
   visibility = ["//visibility:public"],
   deps = [
     ":basement",
+    ":foundation",
     "@hackage_basement//:compat_and_numerical",
     "@hackage_basement//:core",
     "@hackage_basement//:encoding",
     "@hackage_basement//:memory",
-    "@hackage_foundation//:foundation",
+    "@hackage_foundation//:array",
   ],
   prebuilt_dependencies = [
     "bytestring",
@@ -43,13 +54,11 @@ haskell_library(
     "Data/ByteArray/Pack.hs",
     "Data/ByteArray/Parse.hs",
     "Data/ByteArray/Hash.hs",
-    "Data/Memory/Endian.hs",
     "Data/Memory/PtrMethods.hs",
     "Data/Memory/ExtendedWords.hs",
     "Data/Memory/Encoding/Base16.hs",
     "Data/Memory/Encoding/Base32.hs",
     "Data/Memory/Encoding/Base64.hs",
-    "Data/Memory/Internal/Compat.hs",
     "Data/Memory/Internal/CompatPrim.hs",
     "Data/Memory/Internal/CompatPrim64.hs",
     "Data/Memory/Internal/DeepSeq.hs",
@@ -64,6 +73,6 @@ haskell_library(
     "Data/ByteArray/Methods.hs",
     "Data/ByteArray/MemView.hs",
     "Data/ByteArray/View.hs",
+    "Data/Memory/Endian.hs",
   ],
 )
-

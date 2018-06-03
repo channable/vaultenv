@@ -199,7 +199,8 @@ haskell_library(
     ":cbits",
     ":curve25519",
     ":decaf",
-    "@hackage_foundation//:foundation",
+    "@hackage_foundation//:misc",
+    "@hackage_foundation//:array",
     "@hackage_memory//:memory",
   ],
   prebuilt_dependencies = [

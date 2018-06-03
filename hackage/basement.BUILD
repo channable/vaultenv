@@ -100,6 +100,7 @@ haskell_library(
   name = "memory",
   visibility = ["//visibility:public"],
   deps = [
+    ":cbits",
     ":compat_and_numerical",
     ":compat_misc",
     ":core",

@@ -1769,34 +1769,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/x509-store-1.6.5.tar.gz",
   ],
   strip_prefix = "x509-store-1.6.5",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "x509-store",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_pem//:pem",
-    "@hackage_asn1_types//:asn1-types",
-    "@hackage_x509//:x509",
-    "@hackage_cryptonite//:cryptonite",
-    "@hackage_mtl//:mtl",
-    "@hackage_asn1_encoding//:asn1-encoding",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "filepath",
-    "containers",
-    "directory",
-  ],
-  srcs = [
-    "Data/X509/CertificateStore.hs",
-    "Data/X509/File.hs",
-    "Data/X509/Memory.hs",
-  ],
-)
-""",
+  build_file = "hackage/x509_store.BUILD",
 )
 
 new_http_archive(
@@ -1878,39 +1851,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/x509-validation-1.6.9.tar.gz",
   ],
   strip_prefix = "x509-validation-1.6.9",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "x509-validation",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_hourglass//:hourglass",
-    "@hackage_data_default_class//:data-default-class",
-    "@hackage_pem//:pem",
-    "@hackage_asn1_types//:asn1-types",
-    "@hackage_x509_store//:x509-store",
-    "@hackage_memory//:memory",
-    "@hackage_x509//:x509",
-    "@hackage_cryptonite//:cryptonite",
-    "@hackage_mtl//:mtl",
-    "@hackage_byteable//:byteable",
-    "@hackage_asn1_encoding//:asn1-encoding",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "containers",
-  ],
-  srcs = [
-    "Data/X509/Validation.hs",
-    "Data/X509/Validation/Signature.hs",
-    "Data/X509/Validation/Fingerprint.hs",
-    "Data/X509/Validation/Cache.hs",
-    "Data/X509/Validation/Types.hs",
-  ],
-)
-""",
+  build_file = "hackage/x509_validation.BUILD",
 )
 
 new_http_archive(
@@ -2149,37 +2090,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/http-client-tls-0.3.5.3.tar.gz",
   ],
   strip_prefix = "http-client-tls-0.3.5.3",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "http-client-tls",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_http_client//:http-client",
-    "@hackage_exceptions//:exceptions",
-    "@hackage_case_insensitive//:case-insensitive",
-    "@hackage_data_default_class//:data-default-class",
-    "@hackage_text//:text",
-    "@hackage_tls//:tls",
-    "@hackage_network//:network",
-    "@hackage_connection//:connection",
-    "@hackage_memory//:memory",
-    "@hackage_cryptonite//:cryptonite",
-    "@hackage_network_uri//:network-uri",
-    "@hackage_http_types//:http-types",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "containers",
-    "transformers",
-  ],
-  srcs = [
-    "Network/HTTP/Client/TLS.hs",
-  ],
-)
-""",
+  build_file = "hackage/http_client_tls.BUILD",
 )
 
 new_http_archive(

@@ -335,6 +335,47 @@ haskell_library(
   ],
 )
 
+haskell_library(
+  name = "list",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":collection",
+    "@hackage_basement//:compat_and_numerical",
+    "@hackage_basement//:compat_misc",
+    "@hackage_basement//:sized",
+  ],
+  compiler_flags = [
+    "-XNoImplicitPrelude",
+    "-XTypeFamilies",
+  ],
+  srcs = [
+    "Foundation/List/DList.hs",
+    "Foundation/List/ListN.hs",
+  ],
+)
+
+haskell_library(
+  name = "core",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":tuple",
+    ":bits",
+    ":numerical",
+    ":collection",
+    ":io",
+    ":array",
+    ":string",
+    "@hackage_basement//:compat_and_numerical",
+    "@hackage_basement//:compat_misc",
+    "@hackage_basement//:misc",
+  ],
+  compiler_flags = ["-XNoImplicitPrelude"],
+  srcs = [
+    "Foundation/Partial.hs",
+    "Foundation.hs",
+  ],
+)
+
 # TODO(ruuda): Split up this library further.
 haskell_library(
   name = "misc",
@@ -348,18 +389,17 @@ haskell_library(
     ":io",
     ":monad",
     ":numerical",
+    ":core",
     ":random",
     ":storable",
     ":string",
     ":system",
-    ":tuple",
     "@hackage_basement//:compat_and_numerical",
     "@hackage_basement//:compat_misc",
     "@hackage_basement//:core",
     "@hackage_basement//:encoding",
     "@hackage_basement//:memory",
     "@hackage_basement//:misc",
-    "@hackage_basement//:sized",
   ],
   prebuilt_dependencies = ["base"],
   compiler_flags = [
@@ -369,20 +409,16 @@ haskell_library(
     "-XBangPatterns",
   ],
   srcs = [
-    "Foundation.hs",
     "Foundation/Class/Bifunctor.hs",
     "Foundation/Conduit.hs",
     "Foundation/Conduit/Internal.hs",
     "Foundation/Conduit/Textual.hs",
     "Foundation/Exception.hs",
-    "Foundation/List/DList.hs",
-    "Foundation/List/ListN.hs",
     "Foundation/Math/Trigonometry.hs",
     "Foundation/Network/HostName.hsc",
     "Foundation/Network/IPv4.hs",
     "Foundation/Network/IPv6.hs",
     "Foundation/Parser.hs",
-    "Foundation/Partial.hs",
     "Foundation/Strict.hs",
     "Foundation/Time/Bindings.hs",
     "Foundation/Time/StopWatch.hs",
@@ -401,7 +437,7 @@ haskell_library(
     ":collection",
     ":hashing",
     ":io",
-    ":misc",
+    ":list",
     ":monad",
     ":numerical",
     ":random",

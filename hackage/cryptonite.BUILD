@@ -199,7 +199,7 @@ haskell_library(
     ":cbits",
     ":curve25519",
     ":decaf",
-    "@hackage_foundation//:misc",
+    "@hackage_foundation//:core",
     "@hackage_foundation//:array",
     "@hackage_memory//:memory",
   ],

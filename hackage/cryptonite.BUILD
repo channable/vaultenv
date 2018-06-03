@@ -287,6 +287,21 @@ haskell_library(
   ],
   srcs = [
     "Crypto/Cipher/ChaCha.hs",
+  ],
+)
+
+haskell_library(
+  name = "poly1305",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":aes",
+    ":cbits",
+    ":internal",
+    ":core",
+    ":chacha",
+    "@hackage_memory//:memory",
+  ],
+  srcs = [
     "Crypto/Cipher/ChaChaPoly1305.hs",
     "Crypto/MAC/Poly1305.hs",
   ],
@@ -398,13 +413,32 @@ haskell_library(
 )
 
 haskell_library(
-  name = "number_random",
+  name = "number",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":internal",
+    "@hackage_memory//:memory",
+  ],
+  prebuilt_dependencies = ["base"],
+  srcs = [
+    "Crypto/Number/Basic.hs",
+    "Crypto/Number/Compat.hs",
+    "Crypto/Number/F2m.hs",
+    "Crypto/Number/ModArithmetic.hs",
+    "Crypto/Number/Serialize.hs",
+    "Crypto/Number/Serialize/Internal.hs",
+  ],
+)
+
+haskell_library(
+  name = "random",
   visibility = ["//visibility:public"],
   deps = [
     ":cbits",
-    ":internal",
-    ":core",
     ":chacha",
+    ":core",
+    ":internal",
+    ":number",
     "@hackage_memory//:memory",
   ],
   prebuilt_dependencies = ["base"],
@@ -419,16 +453,10 @@ haskell_library(
     "Crypto/Random/EntropyPool.hs",
     "Crypto/Random/Probabilistic.hs",
     "Crypto/Random/SystemDRG.hs",
-    "Crypto/Number/Basic.hs",
-    "Crypto/Number/Compat.hs",
-    "Crypto/Number/F2m.hs",
-    "Crypto/Number/Generate.hs",
-    "Crypto/Number/ModArithmetic.hs",
-    "Crypto/Number/Prime.hs",
-    "Crypto/Number/Serialize.hs",
-    "Crypto/Number/Serialize/Internal.hs",
     "Crypto/Random/Types.hs",
     "Crypto/Random/Entropy.hs",
+    "Crypto/Number/Prime.hs",
+    "Crypto/Number/Generate.hs",
   ],
 )
 
@@ -441,7 +469,8 @@ haskell_library(
     ":curve25519",
     ":decaf",
     ":internal",
-    ":number_random",
+    ":number",
+    ":random",
     "@hackage_memory//:memory",
   ],
   srcs = [
@@ -475,8 +504,9 @@ haskell_library(
     ":decaf",
     ":hash",
     ":internal",
-    ":number_random",
+    ":number",
     ":pubkey_nohash",
+    ":random",
     "@hackage_memory//:memory",
   ],
   srcs = [
@@ -518,7 +548,8 @@ haskell_library(
     ":hash",
     ":internal",
     ":mac",
-    ":number_random",
+    ":number",
+    ":random",
     "@hackage_memory//:memory",
   ],
   prebuilt_dependencies = ["base"],
@@ -538,7 +569,7 @@ haskell_library(
     ":hash",
     ":internal",
     ":mac",
-    ":number_random",
+    ":random",
     "@hackage_memory//:memory",
   ],
   srcs = [

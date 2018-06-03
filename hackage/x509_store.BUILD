@@ -7,7 +7,7 @@ haskell_library(
     "@hackage_pem//:pem",
     "@hackage_asn1_types//:asn1-types",
     "@hackage_x509//:x509",
-    "@hackage_cryptonite//:number_random",
+    "@hackage_cryptonite//:number",
     "@hackage_cryptonite//:pubkey_hash",
     "@hackage_cryptonite//:pubkey_nohash",
     "@hackage_mtl//:mtl",

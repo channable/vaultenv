@@ -228,6 +228,8 @@ haskell_library(
   deps = [
     ":internal",
     "@hackage_memory//:memory",
+    "@hackage_foundation//:array",
+    "@hackage_foundation//:core",
   ],
   srcs = [
     "Crypto/Error.hs",
@@ -240,6 +242,7 @@ haskell_library(
     "Crypto/Cipher/Types/Stream.hs",
     "Crypto/Cipher/Types/Utils.hs",
     "Crypto/Data/Padding.hs",
+    "Crypto/Hash/Types.hs",
   ],
 )
 
@@ -290,7 +293,29 @@ haskell_library(
 )
 
 haskell_library(
-  name = "hash",
+  name = "hash_sha",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":cbits",
+    ":internal",
+    ":core",
+  ],
+  prebuilt_dependencies = ["base"],
+  srcs = [
+    "Crypto/ConstructHash/MiyaguchiPreneel.hs",
+    #"Crypto/Hash/IO.hs",
+    "Crypto/Hash/SHA1.hs",
+    "Crypto/Hash/SHA224.hs",
+    "Crypto/Hash/SHA256.hs",
+    "Crypto/Hash/SHA3.hs",
+    "Crypto/Hash/SHA384.hs",
+    "Crypto/Hash/SHA512.hs",
+    "Crypto/Hash/SHA512t.hs",
+  ],
+)
+
+haskell_library(
+  name = "hash_blake",
   visibility = ["//visibility:public"],
   deps = [
     ":blake2",
@@ -302,33 +327,73 @@ haskell_library(
   ],
   prebuilt_dependencies = ["base"],
   srcs = [
-    "Crypto/ConstructHash/MiyaguchiPreneel.hs",
-    "Crypto/Hash.hs",
-    "Crypto/Hash/Algorithms.hs",
     "Crypto/Hash/Blake2.hs",
     "Crypto/Hash/Blake2b.hs",
     "Crypto/Hash/Blake2bp.hs",
     "Crypto/Hash/Blake2s.hs",
     "Crypto/Hash/Blake2sp.hs",
-    "Crypto/Hash/IO.hs",
-    "Crypto/Hash/Keccak.hs",
+  ],
+)
+
+haskell_library(
+  name = "hash_md",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":blake2",
+    ":cbits",
+    ":internal",
+    ":core",
+    "@hackage_foundation//:core",
+    "@hackage_foundation//:array",
+  ],
+  prebuilt_dependencies = ["base"],
+  srcs = [
     "Crypto/Hash/MD2.hs",
     "Crypto/Hash/MD4.hs",
     "Crypto/Hash/MD5.hs",
+  ],
+)
+
+haskell_library(
+  name = "hash_misc",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":blake2",
+    ":cbits",
+    ":internal",
+    ":core",
+    "@hackage_foundation//:core",
+    "@hackage_foundation//:array",
+  ],
+  prebuilt_dependencies = ["base"],
+  srcs = [
+    "Crypto/Hash/Keccak.hs",
     "Crypto/Hash/RIPEMD160.hs",
-    "Crypto/Hash/SHA1.hs",
-    "Crypto/Hash/SHA224.hs",
-    "Crypto/Hash/SHA256.hs",
-    "Crypto/Hash/SHA3.hs",
-    "Crypto/Hash/SHA384.hs",
-    "Crypto/Hash/SHA512.hs",
-    "Crypto/Hash/SHA512t.hs",
     "Crypto/Hash/SHAKE.hs",
     "Crypto/Hash/Skein256.hs",
     "Crypto/Hash/Skein512.hs",
     "Crypto/Hash/Tiger.hs",
-    "Crypto/Hash/Types.hs",
     "Crypto/Hash/Whirlpool.hs",
+  ],
+)
+
+haskell_library(
+  name = "hash",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":cbits",
+    ":internal",
+    ":core",
+    ":hash_blake",
+    ":hash_md",
+    ":hash_misc",
+    ":hash_sha",
+  ],
+  srcs = [
+    "Crypto/ConstructHash/MiyaguchiPreneel.hs",
+    "Crypto/Hash.hs",
+    "Crypto/Hash/Algorithms.hs",
+    "Crypto/Hash/IO.hs",
   ],
 )
 
@@ -368,14 +433,13 @@ haskell_library(
 )
 
 haskell_library(
-  name = "pubkey",
+  name = "pubkey_nohash",
   visibility = ["//visibility:public"],
   deps = [
     ":cbits",
     ":core",
     ":curve25519",
     ":decaf",
-    ":hash",
     ":internal",
     ":number_random",
     "@hackage_memory//:memory",
@@ -387,25 +451,43 @@ haskell_library(
     "Crypto/PubKey/Curve25519.hs",
     "Crypto/PubKey/Curve448.hs",
     "Crypto/PubKey/DH.hs",
-    "Crypto/PubKey/DSA.hs",
     "Crypto/PubKey/ECC/DH.hs",
-    "Crypto/PubKey/ECC/ECDSA.hs",
-    "Crypto/PubKey/ECC/Generate.hs",
     "Crypto/PubKey/ECC/P256.hs",
     "Crypto/PubKey/ECC/Prim.hs",
     "Crypto/PubKey/ECC/Types.hs",
     "Crypto/PubKey/ECIES.hs",
     "Crypto/PubKey/Ed25519.hs",
     "Crypto/PubKey/Ed448.hs",
-    "Crypto/PubKey/ElGamal.hs",
     "Crypto/PubKey/Internal.hs",
-    "Crypto/PubKey/MaskGenFunction.hs",
     "Crypto/PubKey/RSA.hs",
+    "Crypto/PubKey/RSA/Prim.hs",
+    "Crypto/PubKey/RSA/Types.hs",
+  ],
+)
+
+haskell_library(
+  name = "pubkey_hash",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":cbits",
+    ":core",
+    ":curve25519",
+    ":decaf",
+    ":hash",
+    ":internal",
+    ":number_random",
+    ":pubkey_nohash",
+    "@hackage_memory//:memory",
+  ],
+  srcs = [
+    "Crypto/PubKey/DSA.hs",
+    "Crypto/PubKey/ECC/ECDSA.hs",
+    "Crypto/PubKey/ECC/Generate.hs",
+    "Crypto/PubKey/ElGamal.hs",
+    "Crypto/PubKey/MaskGenFunction.hs",
     "Crypto/PubKey/RSA/OAEP.hs",
     "Crypto/PubKey/RSA/PKCS15.hs",
     "Crypto/PubKey/RSA/PSS.hs",
-    "Crypto/PubKey/RSA/Prim.hs",
-    "Crypto/PubKey/RSA/Types.hs",
   ],
 )
 

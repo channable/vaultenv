@@ -12,7 +12,7 @@ haskell_library(
     "@hackage_cryptonite//:pubkey_nohash",
     "@hackage_data_default_class//:data-default-class",
     "@hackage_hourglass//:hourglass",
-    "@hackage_memory//:memory",
+    "@hackage_memory//:byte_array",
     "@hackage_x509//:x509",
     "@hackage_x509_store//:x509-store",
   ],

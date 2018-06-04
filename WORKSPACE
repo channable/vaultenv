@@ -1598,30 +1598,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/asn1-types-0.3.2.tar.gz",
   ],
   strip_prefix = "asn1-types-0.3.2",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "asn1-types",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_hourglass//:hourglass",
-    "@hackage_memory//:memory",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-  ],
-  srcs = [
-    "Data/ASN1/BitArray.hs",
-    "Data/ASN1/OID.hs",
-    "Data/ASN1/Pretty.hs",
-    "Data/ASN1/Types.hs",
-    "Data/ASN1/Types/Lowlevel.hs",
-    "Data/ASN1/Types/String.hs",
-  ],
-)
-""",
+  build_file = "hackage/asn1_types.BUILD",
 )
 
 new_http_archive(

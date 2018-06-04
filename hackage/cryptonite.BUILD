@@ -207,6 +207,7 @@ haskell_library(
   visibility = ["//visibility:public"],
   deps = [
     "@hackage_memory//:memory",
+    "@hackage_memory//:byte_array",
   ],
   prebuilt_dependencies = ["base"],
   srcs = [
@@ -227,7 +228,7 @@ haskell_library(
   visibility = ["//visibility:public"],
   deps = [
     ":internal",
-    "@hackage_memory//:memory",
+    "@hackage_memory//:byte_array",
     "@hackage_foundation//:array",
     "@hackage_foundation//:core",
   ],
@@ -253,6 +254,7 @@ haskell_library(
     ":aes",
     ":internal",
     ":core",
+    "@hackage_memory//:byte_array",
     "@hackage_memory//:memory",
   ],
   srcs = [
@@ -299,6 +301,7 @@ haskell_library(
     ":internal",
     ":core",
     ":chacha",
+    "@hackage_memory//:byte_array",
     "@hackage_memory//:memory",
   ],
   srcs = [
@@ -439,6 +442,7 @@ haskell_library(
     ":core",
     ":internal",
     ":number",
+    "@hackage_memory//:byte_array",
     "@hackage_memory//:memory",
   ],
   prebuilt_dependencies = ["base"],
@@ -471,6 +475,7 @@ haskell_library(
     ":internal",
     ":number",
     ":random",
+    "@hackage_memory//:byte_array",
     "@hackage_memory//:memory",
   ],
   srcs = [
@@ -550,6 +555,7 @@ haskell_library(
     ":mac",
     ":number",
     ":random",
+    "@hackage_memory//:byte_array",
     "@hackage_memory//:memory",
   ],
   prebuilt_dependencies = ["base"],
@@ -570,6 +576,7 @@ haskell_library(
     ":internal",
     ":mac",
     ":random",
+    "@hackage_memory//:byte_array",
     "@hackage_memory//:memory",
   ],
   srcs = [

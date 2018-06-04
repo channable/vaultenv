@@ -42,7 +42,7 @@ haskell_library(
     ":core",
     "@hackage_hourglass//:hourglass",
     "@hackage_asn1_types//:asn1-types",
-    "@hackage_memory//:memory",
+    "@hackage_memory//:byte_array",
     "@hackage_cryptonite//:number",
     "@hackage_cryptonite//:pubkey_nohash",
     "@hackage_cryptonite//:pubkey_hash",

@@ -12,7 +12,7 @@ haskell_library(
     "@hackage_tls//:tls",
     "@hackage_network//:network",
     "@hackage_connection//:connection",
-    "@hackage_memory//:memory",
+    "@hackage_memory//:byte_array",
     "@hackage_cryptonite//:hash",
     "@hackage_network_uri//:network-uri",
     "@hackage_http_types//:http-types",

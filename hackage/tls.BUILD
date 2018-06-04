@@ -32,7 +32,7 @@ haskell_library(
   name = "imports",
   visibility = ["//visibility:public"],
   deps = [
-    "@hackage_memory//:memory",
+    "@hackage_memory//:byte_array",
   ],
   compiler_flags = [
     "-DSSLV2_COMPATIBLE",
@@ -84,7 +84,7 @@ haskell_library(
     "@hackage_cryptonite//:core",
     "@hackage_cryptonite//:number",
     "@hackage_cryptonite//:pubkey_nohash",
-    "@hackage_memory//:memory",
+    "@hackage_memory//:byte_array",
   ],
   compiler_flags = [
     "-DSSLV2_COMPATIBLE",
@@ -116,7 +116,7 @@ haskell_library(
     "@hackage_cryptonite//:pubkey_hash",
     "@hackage_cryptonite//:pubkey_nohash",
     "@hackage_cryptonite//:random",
-    "@hackage_memory//:memory",
+    "@hackage_memory//:byte_array",
     "@hackage_mtl//:mtl",
     "@hackage_x509//:x509",
   ],

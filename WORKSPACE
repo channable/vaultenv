@@ -1938,34 +1938,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/connection-0.2.8.tar.gz",
   ],
   strip_prefix = "connection-0.2.8",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "connection",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_socks//:socks",
-    "@hackage_x509_validation//:x509-validation",
-    "@hackage_data_default_class//:data-default-class",
-    "@hackage_tls//:tls",
-    "@hackage_network//:network",
-    "@hackage_x509_store//:x509-store",
-    "@hackage_x509//:x509",
-    "@hackage_x509_system//:x509-system",
-    "@hackage_byteable//:byteable",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "containers",
-  ],
-  srcs = [
-    "Network/Connection.hs",
-    "Network/Connection/Types.hs",
-  ],
-)
-""",
+  build_file = "hackage/connection.BUILD",
 )
 
 new_http_archive(

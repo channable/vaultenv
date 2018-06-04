@@ -61,10 +61,39 @@ haskell_library(
 )
 
 haskell_library(
+  name = "type_base",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":internal",
+    "@hackage_call_stack//:call-stack",
+    "@hackage_comonad//:comonad",
+    "@hackage_contravariant//:contravariant",
+    "@hackage_mtl//:mtl",
+    "@hackage_profunctors//:profunctors",
+    "@hackage_reflection//:reflection",
+    "@hackage_semigroupoids//:semigroupoids",
+    "@hackage_tagged//:tagged",
+  ],
+  prebuilt_dependencies = [
+    "base",
+  ],
+  compiler_flags = ["-XTrustworthy"],
+  srcs = [
+    "src/Control/Lens/Fold.hs",
+    "src/Control/Lens/Getter.hs",
+    "src/Control/Lens/Review.hs",
+    "src/Control/Lens/Setter.hs",
+    "src/Control/Lens/Type.hs",
+  ],
+  src_strip_prefix = "src",
+)
+
+haskell_library(
   name = "type",
   visibility = ["//visibility:public"],
   deps = [
     ":internal",
+    ":type_base",
     "@hackage_call_stack//:call-stack",
     "@hackage_comonad//:comonad",
     "@hackage_contravariant//:contravariant",
@@ -82,17 +111,12 @@ haskell_library(
   ],
   compiler_flags = ["-XTrustworthy"],
   srcs = [
-    "src/Control/Lens/Fold.hs",
-    "src/Control/Lens/Getter.hs",
     "src/Control/Lens/Lens.hs",
     "src/Control/Lens/Level.hs",
     "src/Control/Lens/Prism.hs",
     "src/Control/Lens/Reified.hs",
-    "src/Control/Lens/Review.hs",
-    "src/Control/Lens/Setter.hs",
     "src/Control/Lens/Traversal.hs",
     "src/Control/Lens/Tuple.hs",
-    "src/Control/Lens/Type.hs",
   ],
   src_strip_prefix = "src",
 )
@@ -101,6 +125,7 @@ haskell_library(
   name = "indexed",
   deps = [
     ":internal",
+    ":type_base",
     ":type",
     "@hackage_comonad//:comonad",
     "@hackage_contravariant//:contravariant",
@@ -129,6 +154,7 @@ haskell_library(
   visibility = ["//visibility:public"],
   deps = [
     ":internal",
+    ":type_base",
     ":type",
     "@hackage_bifunctors//:bifunctors",
     "@hackage_comonad//:comonad",
@@ -164,6 +190,7 @@ haskell_library(
   visibility = ["//visibility:public"],
   deps = [
     ":internal",
+    ":type_base",
     ":type",
     ":control",
     "@hackage_unordered_containers//:unordered-containers",
@@ -178,7 +205,7 @@ haskell_library(
   name = "map_set",
   visibility = ["//visibility:public"],
   deps = [
-    ":type",
+    ":type_base",
     ":control",
     "@hackage_hashable//:hashable",
     "@hackage_unordered_containers//:unordered-containers",
@@ -196,6 +223,7 @@ haskell_library(
   name = "text",
   visibility = ["//visibility:public"],
   deps = [
+    ":type_base",
     ":type",
     ":control",
     "@hackage_text//:text",
@@ -221,6 +249,7 @@ haskell_library(
     ":map_set",
     ":text",
     ":type",
+    ":type_base",
     "@hackage_free//:free",
     "@hackage_hashable//:hashable",
     "@hackage_mtl//:mtl",
@@ -257,6 +286,7 @@ haskell_library(
   visibility = ["//visibility:public"],
   deps = [
     ":internal",
+    ":type_base",
     ":type",
     ":control",
     ":indexed",

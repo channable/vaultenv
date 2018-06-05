@@ -1021,55 +1021,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/semigroupoids-5.2.1.tar.gz",
   ],
   strip_prefix = "semigroupoids-5.2.1",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "semigroupoids",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_comonad//:comonad",
-    "@hackage_unordered_containers//:unordered-containers",
-    "@hackage_distributive//:distributive",
-    "@hackage_semigroups//:semigroups",
-    "@hackage_base_orphans//:base-orphans",
-    "@hackage_tagged//:tagged",
-    "@hackage_bifunctors//:bifunctors",
-    "@hackage_contravariant//:contravariant",
-    "@hackage_hashable//:hashable",
-    "@hackage_transformers_compat//:transformers-compat",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "containers",
-    "transformers",
-  ],
-  srcs = [
-    "src/Data/Isomorphism.hs",
-    "src/Data/Semigroupoid.hs",
-    "src/Data/Groupoid.hs",
-    "src/Data/Semigroupoid/Dual.hs",
-    "src/Data/Semigroupoid/Static.hs",
-    "src/Data/Semigroupoid/Ob.hs",
-    "src/Data/Bifunctor/Apply.hs",
-    "src/Data/Functor/Bind.hs",
-    "src/Data/Functor/Apply.hs",
-    "src/Data/Functor/Alt.hs",
-    "src/Data/Functor/Extend.hs",
-    "src/Data/Functor/Plus.hs",
-    "src/Data/Functor/Bind/Class.hs",
-    "src/Data/Functor/Bind/Trans.hs",
-    "src/Data/Traversable/Instances.hs",
-    "src/Data/Semigroup/Bifoldable.hs",
-    "src/Data/Semigroup/Foldable.hs",
-    "src/Data/Semigroup/Bitraversable.hs",
-    "src/Data/Semigroup/Traversable.hs",
-    "src/Data/Semigroup/Traversable/Class.hs",
-    "src/Data/Semigroup/Foldable/Class.hs",
-  ],
-  src_strip_prefix = "src",
-)
-""",
+  build_file = "hackage/semigroupoids.BUILD",
 )
 
 new_http_archive(

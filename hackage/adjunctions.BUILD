@@ -1,0 +1,40 @@
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "adjunctions",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_comonad//:comonad",
+    "@hackage_contravariant//:contravariant",
+    "@hackage_distributive//:distributive",
+    "@hackage_free//:monad_comonad",
+    "@hackage_free//:free",
+    "@hackage_mtl//:mtl",
+    "@hackage_profunctors//:profunctors",
+    "@hackage_semigroupoids//:semigroupoids",
+    "@hackage_semigroups//:semigroups",
+    "@hackage_tagged//:tagged",
+    "@hackage_transformers_compat//:transformers-compat",
+    "@hackage_void//:void",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "array",
+    "containers",
+    "transformers",
+  ],
+  srcs = [
+    "src/Control/Comonad/Representable/Store.hs",
+    "src/Control/Comonad/Trans/Adjoint.hs",
+    "src/Control/Monad/Representable/Reader.hs",
+    "src/Control/Monad/Representable/State.hs",
+    "src/Control/Monad/Trans/Adjoint.hs",
+    "src/Control/Monad/Trans/Contravariant/Adjoint.hs",
+    "src/Control/Monad/Trans/Conts.hs",
+    "src/Data/Functor/Adjunction.hs",
+    "src/Data/Functor/Contravariant/Adjunction.hs",
+    "src/Data/Functor/Contravariant/Rep.hs",
+    "src/Data/Functor/Rep.hs",
+  ],
+  src_strip_prefix = "src",
+)

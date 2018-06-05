@@ -1041,47 +1041,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/adjunctions-4.3.tar.gz",
   ],
   strip_prefix = "adjunctions-4.3",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "adjunctions",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_semigroupoids//:semigroupoids",
-    "@hackage_free//:free",
-    "@hackage_void//:void",
-    "@hackage_comonad//:comonad",
-    "@hackage_distributive//:distributive",
-    "@hackage_semigroups//:semigroups",
-    "@hackage_tagged//:tagged",
-    "@hackage_contravariant//:contravariant",
-    "@hackage_mtl//:mtl",
-    "@hackage_transformers_compat//:transformers-compat",
-    "@hackage_profunctors//:profunctors",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "array",
-    "containers",
-    "transformers",
-  ],
-  srcs = [
-    "src/Control/Comonad/Representable/Store.hs",
-    "src/Control/Comonad/Trans/Adjoint.hs",
-    "src/Control/Monad/Representable/Reader.hs",
-    "src/Control/Monad/Representable/State.hs",
-    "src/Control/Monad/Trans/Adjoint.hs",
-    "src/Control/Monad/Trans/Conts.hs",
-    "src/Control/Monad/Trans/Contravariant/Adjoint.hs",
-    "src/Data/Functor/Adjunction.hs",
-    "src/Data/Functor/Rep.hs",
-    "src/Data/Functor/Contravariant/Adjunction.hs",
-    "src/Data/Functor/Contravariant/Rep.hs",
-  ],
-  src_strip_prefix = "src",
-)
-""",
+  build_file = "hackage/adjunctions.BUILD",
 )
 
 new_http_archive(
@@ -1091,45 +1051,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/kan-extensions-5.0.2.tar.gz",
   ],
   strip_prefix = "kan-extensions-5.0.2",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "kan-extensions",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_semigroupoids//:semigroupoids",
-    "@hackage_free//:free",
-    "@hackage_comonad//:comonad",
-    "@hackage_adjunctions//:adjunctions",
-    "@hackage_distributive//:distributive",
-    "@hackage_tagged//:tagged",
-    "@hackage_contravariant//:contravariant",
-    "@hackage_mtl//:mtl",
-  ],
-  prebuilt_dependencies = [
-    "base",
-    "array",
-    "containers",
-    "transformers",
-  ],
-  srcs = [
-    "src/Control/Comonad/Density.hs",
-    "src/Control/Monad/Co.hs",
-    "src/Control/Monad/Codensity.hs",
-    "src/Data/Functor/Coyoneda.hs",
-    "src/Data/Functor/Day.hs",
-    "src/Data/Functor/Yoneda.hs",
-    "src/Data/Functor/Contravariant/Coyoneda.hs",
-    "src/Data/Functor/Contravariant/Day.hs",
-    "src/Data/Functor/Contravariant/Yoneda.hs",
-    "src/Data/Functor/Day/Curried.hs",
-    "src/Data/Functor/Kan/Lan.hs",
-    "src/Data/Functor/Kan/Ran.hs",
-  ],
-  src_strip_prefix = "src",
-)
-""",
+  build_file = "hackage/kan_extensions.BUILD",
 )
 
 new_http_archive(

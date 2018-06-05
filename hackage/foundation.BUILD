@@ -33,10 +33,32 @@ haskell_library(
 )
 
 haskell_library(
+  name = "collection_core",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":numerical",
+    "@hackage_basement//:compat_and_numerical",
+    "@hackage_basement//:core",
+    "@hackage_basement//:memory",
+  ],
+  compiler_flags = [
+    "-XNoImplicitPrelude",
+    "-XTypeFamilies",
+  ],
+  srcs = [
+    "Foundation/Collection/List.hs",
+    "Foundation/Collection/Keyed.hs",
+    "Foundation/Collection/Mutable.hs",
+    "Foundation/Collection/Mappable.hs",
+  ],
+)
+
+haskell_library(
   name = "collection",
   visibility = ["//visibility:public"],
   deps = [
     ":numerical",
+    ":collection_core",
     "@hackage_basement//:ascii",
     "@hackage_basement//:compat_and_numerical",
     "@hackage_basement//:compat_misc",
@@ -49,20 +71,16 @@ haskell_library(
     "-XTypeFamilies",
   ],
   srcs = [
-    "Foundation/Collection.hs",
-    "Foundation/Collection/Buildable.hs",
-    "Foundation/Collection/List.hs",
-    "Foundation/Collection/Element.hs",
+    "Foundation/Collection/Foldable.hs",
+    "Foundation/Collection/Zippable.hs",
+    "Foundation/Collection/Sequential.hs",
     "Foundation/Collection/InnerFunctor.hs",
+    "Foundation/Collection/Indexed.hs",
+    "Foundation/Collection.hs",
     "Foundation/Collection/Collection.hs",
     "Foundation/Collection/Copy.hs",
-    "Foundation/Collection/Sequential.hs",
-    "Foundation/Collection/Keyed.hs",
-    "Foundation/Collection/Indexed.hs",
-    "Foundation/Collection/Foldable.hs",
-    "Foundation/Collection/Mutable.hs",
-    "Foundation/Collection/Zippable.hs",
-    "Foundation/Collection/Mappable.hs",
+    "Foundation/Collection/Element.hs",
+    "Foundation/Collection/Buildable.hs",
   ],
 )
 
@@ -383,6 +401,7 @@ haskell_library(
   deps = [
     ":array",
     ":bits",
+    ":collection_core",
     ":collection",
     ":foreign",
     ":hashing",

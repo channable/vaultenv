@@ -120,10 +120,11 @@ getHttpManager opts = newManager managerSettings
 -- throw HTTP exceptions.
 vaultEnv :: Context -> ExceptT VaultError IO [EnvVar]
 vaultEnv context = do
-  secrets <- mapExceptT (fmap $ first SecretFileErr)  $ readSecretList (oSecretFile . cCliOptions $ context)
+  secrets <- mapExceptT (fmap $ first SecretFileErr)  $ readSecretList secretFile
   secretEnv <- requestSecrets context secrets
   checkNoDuplicates (buildEnv secretEnv)
     where
+      secretFile = oSecretFile (cCliOptions context)
       checkNoDuplicates :: MonadError VaultError m => [EnvVar] -> m [EnvVar]
       checkNoDuplicates e =
         either (throwError . DuplicateVar) (return . const e) $ dups (map fst e)
@@ -183,8 +184,7 @@ requestSecret context secretPath =
 -- order to avoid unnecessary round trips and DNS requets.
 requestSecrets :: Context -> [Secret] -> (ExceptT VaultError IO) [EnvVar]
 requestSecrets context secrets = do
-  let
-    secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap secretRequestPath secrets
+  let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap secretRequestPath secrets
   secretDataOrErr <- liftIO $ Async.mapConcurrently (requestSecret context) secretPaths
   either throwError return $ sequence secretDataOrErr >>= lookupSecrets secrets
 
@@ -239,27 +239,27 @@ vaultErrorLogMessage :: VaultError -> String
 vaultErrorLogMessage vaultError =
   let
     description = case vaultError of
-      (SecretNotFound secretPath) ->
+      SecretNotFound secretPath ->
         "Secret not found: " <> secretPath
-      (SecretFileErr sfe) -> show sfe
-      (KeyNotFound secret) ->
+      SecretFileErr sfe -> show sfe
+      KeyNotFound secret ->
         "Key " <> (sKey secret) <> " not found for path " <> (sPath secret)
-      (DuplicateVar varName) ->
+      DuplicateVar varName ->
         "Found duplicate environment variable \"" ++ varName ++ "\""
-      (BadRequest resp) ->
+      BadRequest resp ->
         "Made a bad request: " <> (LBS.unpack resp)
-      (Forbidden) ->
+      Forbidden ->
         "Invalid Vault token"
-      (InvalidUrl secretPath) ->
+      InvalidUrl secretPath ->
         "Secret " <> secretPath <> " contains characters that are illegal in URLs"
-      (ServerError resp) ->
+      ServerError resp ->
         "Internal Vault error: " <> (LBS.unpack resp)
-      (ServerUnavailable resp) ->
+      ServerUnavailable resp ->
         "Vault is unavailable for requests. It can be sealed, " <>
         "under maintenance or enduring heavy load: " <> (LBS.unpack resp)
-      (ServerUnreachable exception) ->
+      ServerUnreachable exception ->
         "ServerUnreachable error: " <> show exception
-      (Unspecified status resp) ->
+      Unspecified status resp ->
         "Received an error that I don't know about (" <> show status
         <> "): " <> (LBS.unpack resp)
   in

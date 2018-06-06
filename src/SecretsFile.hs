@@ -8,28 +8,26 @@ import Data.List              (intercalate)
 import Control.Monad.Except   (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
-import qualified Control.Exception          as Exception
+import qualified Control.Exception as Exception
 
-import Text.ParserCombinators.ReadP
+import Text.ParserCombinators.ReadP (ReadP, char, manyTill, get, option, skipSpaces,
+                                     string, many, readP_to_S, eof)
 
 data Secret = Secret
-  { sMount   :: String
-  , sPath    :: String
-  , sKey     :: String
+  { sMount :: String
+  , sPath :: String
+  , sKey :: String
   , sVarName :: String
   } deriving (Eq, Show)
 
 data SecretFileErr
-  = IOError           FilePath
-  | ParseError        FilePath
+  = IOError FilePath
+  | ParseError FilePath
 
 instance Show SecretFileErr where
-  show err =
-    case err of
-      (IOError fp) ->
-        "An I/O error happened while opening: " <> fp
-      (ParseError fp) ->
-        "Could not parse: " <> fp
+  show err = case err of
+    IOError fp -> "An I/O error happened while opening: " <> fp
+    ParseError fp -> "Could not parse: " <> fp
 
 data SecretFileVersion = V1 | V2
 
@@ -103,7 +101,7 @@ getVarName version mount path key = fmap format $ intercalate "_" components
 -- Does minimal error reporting, but does differentiate IO and parse errors.
 readSecretList :: (MonadError SecretFileErr m, MonadIO m) => FilePath -> m [Secret]
 readSecretList fileName = do
-  contents <- liftIO $ safeReadFile
+  contents <- liftIO safeReadFile
   res <- maybe (throwError $ IOError fileName) (runParser fileName secretFileP) contents
   liftIO $ print res
   pure res

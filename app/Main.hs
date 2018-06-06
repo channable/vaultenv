@@ -34,8 +34,8 @@ import qualified Data.Map                   as Map
 import qualified Data.Map.Lens              as Lens (toMapOf)
 import qualified Data.Text                  as Text
 
-import Config
-import SecretsFile
+import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds, LogLevel(..))
+import SecretsFile (Secret(..), SecretFileErr(..), readSecretList)
 
 secretRequestPath :: Secret -> String
 secretRequestPath secret = "/v1/" <> sMount secret <> "/" <> sPath secret

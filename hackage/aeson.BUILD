@@ -71,15 +71,52 @@ haskell_library(
 )
 
 haskell_library(
-  name = "aeson",
+  name = "aeson_time",
   visibility = ["//visibility:public"],
   deps = [
     ":attoparsec_iso8601",
+    ":core",
+    "@hackage_attoparsec//:text_lazy",
+    "@hackage_base_compat//:base-compat",
+    "@hackage_text//:text",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+  ],
+  srcs = [
+    "Data/Aeson/Internal/Time.hs",
+    "Data/Aeson/Parser/Time.hs",
+  ],
+)
+
+haskell_library(
+  name = "encoding",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":core",
+    ":aeson_time",
+    "@hackage_base_compat//:base-compat",
+    "@hackage_scientific//:scientific",
+    "@hackage_text//:text",
+    "@hackage_text//:lazy",
+    "@hackage_unordered_containers//:unordered-containers",
+    "@hackage_vector//:vector",
+  ],
+  srcs = [
+    "Data/Aeson/Encoding.hs",
+    "Data/Aeson/Encoding/Internal.hs",
+    "Data/Aeson/Encoding/Builder.hs",
+  ],
+)
+
+haskell_library(
+  name = "from_json",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":aeson_time",
     ":cbits",
     ":core",
     "@hackage_attoparsec//:core",
-    "@hackage_attoparsec//:attoparsec",
-    "@hackage_attoparsec//:text_lazy",
     "@hackage_attoparsec//:char8",
     "@hackage_base_compat//:base-compat",
     "@hackage_dlist//:dlist",
@@ -88,27 +125,112 @@ haskell_library(
     "@hackage_tagged//:tagged",
     "@hackage_text//:text",
     "@hackage_text//:lazy",
-    "@hackage_text//:builder",
-    "@hackage_th_abstraction//:th-abstraction",
     "@hackage_time_locale_compat//:time-locale-compat",
     "@hackage_unordered_containers//:unordered-containers",
     "@hackage_uuid_types//:uuid-types",
     "@hackage_vector//:vector",
   ],
+  prebuilt_dependencies = [
+    "bytestring",
+  ],
+  srcs = [
+    "Data/Aeson/Types/FromJSON.hs",
+  ],
+)
+
+haskell_library(
+  name = "to_json",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":cbits",
+    ":core",
+    ":encoding",
+    "@hackage_attoparsec//:core",
+    "@hackage_base_compat//:base-compat",
+    "@hackage_dlist//:dlist",
+    "@hackage_hashable//:hashable",
+    "@hackage_scientific//:scientific",
+    "@hackage_tagged//:tagged",
+    "@hackage_text//:text",
+    "@hackage_text//:lazy",
+    "@hackage_time_locale_compat//:time-locale-compat",
+    "@hackage_unordered_containers//:unordered-containers",
+    "@hackage_uuid_types//:uuid-types",
+    "@hackage_vector//:vector",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+  ],
+  srcs = [
+    "Data/Aeson/Types/ToJSON.hs",
+  ],
+)
+
+haskell_library(
+  name = "internal",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":core",
+    ":from_json",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+  ],
+  srcs = [
+    "Data/Aeson/Internal.hs",
+  ],
+)
+
+haskell_library(
+  name = "types",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":core",
+    ":to_json",
+    ":encoding",
+    ":from_json",
+    "@hackage_base_compat//:base-compat",
+    "@hackage_hashable//:hashable",
+    "@hackage_scientific//:scientific",
+    "@hackage_text//:builder",
+    "@hackage_text//:lazy",
+    "@hackage_text//:text",
+    "@hackage_unordered_containers//:unordered-containers",
+    "@hackage_vector//:vector",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+  ],
+  srcs = [
+    "Data/Aeson/Types/Class.hs",
+    "Data/Aeson/Types.hs",
+    "Data/Aeson/Text.hs",
+  ],
+)
+
+haskell_library(
+  name = "aeson",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":cbits",
+    ":core",
+    ":encoding",
+    ":from_json",
+    ":types",
+    "@hackage_base_compat//:base-compat",
+    "@hackage_hashable//:hashable",
+    "@hackage_text//:builder",
+    "@hackage_text//:text",
+    "@hackage_th_abstraction//:th-abstraction",
+    "@hackage_unordered_containers//:unordered-containers",
+    "@hackage_vector//:vector",
+  ],
+  prebuilt_dependencies = [
+    "template-haskell",
+  ],
   srcs = [
     "Data/Aeson.hs",
     "Data/Aeson/Encode.hs",
-    "Data/Aeson/Encoding.hs",
-    "Data/Aeson/Encoding/Builder.hs",
-    "Data/Aeson/Encoding/Internal.hs",
-    "Data/Aeson/Internal.hs",
-    "Data/Aeson/Internal/Time.hs",
-    "Data/Aeson/Parser/Time.hs",
     "Data/Aeson/TH.hs",
-    "Data/Aeson/Text.hs",
-    "Data/Aeson/Types.hs",
-    "Data/Aeson/Types/Class.hs",
-    "Data/Aeson/Types/FromJSON.hs",
-    "Data/Aeson/Types/ToJSON.hs",
   ],
 )

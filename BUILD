@@ -30,6 +30,7 @@ haskell_binary(
     "@hackage_async//:async",
     "@hackage_connection//:connection",
     "@hackage_http_client//:http-client",
+    "@hackage_http_conduit//:conduit",
     "@hackage_http_conduit//:http-conduit",
     "@hackage_lens//:control_lens",
     "@hackage_lens//:map_set",

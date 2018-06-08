@@ -6,6 +6,7 @@ haskell_library(
   deps = [
     "@hackage_unordered_containers//:unordered-containers",
     "@hackage_text//:text",
+    "@hackage_text//:lazy",
     "@hackage_lens//:control_lens",
     "@hackage_lens//:text",
     "@hackage_attoparsec//:attoparsec",

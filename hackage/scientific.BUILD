@@ -6,6 +6,7 @@ haskell_library(
   deps = [
     "@hackage_integer_logarithms//:integer-logarithms",
     "@hackage_text//:text",
+    "@hackage_text//:builder",
     "@hackage_hashable//:hashable",
     "@hackage_primitive//:primitive",
   ],

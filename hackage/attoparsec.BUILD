@@ -21,7 +21,6 @@ haskell_library(
   deps = [
     ":core",
     "@hackage_text//:text",
-    "@hackage_scientific//:scientific",
   ],
   prebuilt_dependencies = [
     "base",
@@ -36,17 +35,46 @@ haskell_library(
     "Data/Attoparsec/Combinator.hs",
     "Data/Attoparsec/Internal.hs",
     "Data/Attoparsec/Internal/Types.hs",
-    "Data/Attoparsec/Lazy.hs",
     "Data/Attoparsec/Text/Buffer.hs",
     "Data/Attoparsec/Text/FastSet.hs",
-    "Data/Attoparsec/Text/Internal.hs",
     "Data/Attoparsec/Types.hs",
+  ],
+)
 
-    # These files could be in a separate target, such that the :attoparsec
-    # target can avoid the dependency on "scientific". But unfortenately doing
-    # so causes linker errors in "aeson". :(
+haskell_library(
+  name = "char8",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":core",
+    ":attoparsec",
+    "@hackage_text//:text",
+    "@hackage_scientific//:scientific",
+  ],
+  prebuilt_dependencies = [
+    "base",
+  ],
+  srcs = [
     "Data/Attoparsec/ByteString/Char8.hs",
     "Data/Attoparsec/Char8.hs",
+  ],
+)
+
+haskell_library(
+  name = "text_lazy",
+  visibility = ["//visibility:public"],
+  deps = [
+    ":core",
+    ":attoparsec",
+    "@hackage_text//:text",
+    "@hackage_text//:lazy",
+    "@hackage_scientific//:scientific",
+  ],
+  prebuilt_dependencies = [
+    "base",
+  ],
+  srcs = [
+    "Data/Attoparsec/Lazy.hs",
+    "Data/Attoparsec/Text/Internal.hs",
     "Data/Attoparsec/Text.hs",
     "Data/Attoparsec/Text/Lazy.hs",
   ],

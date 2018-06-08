@@ -1049,34 +1049,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/blaze-builder-0.4.0.2.tar.gz",
   ],
   strip_prefix = "blaze-builder-0.4.0.2",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "blaze-builder",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_text//:text",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "deepseq",
-  ],
-  srcs = [
-    "Blaze/ByteString/Builder.hs",
-    "Blaze/ByteString/Builder/Word.hs",
-    "Blaze/ByteString/Builder/Char8.hs",
-    "Blaze/ByteString/Builder/Int.hs",
-    "Blaze/ByteString/Builder/HTTP.hs",
-    "Blaze/ByteString/Builder/ByteString.hs",
-    "Blaze/ByteString/Builder/Internal/Write.hs",
-    "Blaze/ByteString/Builder/Char/Utf8.hs",
-    "Blaze/ByteString/Builder/Compat/Write.hs",
-    "Blaze/ByteString/Builder/Html/Utf8.hs",
-  ],
-)
-""",
+  build_file = "hackage/blaze_builder.BUILD",
 )
 
 new_http_archive(
@@ -1086,28 +1059,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/case-insensitive-1.2.0.10.tar.gz",
   ],
   strip_prefix = "case-insensitive-1.2.0.10",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "case-insensitive",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_text//:text",
-    "@hackage_hashable//:hashable",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "deepseq",
-  ],
-  srcs = [
-    "Data/CaseInsensitive.hs",
-    "Data/CaseInsensitive/Internal.hs",
-    "Data/CaseInsensitive/Unsafe.hs",
-  ],
-)
-""",
+  build_file = "hackage/case_insensitive.BUILD",
 )
 
 new_http_archive(
@@ -1291,50 +1243,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/parsec-3.1.13.0.tar.gz",
   ],
   strip_prefix = "parsec-3.1.13.0",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "parsec",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_text//:text",
-    "@hackage_mtl//:mtl",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-  ],
-  srcs = [
-    "src/Text/Parsec.hs",
-    "src/Text/Parsec/String.hs",
-    "src/Text/Parsec/ByteString.hs",
-    "src/Text/Parsec/Text.hs",
-    "src/Text/Parsec/Pos.hs",
-    "src/Text/Parsec/Error.hs",
-    "src/Text/Parsec/Prim.hs",
-    "src/Text/Parsec/Char.hs",
-    "src/Text/Parsec/Combinator.hs",
-    "src/Text/Parsec/Token.hs",
-    "src/Text/Parsec/Expr.hs",
-    "src/Text/Parsec/Language.hs",
-    "src/Text/Parsec/Perm.hs",
-    "src/Text/Parsec/ByteString/Lazy.hs",
-    "src/Text/Parsec/Text/Lazy.hs",
-    "src/Text/ParserCombinators/Parsec.hs",
-    "src/Text/ParserCombinators/Parsec/Char.hs",
-    "src/Text/ParserCombinators/Parsec/Combinator.hs",
-    "src/Text/ParserCombinators/Parsec/Error.hs",
-    "src/Text/ParserCombinators/Parsec/Expr.hs",
-    "src/Text/ParserCombinators/Parsec/Language.hs",
-    "src/Text/ParserCombinators/Parsec/Perm.hs",
-    "src/Text/ParserCombinators/Parsec/Pos.hs",
-    "src/Text/ParserCombinators/Parsec/Prim.hs",
-    "src/Text/ParserCombinators/Parsec/Token.hs",
-  ],
-  src_strip_prefix = "src",
-)
-""",
+  build_file = "hackage/parsec.BUILD",
 )
 
 new_http_archive(
@@ -1923,55 +1832,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/conduit-extra-1.2.3.2.tar.gz",
   ],
   strip_prefix = "conduit-extra-1.2.3.2",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "conduit-extra",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_exceptions//:exceptions",
-    "@hackage_streaming_commons//:streaming-commons",
-    "@hackage_stm//:stm",
-    "@hackage_text//:text",
-    "@hackage_monad_control//:monad-control",
-    "@hackage_network//:network",
-    "@hackage_async//:async",
-    "@hackage_conduit//:conduit",
-    "@hackage_blaze_builder//:blaze-builder",
-    "@hackage_unliftio_core//:unliftio-core",
-    "@hackage_typed_process//:typed-process",
-    "@hackage_transformers_base//:transformers-base",
-    "@hackage_attoparsec//:attoparsec",
-    "@hackage_resourcet//:resourcet",
-    "@hackage_primitive//:primitive",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "filepath",
-    "process",
-    "transformers",
-    "directory",
-  ],
-  srcs = [
-    "Data/Conduit/Attoparsec.hs",
-    "Data/Conduit/Binary.hs",
-    "Data/Conduit/Blaze.hs",
-    "Data/Conduit/ByteString/Builder.hs",
-    "Data/Conduit/Filesystem.hs",
-    "Data/Conduit/Foldl.hs",
-    "Data/Conduit/Lazy.hs",
-    "Data/Conduit/Network.hs",
-    "Data/Conduit/Network/UDP.hs",
-    "Data/Conduit/Process.hs",
-    "Data/Conduit/Text.hs",
-    "Data/Conduit/Zlib.hs",
-    "Data/Conduit/Network/Unix.hs",
-    "Data/Conduit/Process/Typed.hs",
-  ],
-)
-""",
+  build_file = "hackage/conduit_extra.BUILD",
 )
 
 new_http_archive(

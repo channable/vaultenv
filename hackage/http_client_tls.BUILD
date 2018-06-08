@@ -9,6 +9,7 @@ haskell_library(
     "@hackage_case_insensitive//:case-insensitive",
     "@hackage_data_default_class//:data-default-class",
     "@hackage_text//:text",
+    "@hackage_text//:io",
     "@hackage_tls//:tls",
     "@hackage_network//:network",
     "@hackage_connection//:connection",

@@ -1,0 +1,43 @@
+load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
+
+haskell_library(
+  name = "parsec",
+  visibility = ["//visibility:public"],
+  deps = [
+    "@hackage_text//:text",
+    "@hackage_text//:lazy",
+    "@hackage_mtl//:mtl",
+  ],
+  prebuilt_dependencies = [
+    "bytestring",
+    "base",
+  ],
+  srcs = [
+    "src/Text/Parsec.hs",
+    "src/Text/Parsec/String.hs",
+    "src/Text/Parsec/ByteString.hs",
+    "src/Text/Parsec/Text.hs",
+    "src/Text/Parsec/Pos.hs",
+    "src/Text/Parsec/Error.hs",
+    "src/Text/Parsec/Prim.hs",
+    "src/Text/Parsec/Char.hs",
+    "src/Text/Parsec/Combinator.hs",
+    "src/Text/Parsec/Token.hs",
+    "src/Text/Parsec/Expr.hs",
+    "src/Text/Parsec/Language.hs",
+    "src/Text/Parsec/Perm.hs",
+    "src/Text/Parsec/ByteString/Lazy.hs",
+    "src/Text/Parsec/Text/Lazy.hs",
+    "src/Text/ParserCombinators/Parsec.hs",
+    "src/Text/ParserCombinators/Parsec/Char.hs",
+    "src/Text/ParserCombinators/Parsec/Combinator.hs",
+    "src/Text/ParserCombinators/Parsec/Error.hs",
+    "src/Text/ParserCombinators/Parsec/Expr.hs",
+    "src/Text/ParserCombinators/Parsec/Language.hs",
+    "src/Text/ParserCombinators/Parsec/Perm.hs",
+    "src/Text/ParserCombinators/Parsec/Pos.hs",
+    "src/Text/ParserCombinators/Parsec/Prim.hs",
+    "src/Text/ParserCombinators/Parsec/Token.hs",
+  ],
+  src_strip_prefix = "src",
+)

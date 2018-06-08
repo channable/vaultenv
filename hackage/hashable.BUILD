@@ -10,6 +10,7 @@ haskell_library(
   visibility = ["//visibility:public"],
   deps = [
     ":cbits",
+    "@hackage_text//:lazy",
     "@hackage_text//:text",
   ],
   prebuilt_dependencies = [

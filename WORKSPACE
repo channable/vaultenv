@@ -408,49 +408,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/attoparsec-0.13.2.2.tar.gz",
   ],
   strip_prefix = "attoparsec-0.13.2.2",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "attoparsec",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_text//:text",
-    "@hackage_scientific//:scientific",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "array",
-    "containers",
-    "transformers",
-    "deepseq",
-  ],
-  srcs = [
-    "Data/Attoparsec.hs",
-    "Data/Attoparsec/Lazy.hs",
-    "Data/Attoparsec/Char8.hs",
-    "Data/Attoparsec/Types.hs",
-    "Data/Attoparsec/Text.hs",
-    "Data/Attoparsec/Internal.hs",
-    "Data/Attoparsec/Zepto.hs",
-    "Data/Attoparsec/Number.hs",
-    "Data/Attoparsec/ByteString.hs",
-    "Data/Attoparsec/Combinator.hs",
-    "Data/Attoparsec/Text/FastSet.hs",
-    "Data/Attoparsec/Text/Lazy.hs",
-    "Data/Attoparsec/Text/Buffer.hs",
-    "Data/Attoparsec/Text/Internal.hs",
-    "Data/Attoparsec/ByteString/FastSet.hs",
-    "Data/Attoparsec/ByteString/Lazy.hs",
-    "Data/Attoparsec/ByteString/Char8.hs",
-    "Data/Attoparsec/ByteString/Buffer.hs",
-    "Data/Attoparsec/ByteString/Internal.hs",
-    "Data/Attoparsec/Internal/Types.hs",
-    "Data/Attoparsec/Internal/Fhthagn.hs",
-  ],
-)
-""",
+  build_file = "hackage/attoparsec.BUILD",
 )
 
 new_http_archive(

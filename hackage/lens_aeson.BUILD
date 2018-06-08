@@ -11,6 +11,7 @@ haskell_library(
     "@hackage_attoparsec//:attoparsec",
     "@hackage_scientific//:scientific",
     "@hackage_aeson//:aeson",
+    "@hackage_aeson//:core",
     "@hackage_vector//:vector",
   ],
   prebuilt_dependencies = [

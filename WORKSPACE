@@ -2023,37 +2023,7 @@ new_http_archive(
     "https://s3.amazonaws.com/hackage.fpcomplete.com/package/http-conduit-2.2.4.tar.gz",
   ],
   strip_prefix = "http-conduit-2.2.4",
-  build_file_content = """
-load("@io_tweag_rules_haskell//haskell:haskell.bzl", "haskell_library")
-
-haskell_library(
-  name = "http-conduit",
-  visibility = ["//visibility:public"],
-  deps = [
-    "@hackage_http_client//:http-client",
-    "@hackage_exceptions//:exceptions",
-    "@hackage_monad_control//:monad-control",
-    "@hackage_lifted_base//:lifted-base",
-    "@hackage_conduit//:conduit",
-    "@hackage_conduit_extra//:conduit-extra",
-    "@hackage_http_client_tls//:http-client-tls",
-    "@hackage_mtl//:mtl",
-    "@hackage_resourcet//:resourcet",
-    "@hackage_http_types//:http-types",
-    "@hackage_aeson//:aeson",
-  ],
-  prebuilt_dependencies = [
-    "bytestring",
-    "base",
-    "transformers",
-  ],
-  srcs = [
-    "Network/HTTP/Conduit.hs",
-    "Network/HTTP/Client/Conduit.hs",
-    "Network/HTTP/Simple.hs",
-  ],
-)
-""",
+  build_file = "hackage/http_conduit.BUILD",
 )
 
 new_http_archive(

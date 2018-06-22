@@ -27,6 +27,7 @@ mkdir -p "$PKGNAME/etc/secrets.d"
 stack build
 stack install
 cp "$(stack path --local-install-root)/bin/vaultenv" "$PKGNAME/usr/bin/"
+cp "$(stack path --local-install-root)/bin/vaultenv" vaultenv-${VERSION}_x86_64-ubuntu-linux
 
 # Write the package metadata file, substituting environment variables in the
 # template file.

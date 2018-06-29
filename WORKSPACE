@@ -1,11 +1,11 @@
-# Current master has some fixes that are not in v0.5.
-rules_haskell_version = "a7ed28171ff9e4dfad23c4669eead8c170bc8e0c"
+# Version from https://github.com/tweag/rules_haskell/pull/320.
+rules_haskell_version = "96e42b1c8a11c1976f06b8ecd8b22b87dba2d4a3"
 
 http_archive(
   name = "io_tweag_rules_haskell",
   strip_prefix = "rules_haskell-" + rules_haskell_version,
   urls = ["https://github.com/tweag/rules_haskell/archive/" + rules_haskell_version + ".tar.gz"],
-  sha256 = "2b2ce55757bf44fce050dc308fd33f5645a0c57415cbdce496d822bcea8bc987",
+  sha256 = "05aa03b928aa0553a301436934f8b981de24a252bb40891260e660998cb2535a",
 )
 
 load("@io_tweag_rules_haskell//haskell:repositories.bzl", "haskell_repositories")

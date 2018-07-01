@@ -1,11 +1,11 @@
-# Version from https://github.com/tweag/rules_haskell/pull/320.
-rules_haskell_version = "96e42b1c8a11c1976f06b8ecd8b22b87dba2d4a3"
+# Version from https://github.com/tweag/rules_haskell/pull/304.
+rules_haskell_version = "93cd1665ba7389e971c34f4d3a4bf3c617f9e858"
 
 http_archive(
   name = "io_tweag_rules_haskell",
   strip_prefix = "rules_haskell-" + rules_haskell_version,
   urls = ["https://github.com/tweag/rules_haskell/archive/" + rules_haskell_version + ".tar.gz"],
-  sha256 = "05aa03b928aa0553a301436934f8b981de24a252bb40891260e660998cb2535a",
+  sha256 = "6b0ffd005f6b77781f8dd2f3fb31482fcfe5fb6682cb1dc5c1bffac1866f62be",
 )
 
 load("@io_tweag_rules_haskell//haskell:repositories.bzl", "haskell_repositories")

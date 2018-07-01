@@ -30,7 +30,10 @@ cc_library(
 haskell_library(
   name = "unescape_pure",
   deps = ["@hackage_text//:text"],
-  prebuilt_dependencies = ["base"],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
+  ],
   srcs = ["pure/Data/Aeson/Parser/UnescapePure.hs"],
   src_strip_prefix = "pure",
 )
@@ -55,6 +58,7 @@ haskell_library(
     "base",
     "bytestring",
     "containers",
+    "deepseq",
     "ghc-prim",
     "template-haskell",
     "time",
@@ -81,7 +85,9 @@ haskell_library(
     "@hackage_text//:text",
   ],
   prebuilt_dependencies = [
+    "base",
     "bytestring",
+    "time",
   ],
   srcs = [
     "Data/Aeson/Internal/Time.hs",
@@ -101,6 +107,11 @@ haskell_library(
     "@hackage_text//:lazy",
     "@hackage_unordered_containers//:unordered-containers",
     "@hackage_vector//:vector",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
+    "time",
   ],
   srcs = [
     "Data/Aeson/Encoding.hs",
@@ -131,7 +142,10 @@ haskell_library(
     "@hackage_vector//:vector",
   ],
   prebuilt_dependencies = [
+    "base",
     "bytestring",
+    "containers",
+    "time",
   ],
   srcs = [
     "Data/Aeson/Types/FromJSON.hs",
@@ -159,7 +173,10 @@ haskell_library(
     "@hackage_vector//:vector",
   ],
   prebuilt_dependencies = [
+    "base",
     "bytestring",
+    "containers",
+    "time",
   ],
   srcs = [
     "Data/Aeson/Types/ToJSON.hs",
@@ -174,6 +191,7 @@ haskell_library(
     ":from_json",
   ],
   prebuilt_dependencies = [
+    "base",
     "bytestring",
   ],
   srcs = [
@@ -199,6 +217,7 @@ haskell_library(
     "@hackage_vector//:vector",
   ],
   prebuilt_dependencies = [
+    "base",
     "bytestring",
   ],
   srcs = [
@@ -226,6 +245,9 @@ haskell_library(
     "@hackage_vector//:vector",
   ],
   prebuilt_dependencies = [
+    "base",
+    "bytestring",
+    "containers",
     "template-haskell",
   ],
   srcs = [

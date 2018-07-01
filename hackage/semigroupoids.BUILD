@@ -10,6 +10,10 @@ haskell_library(
     "@hackage_semigroups//:semigroups",
     "@hackage_transformers_compat//:transformers-compat",
   ],
+  prebuilt_dependencies = [
+    "base",
+    "transformers",
+  ],
   srcs = [
     "src/Data/Isomorphism.hs",
     "src/Data/Semigroupoid.hs",

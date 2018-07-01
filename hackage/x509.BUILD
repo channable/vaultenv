@@ -10,6 +10,10 @@ haskell_library(
     "@hackage_asn1_parse//:asn1-parse",
     "@hackage_asn1_encoding//:asn1-encoding",
   ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
+  ],
   compiler_flags = ["-XDatatypeContexts"],
   srcs = [
     "Data/X509/Internal.hs",
@@ -29,6 +33,7 @@ haskell_library(
     "@hackage_asn1_types//:asn1-types",
     "@hackage_cryptonite//:pubkey_nohash",
   ],
+  prebuilt_dependencies = ["base"],
   srcs = [
     "Data/X509/OID.hs",
   ],
@@ -48,6 +53,10 @@ haskell_library(
     "@hackage_cryptonite//:pubkey_hash",
     "@hackage_cryptonite//:hash",
     "@hackage_asn1_encoding//:asn1-encoding",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
   ],
   srcs = [
     "Data/X509.hs",

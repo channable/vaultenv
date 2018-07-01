@@ -23,7 +23,10 @@ haskell_library(
     "@hackage_text//:text",
   ],
   prebuilt_dependencies = [
+    "array",
     "base",
+    "bytestring",
+    "deepseq",
   ],
   srcs = [
     "Data/Attoparsec.hs",
@@ -52,6 +55,7 @@ haskell_library(
   ],
   prebuilt_dependencies = [
     "base",
+    "bytestring",
   ],
   srcs = [
     "Data/Attoparsec/ByteString/Char8.hs",
@@ -71,6 +75,7 @@ haskell_library(
   ],
   prebuilt_dependencies = [
     "base",
+    "deepseq",
   ],
   srcs = [
     "Data/Attoparsec/Lazy.hs",

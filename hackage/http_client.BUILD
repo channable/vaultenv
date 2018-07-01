@@ -9,6 +9,7 @@ haskell_library(
   ],
   prebuilt_dependencies = [
     "base",
+    "bytestring",
     "containers",
   ],
   srcs = [

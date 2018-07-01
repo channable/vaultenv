@@ -13,6 +13,11 @@ haskell_library(
     "@hackage_x509_store//:x509-store",
     "@hackage_x509_system//:x509-system",
   ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
+    "containers",
+  ],
   srcs = [
     "Network/Connection.hs",
     "Network/Connection/Types.hs",

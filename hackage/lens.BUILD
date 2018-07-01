@@ -37,6 +37,10 @@ haskell_library(
   ],
   prebuilt_dependencies = [
     "base",
+    "bytestring",
+    "containers",
+    "template-haskell",
+    "transformers",
   ],
   srcs = [
     "src/Control/Lens/Internal/Bazaar.hs",
@@ -77,6 +81,7 @@ haskell_library(
   ],
   prebuilt_dependencies = [
     "base",
+    "transformers",
   ],
   compiler_flags = ["-XTrustworthy"],
   srcs = [
@@ -109,8 +114,16 @@ haskell_library(
   ],
   prebuilt_dependencies = [
     "base",
+    "containers",
+    "ghc-prim",
+    "transformers",
   ],
-  compiler_flags = ["-XTrustworthy"],
+  compiler_flags = [
+    "-XTrustworthy",
+    # C preprocessor warns on ?? trigraph which fails the build.
+    # Disable that warning.
+    "-optP -Wno-trigraphs"
+  ],
   srcs = [
     "src/Control/Lens/Lens.hs",
     "src/Control/Lens/Level.hs",
@@ -140,7 +153,10 @@ haskell_library(
     "@hackage_vector//:vector",
   ],
   prebuilt_dependencies = [
+    "array",
     "base",
+    "containers",
+    "transformers",
   ],
   compiler_flags = ["-XTrustworthy"],
   srcs = [
@@ -175,6 +191,9 @@ haskell_library(
   ],
   prebuilt_dependencies = [
     "base",
+    "bytestring",
+    "containers",
+    "transformers",
   ],
   compiler_flags = ["-XTrustworthy"],
   srcs = [
@@ -213,7 +232,10 @@ haskell_library(
     "@hackage_hashable//:hashable",
     "@hackage_unordered_containers//:unordered-containers",
   ],
-  prebuilt_dependencies = ["base"],
+  prebuilt_dependencies = [
+    "base",
+    "containers",
+  ],
   srcs = [
     "src/Data/HashSet/Lens.hs",
     "src/Data/Map/Lens.hs",
@@ -234,7 +256,10 @@ haskell_library(
     "@hackage_text//:builder",
     "@hackage_vector//:vector",
   ],
-  prebuilt_dependencies = ["base"],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
+  ],
   srcs = [
     "src/Data/Text/Lazy/Lens.hs",
     "src/Data/Text/Lens.hs",
@@ -266,8 +291,12 @@ haskell_library(
     "@hackage_vector//:vector",
   ],
   prebuilt_dependencies = [
+    "array",
     "base",
+    "bytestring",
     "containers",
+    "template-haskell",
+    "transformers",
   ],
   compiler_flags = [
     "-DTRUSTWORTHY=1",
@@ -307,8 +336,12 @@ haskell_library(
     "@hackage_exceptions//:exceptions",
   ],
   prebuilt_dependencies = [
+    "array",
     "base",
-    "filepath"
+    "bytestring",
+    "containers",
+    "filepath",
+    "transformers",
   ],
   srcs = [
     "src/Control/Exception/Lens.hs",

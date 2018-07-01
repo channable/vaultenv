@@ -43,6 +43,7 @@ haskell_binary(
     "base",
     "bytestring",
     "containers",
+    "unix",
   ],
   srcs = ["app/Main.hs"],
   src_strip_prefix = "app",

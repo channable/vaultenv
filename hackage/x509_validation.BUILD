@@ -16,6 +16,10 @@ haskell_library(
     "@hackage_x509//:x509",
     "@hackage_x509_store//:x509-store",
   ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
+  ],
   srcs = [
     "Data/X509/Validation.hs",
     "Data/X509/Validation/Signature.hs",

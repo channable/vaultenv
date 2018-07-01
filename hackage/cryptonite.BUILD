@@ -209,7 +209,10 @@ haskell_library(
     "@hackage_memory//:memory",
     "@hackage_memory//:byte_array",
   ],
-  prebuilt_dependencies = ["base"],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
+  ],
   srcs = [
     "Crypto/Internal/ByteArray.hs",
     "Crypto/Internal/Compat.hs",
@@ -232,6 +235,7 @@ haskell_library(
     "@hackage_foundation//:array",
     "@hackage_foundation//:core",
   ],
+  prebuilt_dependencies = ["base"],
   srcs = [
     "Crypto/Error.hs",
     "Crypto/Error/Types.hs",
@@ -257,6 +261,7 @@ haskell_library(
     "@hackage_memory//:byte_array",
     "@hackage_memory//:memory",
   ],
+  prebuilt_dependencies = ["base"],
   srcs = [
     "Crypto/Cipher/AES.hs",
     "Crypto/Cipher/Blowfish.hs",
@@ -287,6 +292,7 @@ haskell_library(
     ":core",
     "@hackage_memory//:memory",
   ],
+  prebuilt_dependencies = ["base"],
   srcs = [
     "Crypto/Cipher/ChaCha.hs",
   ],
@@ -304,6 +310,7 @@ haskell_library(
     "@hackage_memory//:byte_array",
     "@hackage_memory//:memory",
   ],
+  prebuilt_dependencies = ["base"],
   srcs = [
     "Crypto/Cipher/ChaChaPoly1305.hs",
     "Crypto/MAC/Poly1305.hs",
@@ -407,6 +414,10 @@ haskell_library(
     ":hash_misc",
     ":hash_sha",
   ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
+  ],
   srcs = [
     "Crypto/ConstructHash/MiyaguchiPreneel.hs",
     "Crypto/Hash.hs",
@@ -478,6 +489,7 @@ haskell_library(
     "@hackage_memory//:byte_array",
     "@hackage_memory//:memory",
   ],
+  prebuilt_dependencies = ["base"],
   srcs = [
     "Crypto/ECC.hs",
     "Crypto/ECC/Simple/Prim.hs",
@@ -514,6 +526,10 @@ haskell_library(
     ":random",
     "@hackage_memory//:memory",
   ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
+  ],
   srcs = [
     "Crypto/PubKey/DSA.hs",
     "Crypto/PubKey/ECC/ECDSA.hs",
@@ -536,6 +552,7 @@ haskell_library(
     ":hash",
     "@hackage_memory//:memory",
   ],
+  prebuilt_dependencies = ["base"],
   srcs = [
     "Crypto/MAC/CMAC.hs",
     "Crypto/MAC/HMAC.hs",
@@ -579,6 +596,7 @@ haskell_library(
     "@hackage_memory//:byte_array",
     "@hackage_memory//:memory",
   ],
+  prebuilt_dependencies = ["base"],
   srcs = [
     "Crypto/Data/AFIS.hs",
     "Crypto/OTP.hs",

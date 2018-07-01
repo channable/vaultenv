@@ -23,6 +23,10 @@ haskell_library(
   deps = [
     "@hackage_basement//:compat_and_numerical",
   ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim"
+  ],
   compiler_flags = [
     "-XNoImplicitPrelude",
   ],
@@ -41,6 +45,7 @@ haskell_library(
     "@hackage_basement//:core",
     "@hackage_basement//:memory",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = [
     "-XNoImplicitPrelude",
     "-XTypeFamilies",
@@ -66,6 +71,7 @@ haskell_library(
     "@hackage_basement//:encoding",
     "@hackage_basement//:memory",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = [
     "-XNoImplicitPrelude",
     "-XTypeFamilies",
@@ -141,6 +147,7 @@ haskell_library(
     "@hackage_basement//:ascii",
     "@hackage_basement//:memory",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = ["-XNoImplicitPrelude"],
   srcs = [
     "Foundation/Bits.hs",
@@ -181,6 +188,7 @@ haskell_library(
     "@hackage_basement//:compat_and_numerical",
     "@hackage_basement//:compat_misc",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = [
     "-XNoImplicitPrelude",
     "-XTypeFamilies",
@@ -299,6 +307,7 @@ haskell_library(
     ":string",
     "@hackage_basement//:compat_and_numerical",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = [
     "-XNoImplicitPrelude",
     "-XTypeFamilies",
@@ -321,6 +330,7 @@ haskell_library(
     "@hackage_basement//:memory",
     "@hackage_basement//:misc",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = ["-XNoImplicitPrelude"],
   srcs = [
     "Foundation/Foreign.hs",
@@ -344,6 +354,7 @@ haskell_library(
     "@hackage_basement//:memory",
     "@hackage_basement//:misc",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = ["-XNoImplicitPrelude"],
   srcs = [
     "Foundation/IO.hs",
@@ -387,6 +398,7 @@ haskell_library(
     "@hackage_basement//:compat_misc",
     "@hackage_basement//:misc",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = ["-XNoImplicitPrelude"],
   srcs = [
     "Foundation/Partial.hs",

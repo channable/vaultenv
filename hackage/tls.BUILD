@@ -10,6 +10,10 @@ haskell_library(
     "@hackage_mtl//:mtl",
     "@hackage_network//:network",
   ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
+  ],
   compiler_flags = [
     "-DSSLV2_COMPATIBLE",
     "-DINCLUDE_NETWORK",
@@ -34,6 +38,10 @@ haskell_library(
   deps = [
     "@hackage_memory//:byte_array",
   ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
+  ],
   compiler_flags = [
     "-DSSLV2_COMPATIBLE",
     "-DINCLUDE_NETWORK",
@@ -49,6 +57,7 @@ haskell_library(
   deps = [
     "@hackage_cryptonite//:number",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = [
     "-DSSLV2_COMPATIBLE",
     "-DINCLUDE_NETWORK",
@@ -64,6 +73,7 @@ haskell_library(
   deps = [
     "@hackage_cryptonite//:random",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = [
     "-DSSLV2_COMPATIBLE",
     "-DINCLUDE_NETWORK",
@@ -86,6 +96,7 @@ haskell_library(
     "@hackage_cryptonite//:pubkey_nohash",
     "@hackage_memory//:byte_array",
   ],
+  prebuilt_dependencies = ["base"],
   compiler_flags = [
     "-DSSLV2_COMPATIBLE",
     "-DINCLUDE_NETWORK",
@@ -119,6 +130,10 @@ haskell_library(
     "@hackage_memory//:byte_array",
     "@hackage_mtl//:mtl",
     "@hackage_x509//:x509",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring",
   ],
   compiler_flags = [
     "-DSSLV2_COMPATIBLE",
@@ -158,6 +173,10 @@ haskell_library(
     "@hackage_x509//:x509",
     "@hackage_x509_store//:x509-store",
     "@hackage_x509_validation//:x509-validation",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "bytestring"
   ],
   compiler_flags = [
     "-DSSLV2_COMPATIBLE",

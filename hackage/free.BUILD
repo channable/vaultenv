@@ -10,7 +10,10 @@ haskell_library(
     "@hackage_transformers_compat//:transformers-compat",
   ],
   prebuilt_dependencies = [
+    "base",
+    "containers",
     "template-haskell",
+    "transformers",
   ],
   srcs = [
     "src/Control/Comonad/Cofree/Class.hs",
@@ -41,6 +44,10 @@ haskell_library(
     "@hackage_prelude_extras//:prelude-extras",
     "@hackage_profunctors//:profunctors",
     "@hackage_semigroupoids//:semigroupoids",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "transformers",
   ],
   srcs = [
     "src/Control/Alternative/Free.hs",

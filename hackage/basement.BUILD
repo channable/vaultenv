@@ -62,6 +62,9 @@ haskell_library(
   name = "compat_misc",
   visibility = ["//visibility:public"],
   deps = [":compat_and_numerical"],
+  prebuilt_dependencies = [
+    "base",
+  ],
   compiler_flags = [
     "-XNoImplicitPrelude",
     "-XBangPatterns",
@@ -79,6 +82,10 @@ haskell_library(
   name = "core",
   visibility = ["//visibility:public"],
   deps = [":compat_and_numerical"],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
+  ],
   compiler_flags = [
     "-XNoImplicitPrelude",
     "-XTypeFamilies",
@@ -104,6 +111,10 @@ haskell_library(
     ":compat_and_numerical",
     ":compat_misc",
     ":core",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
   ],
   compiler_flags = [
     "-XNoImplicitPrelude",
@@ -153,6 +164,10 @@ haskell_library(
   name = "floating",
   visibility = ["//visibility:public"],
   deps = [":compat_and_numerical"],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim"
+  ],
   compiler_flags = ["-XNoImplicitPrelude"],
   srcs = [
     "Basement/Floating.hs",
@@ -169,7 +184,10 @@ haskell_library(
     ":floating",
     ":memory",
   ],
-  prebuilt_dependencies = ["base"],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
+  ],
   compiler_flags = [
     "-XNoImplicitPrelude",
     "-XTypeFamilies",
@@ -198,6 +216,10 @@ haskell_library(
     ":compat_misc",
     ":core",
     ":memory",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
   ],
   compiler_flags = [
     "-XNoImplicitPrelude",
@@ -240,6 +262,10 @@ haskell_library(
     ":core",
     ":encoding",
     ":memory",
+  ],
+  prebuilt_dependencies = [
+    "base",
+    "ghc-prim",
   ],
   compiler_flags = [
     "-XNoImplicitPrelude",

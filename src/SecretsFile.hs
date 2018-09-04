@@ -1,17 +1,17 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module SecretsFile where
 
-import Data.Char              (toUpper)
-import Data.Monoid ((<>))
-import Data.List              (intercalate)
-import Control.Monad.Except   (MonadError, throwError)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-
-import qualified Control.Exception as Exception
-
-import Text.ParserCombinators.ReadP (ReadP, char, manyTill, get, option, skipSpaces,
-                                     string, many, readP_to_S, eof)
+import Data.Char (toUpper)
+import Data.List (intercalate)
+import Control.Applicative.Combinators (some, (<|>), optional)
+import Control.Monad.Except (MonadError, MonadIO, liftEither, liftIO)
+import Control.Exception (try)
+import Data.Void (Void)
+import qualified Text.Megaparsec as MP
+import qualified Text.Megaparsec.Char as MPC
+import qualified Text.Megaparsec.Char.Lexer as MPL
 
 data Secret = Secret
   { sMount :: String
@@ -20,63 +20,107 @@ data Secret = Secret
   , sVarName :: String
   } deriving (Eq, Show)
 
-data SecretFileErr
-  = IOError FilePath
-  | ParseError FilePath
+data SFVersion
+  = V1
+  | V2
+  deriving (Show)
 
-instance Show SecretFileErr where
-  show err = case err of
-    IOError fp -> "An I/O error happened while opening: " <> fp
-    ParseError fp -> "Could not parse: " <> fp
+type Parser = MP.Parsec Void String
 
-data SecretFileVersion = V1 | V2
+data SFError = IOError | ParseError (MP.ParseError (MP.Token String) Void)
 
--- | Run a ReadP parser
+instance Show SFError where
+  show sfErr =
+    case sfErr of
+      IOError -> "could not read file"
+      ParseError pe -> MP.parseErrorPretty pe
+
+-- | Helper for ExceptT stuff.
+readSecretList :: (MonadError SFError m, MonadIO m) => FilePath -> m [Secret]
+readSecretList fp = liftEither =<< (liftIO $ readSecretsFile fp)
+
+-- | Read a lit of secrets from a file
+readSecretsFile :: FilePath -> IO (Either SFError [Secret])
+readSecretsFile fp = do
+  contents <- safeReadFile fp
+  case contents of
+    Just c -> do
+      let parseResult = parseSecretsFile fp c
+      case parseResult of
+        Right res -> pure $ Right res
+        Left err -> pure $ Left (ParseError err)
+    Nothing -> pure $ Left IOError
+
+-- | Read a file, catching all IOError exceptions.
+safeReadFile :: FilePath -> IO (Maybe String)
+safeReadFile fp = do
+  (contentsOrErr :: Either IOError String) <- (try . readFile) fp
+  case contentsOrErr of
+    Right contents -> pure $ Just contents
+    Left _ -> pure $ Nothing
+
+-- | Parse a String as a SecretsFile.
+parseSecretsFile :: FilePath -> String -> Either (MP.ParseError (MP.Token String) Void) [Secret]
+parseSecretsFile = MP.parse secretsFileP
+
+-- | SpaceConsumer parser, which is responsible for stripping all whitespace.
 --
--- Report a syntax error (without additional information) or return a list of
--- secrets. The way to run a ReadP parser is to use the readP_to_S function and
--- pass it a string.
-runParser :: MonadError SecretFileErr m => FilePath -> ReadP a -> String -> m a
-runParser fileName parser contents =
-  let result = (readP_to_S parser) contents
-  in case result of
-    [] -> throwError $ ParseError fileName
-    _ -> pure . fst . head $ result
+-- The name is short, because we need to use it in a lot of places. This is the
+-- suggested/idiomatic name in Megaparsec.
+sc :: Parser ()
+sc = MPL.space MPC.space1 lineComment blockComment
+  where
+    lineComment = MP.empty
+    blockComment = MP.empty
 
--- | Parser for the entire secret file format
+-- | Helper which consumes all whitespace after a parser
+lexeme :: Parser a -> Parser a
+lexeme = MPL.lexeme sc
+
+-- | Helper which looks for a string and consumes trailing whitespace.
+symbol :: String -> Parser String
+symbol = MPL.symbol sc
+
+-- | Top level parser of the secrets file
 --
--- Determines the version of the format, by looking for @VERSION 2@. Default
--- to V1 if this is absent. The @V1@ format consists of single lines of secret
--- specifications. The @V2@ format contains multiple "blocks" of secrets. Each
--- block specifies which mount point it pertains to.
-secretFileP :: ReadP [Secret]
-secretFileP = do
-  fileVersion <- option V1 (formatVersionP <* skipSpaces)
-  case fileVersion of
-    V1 -> many ((secretP fileVersion "secret") <* skipSpaces) <* eof
-    V2 -> concat <$> many (secretBlockP <* skipSpaces) <* eof
+-- Parses the magic version number and dispatches to the Mount block based
+-- parser or the list based parser based on that.
+secretsFileP :: Parser [Secret]
+secretsFileP = do
+  _ <- sc
+  _ <- symbol "VERSION"
+  version <- versionP
+  case version of
+    V1 -> some (secretP version "secret")
+    V2 -> concat <$> some secretBlockP
 
-formatVersionP :: ReadP SecretFileVersion
-formatVersionP = const V2 <$> string "VERSION 2"
+-- | Parse the file version
+versionP :: Parser SFVersion
+versionP = V1 <$ symbol "1"
+       <|> V2 <$ symbol "2"
 
 -- | Parse a secret block
 --
 -- Exclusive to V2 of the format. A secret block consists of a line describing
 -- the mount location followed by secret specifications.
-secretBlockP :: ReadP [Secret]
+secretBlockP :: Parser [Secret]
 secretBlockP = do
-  mountPath <- string "MOUNT " *> manyTill get (char '\n')
-  many (secretP V2 mountPath)
+  _ <- symbol "MOUNT"
+  mountPath <- lexeme (some MPC.alphaNumChar)
+  some (MP.try (lexeme (secretP V2 mountPath)))
 
 -- | Parse a secret specification line
 --
 -- The version of the fileformat we're parsing determines the way we report
 -- variable information. For V2, the mount point is part of the variable name,
 -- to allow for disambiguation. For V1, this is not needed.
-secretP :: SecretFileVersion -> String -> ReadP Secret
+secretP :: SFVersion -> String -> Parser Secret
 secretP version mount = do
-  varName <- option Nothing $ Just <$> manyTill get (char '=')
-  (path, key) <- (,) <$> manyTill get (char '#') <*> manyTill get (char '\n')
+  varName <- optional $ MP.try secretVarP
+  path <- some MPC.alphaNumChar
+  _ <- symbol "#"
+  key <- some MPC.alphaNumChar
+  _ <- symbol "\n"
 
   pure Secret { sMount = mount
               , sPath = path
@@ -84,9 +128,15 @@ secretP version mount = do
               , sVarName = maybe (getVarName version mount path key) id varName
               }
 
+secretVarP :: Parser String
+secretVarP = do
+  var <- some MPC.alphaNumChar
+  _ <- symbol "="
+  pure var
+
 -- | Convert a secret name into the name of the environment variable that it
 -- will be available under.
-getVarName :: SecretFileVersion -> String -> String -> String -> String
+getVarName :: SFVersion -> String -> String -> String -> String
 getVarName version mount path key = fmap format $ intercalate "_" components
   where underscore '/' = '_'
         underscore '-' = '_'
@@ -95,17 +145,3 @@ getVarName version mount path key = fmap format $ intercalate "_" components
         components = case version of
           V1 -> [path, key]
           V2 -> [mount, path, key]
-
--- | Read a list of secrets from @fileName@.
---
--- Does minimal error reporting, but does differentiate IO and parse errors.
-readSecretList :: (MonadError SecretFileErr m, MonadIO m) => FilePath -> m [Secret]
-readSecretList fileName = do
-  contents <- liftIO safeReadFile
-  res <- maybe (throwError $ IOError fileName) (runParser fileName secretFileP) contents
-  liftIO $ print res
-  pure res
-  where
-    safeReadFile =
-      Exception.catch (Just <$> readFile fileName)
-        ((\_ -> return Nothing) :: Exception.IOException -> IO (Maybe String))

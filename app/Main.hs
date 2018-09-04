@@ -35,7 +35,7 @@ import qualified Data.Map.Lens              as Lens (toMapOf)
 import qualified Data.Text                  as Text
 
 import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds, LogLevel(..))
-import SecretsFile (Secret(..), SecretFileErr(..), readSecretList)
+import SecretsFile (Secret(..), SFError(..), readSecretList)
 
 secretRequestPath :: Secret -> String
 secretRequestPath secret = "/v1/" <> sMount secret <> "/" <> sPath secret
@@ -53,7 +53,7 @@ type VaultData = Map.Map String String
 
 data VaultError
   = SecretNotFound    String
-  | SecretFileErr     SecretFileErr
+  | SecretFileError   SFError
   | KeyNotFound       Secret
   | BadRequest        LBS.ByteString
   | Forbidden
@@ -120,7 +120,7 @@ getHttpManager opts = newManager managerSettings
 -- throw HTTP exceptions.
 vaultEnv :: Context -> ExceptT VaultError IO [EnvVar]
 vaultEnv context = do
-  secrets <- mapExceptT (fmap $ first SecretFileErr)  $ readSecretList secretFile
+  secrets <- mapExceptT (fmap $ first SecretFileError) $ readSecretList secretFile
   secretEnv <- requestSecrets context secrets
   checkNoDuplicates (buildEnv secretEnv)
     where
@@ -241,7 +241,7 @@ vaultErrorLogMessage vaultError =
     description = case vaultError of
       SecretNotFound secretPath ->
         "Secret not found: " <> secretPath
-      SecretFileErr sfe -> show sfe
+      SecretFileError sfe -> show sfe
       KeyNotFound secret ->
         "Key " <> (sKey secret) <> " not found for path " <> (sPath secret)
       DuplicateVar varName ->

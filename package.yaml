@@ -14,8 +14,10 @@ dependencies:
   - http-client
   - lens
   - lens-aeson
+  - megaparsec
   - mtl
   - optparse-applicative
+  - parser-combinators
   - retry
   - text
   - unordered-containers

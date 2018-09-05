@@ -3,12 +3,12 @@
 
 module SecretsFile where
 
+import Control.Applicative.Combinators (some, option, optional, sepBy1)
+import Control.Exception (try)
+import Control.Monad.Except (MonadError, MonadIO, liftEither, liftIO)
 import Data.Char (toUpper, isSpace)
 import Data.Functor (void)
 import Data.List (intercalate)
-import Control.Applicative.Combinators (some, option, optional, sepBy1)
-import Control.Monad.Except (MonadError, MonadIO, liftEither, liftIO)
-import Control.Exception (try)
 import Data.Void (Void)
 import qualified Text.Megaparsec as MP
 import qualified Text.Megaparsec.Char as MPC

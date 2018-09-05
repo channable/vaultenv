@@ -3,7 +3,8 @@
 
 module SecretsFile where
 
-import Data.Char (toUpper)
+import Data.Char (toUpper, isSpace)
+import Data.Functor (void)
 import Data.List (intercalate)
 import Control.Applicative.Combinators (some, option, optional, sepBy1)
 import Control.Monad.Except (MonadError, MonadIO, liftEither, liftIO)
@@ -65,21 +66,28 @@ parseSecretsFile = MP.parse secretsFileP
 
 -- | SpaceConsumer parser, which is responsible for stripping all whitespace.
 --
+-- Sometimes, we require explicit newlines, therefore, we don't handle those
+-- here..
+--
 -- The name is short, because we need to use it in a lot of places. This is the
 -- suggested/idiomatic name in Megaparsec.
-sc :: Parser ()
-sc = MPL.space MPC.space1 lineComment blockComment
+whitespace :: Parser ()
+whitespace = MPL.space whitespaceChars lineComment blockComment
   where
+    whitespaceChars = void $ MP.takeWhile1P (Just "whitespace") (\c -> isSpace c && c /= '\n')
     lineComment = MP.empty
     blockComment = MP.empty
 
 -- | Helper which consumes all whitespace after a parser
 lexeme :: Parser a -> Parser a
-lexeme = MPL.lexeme sc
+lexeme = MPL.lexeme whitespace
 
 -- | Helper which looks for a string and consumes trailing whitespace.
 symbol :: String -> Parser String
-symbol = MPL.symbol sc
+symbol = MPL.symbol whitespace
+
+newlines :: Parser ()
+newlines = void $ some $ lexeme $ MPC.char '\n'
 
 -- | Top level parser of the secrets file
 --
@@ -87,7 +95,7 @@ symbol = MPL.symbol sc
 -- parser or the list based parser based on that.
 secretsFileP :: Parser [Secret]
 secretsFileP = do
-  _ <- sc
+  _ <- whitespace
   version <- versionP
   case version of
     V1 -> some (secretP version "secret")
@@ -100,7 +108,9 @@ secretsFileP = do
 versionP :: Parser SFVersion
 versionP = option V1 $ MP.try $ do
   _ <- symbol "VERSION"
-  V2 <$ symbol "2"
+  symbol "2"
+  _ <- newlines
+  pure V2
 
 -- | Parse a secret block
 --
@@ -110,6 +120,7 @@ secretBlockP :: Parser [Secret]
 secretBlockP = do
   _ <- symbol "MOUNT"
   mountPath <- lexeme (some MPC.alphaNumChar)
+  _ <- newlines
   some (MP.try (lexeme (secretP V2 mountPath)))
 
 -- | Parses legal Vault paths.
@@ -123,17 +134,19 @@ pathP = sepBy1 (some MPC.alphaNumChar) (MPC.string "/")
 -- to allow for disambiguation. For V1, this is not needed.
 secretP :: SFVersion -> String -> Parser Secret
 secretP version mount = do
-  varName <- optional $ MP.try secretVarP
-  path <- intercalate "/" <$> pathP
-  _ <- symbol "#"
-  key <- some MPC.alphaNumChar
-  _ <- symbol "\n"
+  secret <- lexeme $ do
+    varName <- optional $ MP.try secretVarP
+    path <- intercalate "/" <$> pathP
+    _ <- symbol "#"
+    key <- some MPC.alphaNumChar
 
-  pure Secret { sMount = mount
-              , sPath = path
-              , sKey = key
-              , sVarName = maybe (getVarName version mount path key) id varName
-              }
+    pure Secret { sMount = mount
+                , sPath = path
+                , sKey = key
+                , sVarName = maybe (getVarName version mount path key) id varName
+                }
+  _ <- newlines
+  pure secret
 
 secretVarP :: Parser String
 secretVarP = do

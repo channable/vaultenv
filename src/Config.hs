@@ -13,7 +13,6 @@ import Options.Applicative (value, long, auto, option, metavar, help, flag,
                             str, argument, many, strOption)
 
 import qualified Options.Applicative as OptParse
-import qualified Options.Applicative.Builder.Internal as OptParse
 import qualified Text.Read as Read
 
 -- | Type alias for enviornment variables, used for readability in this module.

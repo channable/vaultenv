@@ -5,6 +5,14 @@ export VAULT_HOST="localhost"
 export VAULT_PORT="8200"
 export VAULT_ADDR="http://${VAULT_HOST}:${VAULT_PORT}"
 
+set -e
+
+# Check the vault command exists:
+if ! which vault; then 
+  echo "vault: command not found"
+  exit 1
+fi
+
 # Start the Vault server we're going to use for our integration tests
 vault server -dev -dev-root-token-id=${VAULT_TOKEN} &> /dev/null &
 

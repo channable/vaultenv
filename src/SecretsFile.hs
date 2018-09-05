@@ -5,7 +5,7 @@ module SecretsFile where
 
 import Data.Char (toUpper)
 import Data.List (intercalate)
-import Control.Applicative.Combinators (some, option, optional)
+import Control.Applicative.Combinators (some, option, optional, sepBy1)
 import Control.Monad.Except (MonadError, MonadIO, liftEither, liftIO)
 import Control.Exception (try)
 import Data.Void (Void)
@@ -112,6 +112,10 @@ secretBlockP = do
   mountPath <- lexeme (some MPC.alphaNumChar)
   some (MP.try (lexeme (secretP V2 mountPath)))
 
+-- | Parses legal Vault paths.
+pathP :: Parser [String]
+pathP = sepBy1 (some MPC.alphaNumChar) (MPC.string "/")
+
 -- | Parse a secret specification line
 --
 -- The version of the fileformat we're parsing determines the way we report
@@ -120,7 +124,7 @@ secretBlockP = do
 secretP :: SFVersion -> String -> Parser Secret
 secretP version mount = do
   varName <- optional $ MP.try secretVarP
-  path <- some MPC.alphaNumChar
+  path <- intercalate "/" <$> pathP
   _ <- symbol "#"
   key <- some MPC.alphaNumChar
   _ <- symbol "\n"

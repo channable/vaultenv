@@ -36,7 +36,7 @@ instance Show SFError where
       IOError -> "could not read file"
       ParseError pe -> MP.parseErrorPretty pe
 
--- | Helper for ExceptT stuff.
+-- | Helper for ExceptT stuff that we use in app/Main.hs
 readSecretList :: (MonadError SFError m, MonadIO m) => FilePath -> m [Secret]
 readSecretList fp = liftEither =<< (liftIO $ readSecretsFile fp)
 
@@ -67,16 +67,17 @@ parseSecretsFile = MP.parse secretsFileP
 -- | SpaceConsumer parser, which is responsible for stripping all whitespace.
 --
 -- Sometimes, we require explicit newlines, therefore, we don't handle those
--- here..
---
--- The name is short, because we need to use it in a lot of places. This is the
--- suggested/idiomatic name in Megaparsec.
+-- here.
 whitespace :: Parser ()
 whitespace = MPL.space whitespaceChars lineComment blockComment
   where
     whitespaceChars = void $ MP.takeWhile1P (Just "whitespace") (\c -> isSpace c && c /= '\n')
     lineComment = MP.empty
     blockComment = MP.empty
+
+-- | Parses one or multiple newlines separated by whitespace.
+newlines :: Parser ()
+newlines = void $ some $ lexeme $ MPC.char '\n'
 
 -- | Helper which consumes all whitespace after a parser
 lexeme :: Parser a -> Parser a
@@ -85,9 +86,6 @@ lexeme = MPL.lexeme whitespace
 -- | Helper which looks for a string and consumes trailing whitespace.
 symbol :: String -> Parser String
 symbol = MPL.symbol whitespace
-
-newlines :: Parser ()
-newlines = void $ some $ lexeme $ MPC.char '\n'
 
 -- | Top level parser of the secrets file
 --
@@ -124,8 +122,8 @@ secretBlockP = do
   some (MP.try (lexeme (secretP V2 mountPath)))
 
 -- | Parses legal Vault paths.
-pathP :: Parser [String]
-pathP = sepBy1 (some MPC.alphaNumChar) (MPC.string "/")
+pathP :: Parser String
+pathP = intercalate "/" <$> sepBy1 (some MPC.alphaNumChar) (MPC.string "/")
 
 -- | Parse a secret specification line
 --
@@ -136,7 +134,7 @@ secretP :: SFVersion -> String -> Parser Secret
 secretP version mount = do
   secret <- lexeme $ do
     varName <- optional $ MP.try secretVarP
-    path <- intercalate "/" <$> pathP
+    path <- pathP
     _ <- symbol "#"
     key <- some MPC.alphaNumChar
 
@@ -148,9 +146,10 @@ secretP version mount = do
   _ <- newlines
   pure secret
 
+-- | Parses a secret variable.
 secretVarP :: Parser String
 secretVarP = do
-  var <- some MPC.alphaNumChar
+  var <- intercalate "_" <$> sepBy1 (some MPC.alphaNumChar) (MPC.string "_")
   _ <- symbol "="
   pure var
 

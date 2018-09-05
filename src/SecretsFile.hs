@@ -5,7 +5,7 @@ module SecretsFile where
 
 import Data.Char (toUpper)
 import Data.List (intercalate)
-import Control.Applicative.Combinators (some, (<|>), optional)
+import Control.Applicative.Combinators (some, option, optional)
 import Control.Monad.Except (MonadError, MonadIO, liftEither, liftIO)
 import Control.Exception (try)
 import Data.Void (Void)
@@ -88,16 +88,19 @@ symbol = MPL.symbol sc
 secretsFileP :: Parser [Secret]
 secretsFileP = do
   _ <- sc
-  _ <- symbol "VERSION"
   version <- versionP
   case version of
     V1 -> some (secretP version "secret")
     V2 -> concat <$> some secretBlockP
 
 -- | Parse the file version
+--
+-- We need @MP.try@ because we need to backtrack after reading VERSION. (As
+-- some secrets could very well start with that path.
 versionP :: Parser SFVersion
-versionP = V1 <$ symbol "1"
-       <|> V2 <$ symbol "2"
+versionP = option V1 $ MP.try $ do
+  _ <- symbol "VERSION"
+  V2 <$ symbol "2"
 
 -- | Parse a secret block
 --

@@ -23,7 +23,7 @@ module SecretsFile where
 import Control.Applicative.Combinators (some, option, optional, sepBy1)
 import Control.Exception (try, displayException)
 import Control.Monad.Except (MonadError, MonadIO, liftEither, liftIO)
-import Data.Char (toUpper, isSpace)
+import Data.Char (toUpper, isSpace, isControl)
 import Data.Functor (void)
 import Data.List (intercalate)
 import Data.Void (Void)
@@ -141,12 +141,13 @@ secretBlockP = do
 
 -- | Parses legal Vault path components.
 --
--- A Vault path can seemlingly contain any combination of characters. Even
--- spaces, quotes and whatnot. We don't want to complicate the parser and
+-- A Vault path allows a surprising amount of characters. Spaces, quotes and
+-- whatnot are all allowed. We don't want to complicate the parser and
 -- the format by specifying escaping for all kinds of things, so we impose the
 -- following restrictions:
 --
 --  - We don't support mounts, paths and keys with whitespace in them.
+--  - We don't support control characters (vault doesn't either)
 --  - All other characters except @=@ and @#@ are allowed. Supporting paths
 --    with these characters in them would lead to ambiguities when parsing
 --    paths such as:
@@ -161,7 +162,7 @@ secretBlockP = do
 -- supporting this, please open a ticket.
 pathComponentP :: Parser String
 pathComponentP = MP.takeWhile1P (Just "path component") isAllowed
-  where isAllowed c = not (isSpace c) && c /= '#' && c /= '='
+  where isAllowed c = not (isSpace c) && c /= '#' && c /= '=' && not (isControl c)
 
 -- | Parse a secret specification line
 --

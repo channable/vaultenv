@@ -133,13 +133,33 @@ versionP = option V1 $ MP.try $ do
 secretBlockP :: Parser [Secret]
 secretBlockP = do
   _ <- symbol "MOUNT"
-  mountPath <- lexeme (some MPC.alphaNumChar)
+  mountPath <- lexeme pathComponentP
   _ <- newlines
   some (MP.try (lexeme (secretP V2 mountPath)))
 
--- | Parses legal Vault paths.
-pathP :: Parser String
-pathP = intercalate "/" <$> sepBy1 (some MPC.alphaNumChar) (MPC.string "/")
+-- | Parses legal Vault path components.
+--
+-- A Vault path can seemlingly contain any combination of characters. Even
+-- spaces, quotes and whatnot. We don't want to complicate the parser and
+-- the format by specifying escaping for all kinds of things, so we impose the
+-- following restrictions:
+--
+--  - We don't support mounts, paths and keys with whitespace in them.
+--  - All other characters except @=@ and @#@ are allowed. Supporting paths
+--    with these characters in them would lead to ambiguities when parsing
+--    paths such as:
+--
+--        FOO=foo=bar/baz#quix
+--
+--    and
+--
+--        foo#bar/baz#quix
+--
+-- If this is undesired, have a compelling usecase, and a good proposal for
+-- supporting this, please open a ticket.
+pathComponentP :: Parser String
+pathComponentP = MP.takeWhile1P (Just "path component") isAllowed
+  where isAllowed c = not (isSpace c) && c /= '#' && c /= '='
 
 -- | Parse a secret specification line
 --
@@ -150,9 +170,9 @@ secretP :: SFVersion -> String -> Parser Secret
 secretP version mount = do
   secret <- lexeme $ do
     varName <- optional $ MP.try secretVarP
-    path <- pathP
+    path <- pathComponentP
     _ <- symbol "#"
-    key <- some MPC.alphaNumChar
+    key <- pathComponentP
 
     pure Secret { sMount = mount
                 , sPath = path
@@ -163,6 +183,14 @@ secretP version mount = do
   pure secret
 
 -- | Parses a secret variable.
+--
+-- We're restrictrive in the characters we allow in environment variables. We
+-- don't allow special characters or whitespace. This is similar to what Zsh
+-- and Bash allow in their `export` statements. Even though the Unix process
+-- environment is technically just a string and you can put all kinds of things
+-- in there, most programs and standard libraries don't seem to support this.
+--
+-- Please open a ticket if you require looser restrictions.
 secretVarP :: Parser String
 secretVarP = do
   var <- intercalate "_" <$> sepBy1 (some MPC.alphaNumChar) (MPC.string "_")

@@ -37,6 +37,7 @@ import qualified Data.Text                  as Text
 import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds, LogLevel(..))
 import SecretsFile (Secret(..), SFError(..), readSecretList)
 
+-- | Make a HTTP URL path from a secret. This is the path that Vault expects.
 secretRequestPath :: Secret -> String
 secretRequestPath secret = "/v1/" <> sMount secret <> "/" <> sPath secret
 

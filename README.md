@@ -146,19 +146,13 @@ Available options:
 
 ## Secret specification
 
-EBNF of the `--secrets-file` format:
+There are two versions of this specification format. The first version shipped
+with the initial version of Vaultenv, but doesn't allow users to specify custom
+mountpoints for backends. Vaultenv would always fetch from the generic secret
+backend mounted at `secret/`. Version 2 of the format supports custom mount
+points.
 
-```
-file = line, { line } ;
-line = [ var, "=" ] , path , "#" , key , "\n" ;
-var = char , { char } ;
-path = char , { char } ;
-key = char , { char } ;
-
-char = letter | digit | "_" | "-" | "/" ;
-```
-
-Example:
+Example (version 1, implicit `secret/` path prepended):
 
 ```
 production/third-party#api-key
@@ -166,8 +160,56 @@ production/another-third-party#refresh-token
 FOOBAR=production/third-party#foobar
 ```
 
-A `file` consists of multiple `line`s, each specifying a secret to fetch. A
-line specifies the secret `path` and the `key` to fetch, separated by a `#`.
+Vaultenv will make the following environment variables available:
+
+ - `PRODUCTION_THIRD_PARTY_API_KEY`: Contents of the `api-key` field of the
+   secret at `secret/production/third-party`.
+ - `PRODUCTION_ANOTHER_THIRD_PARTY_REFRESH_TOKEN`: Contents of the
+   `refresh-token` field of the secret at
+   `secret/production/another-third-party#refresh-token`.
+ - `FOOBAR`: Contents of the `foobar` field in the secret at
+   `secret/production/third-party`.
+
+The `FOOBAR=` syntax means: make this secret available under the FOOBAR
+environment variable.
+
+Example (version 2, explicit mount paths):
+
+```
+VERSION 2
+
+MOUNT secret
+third-party#api-key
+
+MOUNT production
+third-party#refresh-token
+FOOBAR=third-party#foobar
+```
+
+Vaultenv will make the following environment variables available:
+
+ - `SECRET_THIRD_PARTY_API_KEY` with the contents of the `api-key` field of the
+   secret at `secret/third-party`.
+ - `PRODUCTION_THIRD_PARTY_REFRESH_TOKEN` with the contents of the
+   `refresh-token` field from the secret at `production/third-party`
+ - `FOOBAR` with the contents of the `foobar` field of the secret at
+   `production/third-party`.
+
+## Allowed characters
+
+We disallow the following in any path to keep the parser and format simple and
+unambiguous:
+
+ - Whitespace
+ - The `#` and `=` characters
+ - Control characters
+
+Everything else is allowed.
+
+**N.B.:** Be careful with special characters in path components. While
+vault supports them, and vaultenv parses them from the secrets file just fine,
+you MUST specify an environment variable to put them in, otherwise you may run
+into unexpected behavior.
 
 ## Environment variable names
 

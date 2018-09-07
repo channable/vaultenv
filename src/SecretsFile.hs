@@ -21,7 +21,7 @@ If you are user, please see the README for more information.
 module SecretsFile where
 
 import Control.Applicative.Combinators (some, option, optional, sepBy1)
-import Control.Exception (try)
+import Control.Exception (try, displayException)
 import Control.Monad.Except (MonadError, MonadIO, liftEither, liftIO)
 import Data.Char (toUpper, isSpace)
 import Data.Functor (void)
@@ -45,37 +45,36 @@ data SFVersion
 
 type Parser = MP.Parsec Void String
 
-data SFError = IOError | ParseError (MP.ParseError (MP.Token String) Void)
+-- | Error modes of this module.
+--
+-- We either get IO errors because we cannot open the secrets file, or we
+-- cannot parse it.
+data SFError = IOErr IOError | ParseErr (MP.ParseError (MP.Token String) Void)
 
 instance Show SFError where
-  show sfErr =
-    case sfErr of
-      IOError -> "could not read file"
-      ParseError pe -> MP.parseErrorPretty pe
+  show sfErr = case sfErr of
+    IOErr ioErr -> displayException ioErr
+    ParseErr pe -> MP.parseErrorPretty pe
 
 -- | Helper for ExceptT stuff that we use in app/Main.hs
 readSecretList :: (MonadError SFError m, MonadIO m) => FilePath -> m [Secret]
 readSecretList fp = liftEither =<< (liftIO $ readSecretsFile fp)
 
--- | Read a lit of secrets from a file
+-- | Read a list of secrets from a file
 readSecretsFile :: FilePath -> IO (Either SFError [Secret])
 readSecretsFile fp = do
-  contents <- safeReadFile fp
-  case contents of
-    Just c -> do
+  contentsOrErr <- safeReadFile fp
+  case contentsOrErr of
+    Right c -> do
       let parseResult = parseSecretsFile fp c
       case parseResult of
         Right res -> pure $ Right res
-        Left err -> pure $ Left (ParseError err)
-    Nothing -> pure $ Left IOError
+        Left err -> pure $ Left (ParseErr err)
+    Left err -> pure $ Left (IOErr err)
 
 -- | Read a file, catching all IOError exceptions.
-safeReadFile :: FilePath -> IO (Maybe String)
-safeReadFile fp = do
-  (contentsOrErr :: Either IOError String) <- (try . readFile) fp
-  case contentsOrErr of
-    Right contents -> pure $ Just contents
-    Left _ -> pure $ Nothing
+safeReadFile :: FilePath -> IO (Either IOError String)
+safeReadFile fp = (try . readFile) fp
 
 -- | Parse a String as a SecretsFile.
 parseSecretsFile :: FilePath -> String -> Either (MP.ParseError (MP.Token String) Void) [Secret]

@@ -51,6 +51,11 @@ data Context
 
 type VaultData = Map.Map String String
 
+-- | Error modes of this program.
+--
+-- Every part of the program that can fail has an error type. These can bubble
+-- up the call stack and end up as a value of this type. We then have a single
+-- function which is responsible for printing an error message and exiting.
 data VaultError
   = SecretNotFound    String
   | SecretFileError   SFError

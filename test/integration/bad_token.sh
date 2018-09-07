@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 echo "1..1"
 
 export VAULTENV_RETRY_ATTEMPTS=1

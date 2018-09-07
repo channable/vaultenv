@@ -18,7 +18,6 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                getResponseStatusCode)
 import System.Environment     (getEnvironment)
 import System.Posix.Process   (executeFile)
-import System.IO              (stderr, hPutStrLn)
 import Control.Monad.Except   (ExceptT, MonadError, runExceptT, mapExceptT, throwError)
 
 import qualified Control.Concurrent.Async   as Async
@@ -33,6 +32,7 @@ import qualified Data.Foldable              as Foldable
 import qualified Data.Map                   as Map
 import qualified Data.Map.Lens              as Lens (toMapOf)
 import qualified Data.Text                  as Text
+import qualified System.Exit                as Exit
 
 import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds, LogLevel(..))
 import SecretsFile (Secret(..), SFError(..), readSecretList)
@@ -98,7 +98,7 @@ main = do
                         }
 
   runExceptT (vaultEnv context) >>= \case
-    Left err -> hPutStrLn stderr (vaultErrorLogMessage err)
+    Left err -> Exit.die (vaultErrorLogMessage err)
     Right newEnv -> runCommand cliAndEnvOptions newEnv
 
 -- | This function returns either a manager for plain HTTP or

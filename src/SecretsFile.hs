@@ -83,7 +83,9 @@ parseSecretsFile = MP.parse secretsFileP
 -- | SpaceConsumer parser, which is responsible for stripping all whitespace.
 --
 -- Sometimes, we require explicit newlines, therefore, we don't handle those
--- here.
+-- here. @isSpace@ works on any unicode whitespace character. Megaparsec comes
+-- with some helpers that would make this better, but here we need to roll our
+-- own whitespace parser, because we want to preserve newlines.
 whitespace :: Parser ()
 whitespace = MPL.space whitespaceChars lineComment blockComment
   where

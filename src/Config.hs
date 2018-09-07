@@ -1,3 +1,13 @@
+{-|
+Module      : Config
+Description : Read config from CLI options and environment
+
+This module uses optparse-applicative to parse CLI options. It augments the
+optparse parser with a mechanism to allow for overrides in environment
+variables.
+
+The main entry point is @parseOptionsFromEnvAndCli@.
+-}
 module Config
   ( Options(..)
   , MilliSeconds(..)
@@ -13,7 +23,6 @@ import Options.Applicative (value, long, auto, option, metavar, help, flag,
                             str, argument, many, strOption)
 
 import qualified Options.Applicative as OptParse
-import qualified Options.Applicative.Builder.Internal as OptParse
 import qualified Text.Read as Read
 
 -- | Type alias for enviornment variables, used for readability in this module.

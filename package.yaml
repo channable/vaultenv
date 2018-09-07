@@ -14,8 +14,10 @@ dependencies:
   - http-client
   - lens
   - lens-aeson
+  - megaparsec
   - mtl
   - optparse-applicative
+  - parser-combinators
   - retry
   - text
   - unordered-containers
@@ -34,3 +36,18 @@ executables:
     source-dirs: app
     dependencies:
       - vaultenv
+
+tests:
+  vaultenv-test:
+    main: Spec.hs
+    source-dirs: test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - vaultenv
+    - hspec
+    - hspec-discover
+    - hspec-expectations
+    - directory

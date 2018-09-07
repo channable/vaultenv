@@ -1,6 +1,23 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 
+{-|
+Module      : SecretsFile
+Description : Parser for the vaultenv secret file format
+
+Contains a Megaparsec parser for the config format used by vaultenv to specify
+secrets. We support two versions of the format. This parser accepts both
+versions of the format in use. Version one of the format is a list of secrets,
+which vaultenv will fetch from a generic backend mounted at @secret/@.
+
+Version 2 allows users to specify mountpoints. Both versions of the format
+allow users to specify which keys are fetched from Vault, as well as specify
+the name of the environment variable under which secrets will be made availabe.
+
+The entrypoints here are the @readSecretsFile@ and @readSecretList@ functions.
+
+If you are user, please see the README for more information.
+-}
 module SecretsFile where
 
 import Control.Applicative.Combinators (some, option, optional, sepBy1)

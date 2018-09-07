@@ -1,3 +1,13 @@
+{-|
+Module      : Config
+Description : Read config from CLI options and environment
+
+This module uses optparse-applicative to parse CLI options. It augments the
+optparse parser with a mechanism to allow for overrides in environment
+variables.
+
+The main entry point is @parseOptionsFromEnvAndCli@.
+-}
 module Config
   ( Options(..)
   , MilliSeconds(..)

@@ -111,6 +111,7 @@ symbol = MPL.symbol whitespace
 -- parser or the list based parser based on that.
 secretsFileP :: Parser [Secret]
 secretsFileP = do
+  _ <- optional newlines
   _ <- whitespace
   version <- versionP
   case version of

@@ -123,7 +123,7 @@ secretsFileP = do
 versionP :: Parser SFVersion
 versionP = option V1 $ MP.try $ do
   _ <- symbol "VERSION"
-  symbol "2"
+  _ <- symbol "2"
   _ <- newlines
   pure V2
 

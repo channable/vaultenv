@@ -129,7 +129,7 @@ optionsParserWithInfo :: EnvFlags -> [EnvVar] -> OptParse.ParserInfo Options
 optionsParserWithInfo envFlags localEnvVars =
   OptParse.info
     (OptParse.helper <*> optionsParser envFlags localEnvVars)
-    (OptParse.fullDesc <> OptParse.header "vaultenv - run programs with secrets from HashiCorp Vault")
+    (OptParse.fullDesc <> OptParse.header "vaultenv 0.8.1 - run programs with secrets from HashiCorp Vault")
 
 -- | Parser for our CLI options. Seems intimidating, but is straightforward
 -- once you know about applicative parsing patterns. We construct a parser for

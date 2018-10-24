@@ -159,7 +159,7 @@ runCommand :: Options -> [EnvVar] -> IO a
 runCommand options env =
   let
     command = oCmd options
-    searchPath = False
+    searchPath = oUsePath options
     args = oArgs options
     env' = Just env
   in

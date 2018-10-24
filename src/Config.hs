@@ -47,6 +47,7 @@ data Options = Options
   , oRetryBaseDelay  :: MilliSeconds
   , oRetryAttempts   :: Int
   , oLogLevel        :: LogLevel
+  , oUsePath         :: Bool
   } deriving (Eq)
 
 instance Show Options where
@@ -63,6 +64,7 @@ instance Show Options where
     , "Base delay:     " ++ (show . unMilliSeconds $ oRetryBaseDelay opts)
     , "Retry attempts: " ++ (show $ oRetryAttempts opts)
     , "Log-level:      " ++ (show $ oLogLevel opts)
+    , "Use PATH:       " ++ (show $ oUsePath opts)
     ]
 
 -- | Behavior flags that we allow users to set via environment variables.
@@ -73,6 +75,7 @@ data EnvFlags = EnvFlags
   { efConnectTls :: Bool
   , efValidateCerts :: Bool
   , efInheritEnv :: Bool
+  , efUsePath :: Bool
   }
 
 -- | LogLevel to run vaultenv under. Under @Error@, which is the default, we
@@ -110,6 +113,7 @@ parseEnvFlags envVars
   { efConnectTls = lookupEnvFlag "VAULTENV_CONNECT_TLS"
   , efValidateCerts = lookupEnvFlag "VAULTENV_VALIDATE_CERTS"
   , efInheritEnv = lookupEnvFlag "VAULTENV_INHERIT_ENV"
+  , efUsePath = lookupEnvFlag "VAULTENV_USE_PATH"
   }
   where
     lookupEnvFlag key =
@@ -193,6 +197,7 @@ optionsParser envFlags envVars = Options
     <*> baseDelayMs
     <*> retryAttempts
     <*> logLevel
+    <*> usePath
   where
     host
       =  strOption
@@ -279,6 +284,11 @@ optionsParser envFlags envVars = Options
       <> readValueFromEnvWithDefault "VAULTENV_LOG_LEVEL" Error envVars
       <> help ("Log-level to run vaultenv under. Options: 'error' or 'info'. " ++
                "Defaults to 'error'. Also configurable via VAULTENV_LOG_LEVEL")
+    usePath
+      =  flag (efInheritEnv envFlags) True
+      $  long "use-path"
+      <> help ("Use PATH for finding the executable that vaultenv should call. Default: " ++
+              "don't search PATH. Also configurable via VAULTENV_USE_PATH.")
 
 
 -- | Specialization of @readValueFromEnv@ that does not use a @Read@ instance.

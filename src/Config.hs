@@ -18,10 +18,12 @@ module Config
 
 import Control.Applicative ((<*>), (<|>))
 import Data.List (intercalate, nubBy)
+import Data.Maybe (fromJust)
 import Data.Monoid ((<>))
 
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
                             str, argument, many, strOption)
+import System.IO.Error (catchIOError)
 
 import qualified Configuration.Dotenv as DotEnv
 import qualified Options.Applicative as OptParse
@@ -344,22 +346,29 @@ readValueFromEnvWithDefault key defVal envVars
 -- flags. This is nicer for interactive usage.
 readConfigFromEnvFiles :: IO [(String, String)]
 readConfigFromEnvFiles = do
-  homeDir <- Dir.getHomeDirectory
+  xdgDir <- (Just <$> Dir.getXdgDirectory Dir.XdgConfig "vaultenv")
+    `catchIOError` (const $ pure Nothing)
   cwd <- Dir.getCurrentDirectory
   let
     machineConfigFile = "/etc/vaultenv.conf"
-    userConfigFile = homeDir ++ "/.vaultenv/config.conf"
+
+    userConfigFile :: Maybe FilePath
+    userConfigFile = fmap (++ "/vaultenv.conf") xdgDir
     cwdConfigFile = cwd ++ "/.env"
 
+  -- @doesFileExist@ doesn't throw exceptions, it catches @IOError@s and
+  -- returns @False@ if those are encountered.
   loadMachineConfig <- Dir.doesFileExist machineConfigFile
-  loadUserConfig <- Dir.doesFileExist userConfigFile
+  loadUserConfig <- case userConfigFile of
+     Nothing -> pure False
+     Just fp -> Dir.doesFileExist fp
   loadCwdConfig <- Dir.doesFileExist cwdConfigFile
 
   machineConfig <- if loadMachineConfig
     then DotEnv.parseFile machineConfigFile
     else pure []
   userConfig <- if loadUserConfig
-    then DotEnv.parseFile userConfigFile
+    then DotEnv.parseFile (fromJust userConfigFile) -- safe because of loadUserConfig
     else pure []
   cwdConfig <- if loadCwdConfig
     then DotEnv.parseFile cwdConfigFile

@@ -213,7 +213,7 @@ CLI flags and environment variable lookups). Vaultenv currently looks for these
 files in the following places:
 
  - `/etc/vaultenv.conf`
- - `$HOME/.vaultenv/config.conf`
+ - `$HOME/.config/vaultenv/vaultenv.conf`
  - `$CWD/.env`
 
 These config files support the exact same syntax as the environment variables

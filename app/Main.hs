@@ -89,7 +89,7 @@ main = do
   envFileSettings <- readConfigFromEnvFiles
 
   -- Deduplicate, give precedence to set env vars over .env files
-  let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y) localEnvVars ++ envFileSettings
+  let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y) (localEnvVars ++ envFileSettings)
 
   cliAndEnvAndEnvFileOptions <- parseOptionsFromEnvAndCli envAndEnvFileConfig
 

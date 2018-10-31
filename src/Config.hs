@@ -358,19 +358,20 @@ readConfigFromEnvFiles = do
 
   -- @doesFileExist@ doesn't throw exceptions, it catches @IOError@s and
   -- returns @False@ if those are encountered.
-  loadMachineConfig <- Dir.doesFileExist machineConfigFile
-  loadUserConfig <- case userConfigFile of
-     Nothing -> pure False
-     Just fp -> Dir.doesFileExist fp
-  loadCwdConfig <- Dir.doesFileExist cwdConfigFile
-
-  machineConfig <- if loadMachineConfig
+  machineConfigExists <- Dir.doesFileExist machineConfigFile
+  machineConfig <- if machineConfigExists
     then DotEnv.parseFile machineConfigFile
     else pure []
-  userConfig <- if loadUserConfig
+
+  userConfigExists <- case userConfigFile of
+     Nothing -> pure False
+     Just fp -> Dir.doesFileExist fp
+  userConfig <- if userConfigExists
     then DotEnv.parseFile (fromJust userConfigFile) -- safe because of loadUserConfig
     else pure []
-  cwdConfig <- if loadCwdConfig
+
+  cwdConfigExists <- Dir.doesFileExist cwdConfigFile
+  cwdConfig <- if cwdConfigExists
     then DotEnv.parseFile cwdConfigFile
     else pure []
 

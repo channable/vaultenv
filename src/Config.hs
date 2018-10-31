@@ -20,9 +20,10 @@ import Control.Applicative ((<*>), (<|>))
 import Data.List (intercalate, nubBy)
 import Data.Maybe (fromJust)
 import Data.Monoid ((<>))
-
+import Data.Version (showVersion)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
                             str, argument, many, strOption)
+import Paths_vaultenv (version) -- Magic to get the version field from cabal.
 import System.IO.Error (catchIOError)
 
 import qualified Configuration.Dotenv as DotEnv
@@ -133,8 +134,12 @@ parseEnvFlags envVars
 optionsParserWithInfo :: EnvFlags -> [EnvVar] -> OptParse.ParserInfo Options
 optionsParserWithInfo envFlags localEnvVars =
   OptParse.info
-    (OptParse.helper <*> optionsParser envFlags localEnvVars)
-    (OptParse.fullDesc <> OptParse.header "vaultenv 0.8.1 - run programs with secrets from HashiCorp Vault")
+    (OptParse.helper <*> versionOption <*> optionsParser envFlags localEnvVars)
+    (OptParse.fullDesc <> OptParse.header header)
+  where
+    versionOption = OptParse.infoOption (showVersion version) (long "version" <> help "Show version")
+    header = "vaultenv " ++ showVersion version ++ " - run programs with secrets from HashiCorp Vault"
+
 
 -- | Parser for our CLI options. Seems intimidating, but is straightforward
 -- once you know about applicative parsing patterns. We construct a parser for

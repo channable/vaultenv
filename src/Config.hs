@@ -13,16 +13,21 @@ module Config
   , MilliSeconds(..)
   , parseOptionsFromEnvAndCli
   , LogLevel(..)
+  , readConfigFromEnvFiles
   ) where
 
 import Control.Applicative ((<*>), (<|>))
-import Data.List (intercalate)
+import Data.List (intercalate, nubBy)
+import Data.Maybe (fromJust)
 import Data.Monoid ((<>))
 
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
                             str, argument, many, strOption)
+import System.IO.Error (catchIOError)
 
+import qualified Configuration.Dotenv as DotEnv
 import qualified Options.Applicative as OptParse
+import qualified System.Directory as Dir
 import qualified Text.Read as Read
 
 -- | Type alias for enviornment variables, used for readability in this module.
@@ -332,3 +337,44 @@ readValueFromEnvWithDefault :: (Read a, OptParse.HasValue f)
 readValueFromEnvWithDefault key defVal envVars
   =  value defVal
   <> readValueFromEnv key envVars
+
+-- | Search for environment files in default locations and load them in order.
+--
+-- This function tries to read the following files in order to obtain
+-- environment configuration. This is implicit behavior and allows the user to
+-- configure vaultenv without setting up environment variables or passing CLI
+-- flags. This is nicer for interactive usage.
+readConfigFromEnvFiles :: IO [(String, String)]
+readConfigFromEnvFiles = do
+  xdgDir <- (Just <$> Dir.getXdgDirectory Dir.XdgConfig "vaultenv")
+    `catchIOError` (const $ pure Nothing)
+  cwd <- Dir.getCurrentDirectory
+  let
+    machineConfigFile = "/etc/vaultenv.conf"
+
+    userConfigFile :: Maybe FilePath
+    userConfigFile = fmap (++ "/vaultenv.conf") xdgDir
+    cwdConfigFile = cwd ++ "/.env"
+
+  -- @doesFileExist@ doesn't throw exceptions, it catches @IOError@s and
+  -- returns @False@ if those are encountered.
+  machineConfigExists <- Dir.doesFileExist machineConfigFile
+  machineConfig <- if machineConfigExists
+    then DotEnv.parseFile machineConfigFile
+    else pure []
+
+  userConfigExists <- case userConfigFile of
+     Nothing -> pure False
+     Just fp -> Dir.doesFileExist fp
+  userConfig <- if userConfigExists
+    then DotEnv.parseFile (fromJust userConfigFile) -- safe because of loadUserConfig
+    else pure []
+
+  cwdConfigExists <- Dir.doesFileExist cwdConfigFile
+  cwdConfig <- if cwdConfigExists
+    then DotEnv.parseFile cwdConfigFile
+    else pure []
+
+  -- Deduplicate, user config takes precedence over machine config
+  let config = nubBy (\(x, _) (y, _) -> x == y) $ cwdConfig ++ userConfig ++ machineConfig
+  pure config

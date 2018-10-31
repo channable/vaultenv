@@ -13,16 +13,19 @@ module Config
   , MilliSeconds(..)
   , parseOptionsFromEnvAndCli
   , LogLevel(..)
+  , readConfigFromEnvFiles
   ) where
 
 import Control.Applicative ((<*>), (<|>))
-import Data.List (intercalate)
+import Data.List (intercalate, nubBy)
 import Data.Monoid ((<>))
 
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
                             str, argument, many, strOption)
 
+import qualified Configuration.Dotenv as DotEnv
 import qualified Options.Applicative as OptParse
+import qualified System.Directory as Dir
 import qualified Text.Read as Read
 
 -- | Type alias for enviornment variables, used for readability in this module.
@@ -332,3 +335,36 @@ readValueFromEnvWithDefault :: (Read a, OptParse.HasValue f)
 readValueFromEnvWithDefault key defVal envVars
   =  value defVal
   <> readValueFromEnv key envVars
+
+-- | Search for environment files in default locations and load them in order.
+--
+-- This function tries to read the following files in order to obtain
+-- environment configuration. This is implicit behavior and allows the user to
+-- configure vaultenv without setting up environment variables or passing CLI
+-- flags. This is nicer for interactive usage.
+readConfigFromEnvFiles :: IO [(String, String)]
+readConfigFromEnvFiles = do
+  homeDir <- Dir.getHomeDirectory
+  cwd <- Dir.getCurrentDirectory
+  let
+    machineConfigFile = "/etc/vaultenv.conf"
+    userConfigFile = homeDir ++ "/.vaultenv/config.conf"
+    cwdConfigFile = cwd ++ "/.env"
+
+  loadMachineConfig <- Dir.doesFileExist machineConfigFile
+  loadUserConfig <- Dir.doesFileExist userConfigFile
+  loadCwdConfig <- Dir.doesFileExist cwdConfigFile
+
+  machineConfig <- if loadMachineConfig
+    then DotEnv.parseFile machineConfigFile
+    else pure []
+  userConfig <- if loadUserConfig
+    then DotEnv.parseFile userConfigFile
+    else pure []
+  cwdConfig <- if loadCwdConfig
+    then DotEnv.parseFile cwdConfigFile
+    else pure []
+
+  -- Deduplicate, user config takes precedence over machine config
+  let config = nubBy (\(x, _) (y, _) -> x == y) $ cwdConfig ++ userConfig ++ machineConfig
+  pure config

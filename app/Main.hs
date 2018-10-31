@@ -7,6 +7,7 @@ import Control.Lens           (reindexed, to)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Bifunctor         (first)
 import Data.Either            (isLeft)
+import Data.List              (nubBy)
 import Data.Monoid            ((<>))
 import Network.Connection     (TLSSettings(..))
 import Network.HTTP.Client    (defaultManagerSettings)
@@ -34,7 +35,8 @@ import qualified Data.Map.Lens              as Lens (toMapOf)
 import qualified Data.Text                  as Text
 import qualified System.Exit                as Exit
 
-import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds, LogLevel(..))
+import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds,
+               LogLevel(..), readConfigFromEnvFiles)
 import SecretsFile (Secret(..), SFError(..), readSecretList)
 
 -- | Make a HTTP URL path from a secret. This is the path that Vault expects.
@@ -84,22 +86,27 @@ vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds (oRetryBaseDelay
 main :: IO ()
 main = do
   localEnvVars <- getEnvironment
-  cliAndEnvOptions <- parseOptionsFromEnvAndCli localEnvVars
+  envFileSettings <- readConfigFromEnvFiles
 
-  if (oLogLevel cliAndEnvOptions) <= Info
-    then print cliAndEnvOptions
+  -- Deduplicate, give precedence to set env vars over .env files
+  let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y) localEnvVars ++ envFileSettings
+
+  cliAndEnvAndEnvFileOptions <- parseOptionsFromEnvAndCli envAndEnvFileConfig
+
+  if (oLogLevel cliAndEnvAndEnvFileOptions) <= Info
+    then print cliAndEnvAndEnvFileOptions
     else pure ()
 
-  httpManager <- getHttpManager cliAndEnvOptions
+  httpManager <- getHttpManager cliAndEnvAndEnvFileOptions
 
-  let context = Context { cLocalEnvVars = localEnvVars
-                        , cCliOptions = cliAndEnvOptions
+  let context = Context { cLocalEnvVars = envAndEnvFileConfig
+                        , cCliOptions = cliAndEnvAndEnvFileOptions
                         , cHttpManager = httpManager
                         }
 
   runExceptT (vaultEnv context) >>= \case
     Left err -> Exit.die (vaultErrorLogMessage err)
-    Right newEnv -> runCommand cliAndEnvOptions newEnv
+    Right newEnv -> runCommand cliAndEnvAndEnvFileOptions newEnv
 
 -- | This function returns either a manager for plain HTTP or
 -- for HTTPS connections. If TLS is wanted, we also check if the

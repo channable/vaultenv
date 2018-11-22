@@ -197,7 +197,7 @@ secretP version mount = do
 -- Please open a ticket if you require looser restrictions.
 secretVarP :: Parser String
 secretVarP = do
-  var <- intercalate "_" <$> sepBy1 (some MPC.alphaNumChar) (MPC.string "_")
+  var <- intercalate "_" <$> sepBy1 (some MPC.alphaNumChar) (some (MPC.string "_"))
   _ <- symbol "="
   pure var
 

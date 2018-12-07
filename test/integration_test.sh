@@ -28,6 +28,7 @@ testing#otherkey
 testing2#foo
 testing2#bar
 TEST_TEST=testing#key
+TEST__TEST=testing#key
 EOF
 
 export VAULT_SEEDS_V2="$(mktemp)"

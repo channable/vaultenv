@@ -33,5 +33,6 @@ test_env_contents() {
 
 test_env_contents 2 "TESTING_KEY" "testing42" ${VAULT_SEEDS}
 test_env_contents 3 "TEST_TEST" "testing42" ${VAULT_SEEDS}
+test_env_contents 4 "TEST__TEST" "testing42" ${VAULT_SEEDS}
 
-test_env_contents 4 "SECRET_TESTING_KEY" "testing42" ${VAULT_SEEDS_V2}
+test_env_contents 5 "SECRET_TESTING_KEY" "testing42" ${VAULT_SEEDS_V2}

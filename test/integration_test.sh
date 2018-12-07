@@ -8,7 +8,7 @@ export VAULT_ADDR="http://${VAULT_HOST}:${VAULT_PORT}"
 set -e
 
 # Check the vault command exists:
-if ! which vault; then 
+if ! which vault; then
   echo "vault: command not found"
   exit 1
 fi
@@ -27,6 +27,7 @@ testing#key
 testing#otherkey
 testing2#foo
 testing2#bar
+TEST_TEST=testing#key
 EOF
 
 export VAULT_SEEDS_V2="$(mktemp)"

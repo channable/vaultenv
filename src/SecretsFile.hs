@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 
@@ -20,7 +21,7 @@ If you are user, please see the README for more information.
 -}
 module SecretsFile where
 
-import Control.Applicative.Combinators (some, option, optional, sepBy1)
+import Control.Applicative.Combinators (some, option, optional)
 import Control.Exception (try, displayException)
 import Control.Monad.Except (MonadError, MonadIO, liftEither, liftIO)
 import Data.Char (toUpper, isSpace, isControl)
@@ -189,17 +190,30 @@ secretP version mount = do
 -- | Parses a secret variable.
 --
 -- We're restrictrive in the characters we allow in environment variables. We
--- don't allow special characters or whitespace. This is similar to what Zsh
--- and Bash allow in their `export` statements. Even though the Unix process
--- environment is technically just a string and you can put all kinds of things
--- in there, most programs and standard libraries don't seem to support this.
+-- don't allow special characters or whitespace. Environment variables have to
+-- start with a letter or underscore which can be followed by letters
+-- underscores and digits. This is similar to what Zsh and Bash allow in their
+-- `export` statements. Even though the Unix process environment is technically
+-- just a string and you can put all kinds of things in there, most programs
+-- and standard libraries don't seem to support this.
 --
 -- Please open a ticket if you require looser restrictions.
 secretVarP :: Parser String
 secretVarP = do
-  var <- intercalate "_" <$> sepBy1 (some MPC.alphaNumChar) (some (MPC.string "_"))
+  -- Environment variables have to start with a letter or underscore and can be
+  -- followed by letters, underscores and digits.
+  varStart <- MPC.oneOf asciiLettersUnderscore
+  varRest <- MP.many $ MPC.oneOf (asciiLettersUnderscore ++ digits)
   _ <- symbol "="
-  pure var
+  pure (varStart:varRest)
+
+-- | Helper list for ASCII chars plus the underscore
+asciiLettersUnderscore :: [MP.Token String]
+asciiLettersUnderscore = ['a'..'z'] ++ ['A'..'Z'] ++ ['_']
+
+-- | Helper list for ASCII digits
+digits :: [MP.Token String]
+digits = ['0'..'9']
 
 -- | Convert a secret name into the name of the environment variable that it
 -- will be available under.

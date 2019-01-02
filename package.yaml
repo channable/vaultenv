@@ -5,6 +5,7 @@ license: BSD3
 github: channable/vaultenv
 
 dependencies:
+  - aeson
   - base
   - async
   - bytestring
@@ -14,8 +15,6 @@ dependencies:
   - directory
   - http-conduit
   - http-client
-  - lens
-  - lens-aeson
   - megaparsec
   - mtl
   - optparse-applicative

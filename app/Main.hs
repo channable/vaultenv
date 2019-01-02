@@ -2,9 +2,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+import Control.Applicative    ((<|>))
 import Control.Monad          (forM)
-import Control.Lens           (reindexed, to)
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.Aeson             (FromJSON, (.:))
 import Data.Bifunctor         (first)
 import Data.List              (nubBy)
 import Data.Monoid            ((<>))
@@ -23,15 +24,13 @@ import Control.Monad.Except   (ExceptT, MonadError, runExceptT, mapExceptT, thro
 import qualified Control.Concurrent.Async   as Async
 import qualified Control.Exception          as Exception
 import qualified Control.Retry              as Retry
-import qualified Data.Aeson.Lens            as Lens (key, members, _String)
+import qualified Data.Aeson                 as Aeson
 import qualified Data.Bifunctor             as Bifunctor
 import qualified Data.ByteString.Char8      as SBS
 import qualified Data.ByteString.Lazy       as LBS hiding (unpack)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Foldable              as Foldable
 import qualified Data.Map                   as Map
-import qualified Data.Map.Lens              as Lens (toMapOf)
-import qualified Data.Text                  as Text
 import qualified System.Exit                as Exit
 
 import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds,
@@ -51,7 +50,61 @@ data Context
   , cHttpManager :: Manager
   }
 
-type VaultData = Map.Map String String
+data VaultData = VaultData (Map.Map String String)
+
+-- Vault has two versions of the Key/Value backend. We try to parse both
+-- response formats here and return the one which we can parse correctly.
+--
+-- This means there is some inference going on by vaultenv, but since
+-- we can find out which format we're parsing unambiguously, we just go
+-- with the inference instead of making the user specify this. The benefit
+-- here is that users can upgrade the version of the KV secret engine
+-- without having to change their config files.
+--
+-- KV version 1 looks like this:
+--
+-- @
+-- {
+--   "auth": null,
+--   "data": {
+--     "foo": "bar"
+--   },
+--   "lease_duration": 2764800,
+--   "lease_id": "",
+--   "renewable": false
+-- }
+-- @
+--
+-- And version 2 looks like this:
+--
+-- @
+-- {
+--   "data": {
+--     "data": {
+--       "foo": "bar"
+--     },
+--     "metadata": {
+--       "created_time": "2018-03-22T02:24:06.945319214Z",
+--       "deletion_time": "",
+--       "destroyed": false,
+--       "version": 1
+--     }
+--   },
+-- }
+-- @
+instance FromJSON VaultData where
+  parseJSON =
+    let
+      parseV1 obj = do
+        keyValuePairs <- obj .: "data"
+        VaultData <$> Aeson.parseJSON keyValuePairs
+      parseV2 obj = do
+        nested <- obj .: "data"
+        flip (Aeson.withObject "nested") nested $ \obj' -> do
+          keyValuePairs <- obj' .: "data"
+          VaultData <$> Aeson.parseJSON keyValuePairs
+    in Aeson.withObject "object" $ \obj -> parseV1 obj <|> parseV2 obj
+
 
 -- | Error modes of this program.
 --
@@ -64,6 +117,7 @@ data VaultError
   | KeyNotFound       Secret
   | BadRequest        LBS.ByteString
   | Forbidden
+  | BadJSONResp       String
   | ServerError       LBS.ByteString
   | ServerUnavailable LBS.ByteString
   | ServerUnreachable HttpException
@@ -194,6 +248,7 @@ requestSecret context secretPath =
         ServerUnavailable _ -> True
         ServerUnreachable _ -> True
         Unspecified _ _ -> True
+        BadJSONResp _ -> True
 
         -- Errors where we don't retry
         BadRequest _ -> False
@@ -224,7 +279,7 @@ requestSecrets context secrets = do
 lookupSecrets :: [Secret] -> Map.Map String VaultData -> Either VaultError [EnvVar]
 lookupSecrets secrets vaultData = forM secrets $ \secret ->
   let secretData = Map.lookup (secretRequestPath secret) vaultData
-      secretValue = secretData >>= Map.lookup (sKey secret)
+      secretValue = secretData >>= (\(VaultData vd) -> Map.lookup (sKey secret) vd)
       toEnvVar val = (sVarName secret, val)
   in maybe (Left $ KeyNotFound secret) (Right . toEnvVar) $ secretValue
 
@@ -248,7 +303,7 @@ parseResponse secretPath response =
     responseBody = getResponseBody response
     statusCode = getResponseStatusCode response
   in case statusCode of
-    200 -> Right $ parseSuccessResponse responseBody
+    200 -> parseSuccessResponse responseBody
     403 -> Left Forbidden
     404 -> Left $ SecretNotFound secretPath
     500 -> Left $ ServerError responseBody
@@ -256,12 +311,8 @@ parseResponse secretPath response =
     _   -> Left $ Unspecified statusCode responseBody
 
 
-parseSuccessResponse :: LBS.ByteString -> VaultData
-parseSuccessResponse responseBody =
-  let
-    getter = Lens.key "data" . reindexed Text.unpack Lens.members . Lens._String . to Text.unpack
-  in
-    Lens.toMapOf getter responseBody
+parseSuccessResponse :: LBS.ByteString -> Either VaultError VaultData
+parseSuccessResponse responseBody = first BadJSONResp $ Aeson.eitherDecode' responseBody
 
 --
 -- Utility functions
@@ -284,6 +335,8 @@ vaultErrorLogMessage vaultError =
         "Invalid Vault token"
       InvalidUrl secretPath ->
         "Secret " <> secretPath <> " contains characters that are illegal in URLs"
+      BadJSONResp msg ->
+        "Received bad JSON from Vault: " <> msg
       ServerError resp ->
         "Internal Vault error: " <> (LBS.unpack resp)
       ServerUnavailable resp ->

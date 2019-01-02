@@ -6,7 +6,6 @@ import Control.Monad          (forM)
 import Control.Lens           (reindexed, to)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Bifunctor         (first)
-import Data.Either            (isLeft)
 import Data.List              (nubBy)
 import Data.Monoid            ((<>))
 import Network.Connection     (TLSSettings(..))
@@ -187,7 +186,27 @@ requestSecret context secretPath =
             $ setRequestSecure (oConnectTls cliOptions)
             $ defaultRequest
 
-    shouldRetry = const $ return . isLeft
+    -- Only retry on connection related failures
+    shouldRetry _retryStatus (Right _) = return False
+    shouldRetry _retryStatus (Left e) =
+      return $ case e of
+        ServerError _ -> True
+        ServerUnavailable _ -> True
+        ServerUnreachable _ -> True
+        Unspecified _ _ -> True
+
+        -- Errors where we don't retry
+        BadRequest _ -> False
+        Forbidden -> False
+        InvalidUrl _ -> False
+        SecretNotFound _ -> False
+
+        -- Errors that cannot occur at this point, but we list for
+        -- exhaustiveness checking.
+        KeyNotFound _ -> False
+        DuplicateVar _ -> False
+        SecretFileError _ -> False
+
     retryAction _retryStatus = doRequest secretPath request
   in
     Retry.retrying (vaultRetryPolicy cliOptions) shouldRetry retryAction

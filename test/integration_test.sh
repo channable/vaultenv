@@ -8,8 +8,14 @@ export VAULT_ADDR="http://${VAULT_HOST}:${VAULT_PORT}"
 set -e
 
 # Check the vault command exists:
-if ! which vault; then
+if ! which vault > /dev/null; then
   echo "vault: command not found"
+  exit 1
+fi
+
+if [[ $(vault -version) != "Vault v1"* ]]; then
+  echo "Wrong vault version installed. Integration tests require Vault >= 1.0"
+  echo "Get it here: https://www.vaultproject.io/downloads.html"
   exit 1
 fi
 

@@ -38,5 +38,5 @@ after_success:
       stack exec -- cp $(which vaultenv) .
       # Use a user within the organization and generate a github token
       ./github-release release --token=$GITHUB_TOKEN --owner=$GITHUB_USER --repo=vaultenv --title=v$TRAVIS_TAG  --tag=$TRAVIS_TAG
-      ./github-release upload  --token=$GITHUB_TOKEN --owner=$GITHUB_USER --repo=vaultenv --file=vaultenv --tag=$TRAVIS_TAG --name=vautenv-$TRAVIS_TAG-$TRAVIS_OS_NAME-x86_64
+      ./github-release upload  --token=$GITHUB_TOKEN --owner=$GITHUB_USER --repo=vaultenv --file=vaultenv --tag=$TRAVIS_TAG --name=vaultenv-$TRAVIS_TAG-$TRAVIS_OS_NAME-x86_64
     fi;

@@ -8,6 +8,10 @@ Run processes with secrets from [HashiCorp Vault]. It:
 
 There is nothing else going on.
 
+`vaultenv` supports the Vault KV API. It supports both version 1 and version 2.
+This support is automatic; but you do need a token which has read access on
+the `/sys/mounts` endpoint.
+
 ## Comparison to alternatives
 
 The only alternative to this tool that we are aware of is [envconsul], also by

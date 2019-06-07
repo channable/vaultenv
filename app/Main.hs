@@ -149,7 +149,7 @@ instance FromJSON MountInfo where
           _ -> fail "expected a KV type"))
     in
       Aeson.withObject "MountResp" $ \obj -> do
-        pure . traceShowId $ MountInfo (mapMaybe (\v -> parseMaybe getType v) obj)
+        pure $ MountInfo (mapMaybe (\v -> parseMaybe getType v) obj)
 
 -- | Error modes of this program.
 --

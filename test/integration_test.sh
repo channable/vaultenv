@@ -8,8 +8,14 @@ export VAULT_ADDR="http://${VAULT_HOST}:${VAULT_PORT}"
 set -e
 
 # Check the vault command exists:
-if ! which vault; then
+if ! which vault > /dev/null; then
   echo "vault: command not found"
+  exit 1
+fi
+
+if [[ $(vault -version) != "Vault v1"* ]]; then
+  echo "Wrong vault version installed. Integration tests require Vault >= 1.0"
+  echo "Get it here: https://www.vaultproject.io/downloads.html"
   exit 1
 fi
 
@@ -45,8 +51,29 @@ testing2#foo
 testing2#bar
 EOF
 
-vault write secret/testing key=testing42 otherkey=testing8 &> /dev/null
-vault write secret/testing2 foo=val1 bar=val2 &> /dev/null
+# First unmount the default `secret/` mount and remount as V1 so we can test
+# with that API version first.
+echo "Running tests for Key/Value mount V1"
+vault secrets disable secret
+vault secrets enable -path=secret -version=1 kv
+
+vault kv put secret/testing key=testing42 otherkey=testing8 &> /dev/null
+vault kv put secret/testing2 foo=val1 bar=val2 &> /dev/null
+
+# Run all tests if we didn't get any arguments.
+if [ $# -eq 0 ]; then
+  echo "Running all tests"
+  echo "NOTE: You might see errors in the log. That's part of what we test."
+  echo "Look at the test summary report to see if there's anything wrong."
+  prove $(find integration -type f -iname '*.sh' ! -name '_*')
+else
+  echo "Running only $1"
+  $1
+fi
+
+# Upgrade the default API.
+echo "Running tests for Key/Value mount V2"
+vault kv enable-versioning secret
 
 # Run all tests if we didn't get any arguments.
 if [ $# -eq 0 ]; then

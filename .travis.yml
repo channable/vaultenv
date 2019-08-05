@@ -1,6 +1,9 @@
 sudo: true
 language: generic
 
+notifications:
+  email: false
+
 os:
   - linux
   - osx

@@ -5,16 +5,16 @@ let
       sha256 = "sha256:1mwxipvyrwfbl0z6mghv0gr6z61awidnpld1p8h4fwjfifv0dn2j";
     };
   nixpkgsConfig = {
-    allowBroken = true;
-    packageOverrides = pkgs: {
-      haskellPackages = pkgs.haskellPackages.override {
+    packageOverrides = pkgsOld: {
+      haskellPackages = pkgsOld.haskellPackages.override {
         overrides = haskellNew: haskellOld: {
-          # Don't run the dotenv test suite. It's broken, and we have our own
-          # tests for this.
-          dotenv = pkgs.haskell.lib.dontCheck haskellOld.dotenv;
+          dotenv = haskellOld.callPackage ./dotenv.nix {};
         };
       };
     };
   };
 in
-  _: import "${nixpkgsTar}/default.nix" { config = nixpkgsConfig; }
+  # Lambda so we can pass in custom configuration/options to this file later.
+  # This seems to be a standard Nix pattern. Currently, we don't take any
+  # arguments.
+  {}: import "${nixpkgsTar}/default.nix" { config = nixpkgsConfig; }

@@ -16,7 +16,7 @@ in
     pname = "vaultenv";
     version = "0.10.0";
 
-    src = ./.;
+    src = pkgs.lib.cleanSource ./.;
 
     buildTools = [ hpack ];
 

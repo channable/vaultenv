@@ -30,6 +30,4 @@ in
     homepage = "https://github.com/channable/vaultenv#readme";
     description = "Runs processes with secrets from HashiCorp Vault";
     license = stdenv.lib.licenses.bsd3;
-    maintainers = with stdenv.lib.maintainers; [ lnl7 ];
-    hydraPlatforms = [];
   }

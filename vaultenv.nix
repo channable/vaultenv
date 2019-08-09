@@ -11,12 +11,13 @@ let
     http-conduit lens lens-aeson megaparsec mtl optparse-applicative
     parser-combinators retry text unix unordered-containers utf8-string
   ];
+  gitignore = import ./nix/gitignore.nix;
 in
   mkDerivation rec {
     pname = "vaultenv";
     version = "0.10.0";
 
-    src = pkgs.lib.cleanSource ./.;
+    src = gitignore ./.;
 
     buildTools = [ hpack ];
 

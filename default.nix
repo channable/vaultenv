@@ -12,7 +12,7 @@ let
   pkgs = import (import ./nixpkgs-pinned.nix) {};
 
   # Pin static-haskell-nix version.
-  static-haskell-nix = fetchTarball https://github.com/nh2/static-haskell-nix/archive/1d37d9a83e570eceef9c7dad5c89557f8179a076.tar.gz;
+  static-haskell-nix = fetchTarball https://github.com/ruuda/static-haskell-nix/archive/0f6e5750e5adef4c6063205514c47ed96db0610e.tar.gz;
 
   stack2nix-script = import "${static-haskell-nix}/static-stack2nix-builder/stack2nix-script.nix" {
     inherit pkgs;
@@ -31,6 +31,7 @@ let
     #!/usr/bin/env bash
     set -eu -o pipefail
     STACK2NIX_OUTPUT_PATH=$(${stack2nix-script})
+    export LANG=en_US.utf8
     ${pkgs.nix}/bin/nix-build --no-link -A static_package --argstr stack2nix-output-path "$STACK2NIX_OUTPUT_PATH" "$@"
   '';
 

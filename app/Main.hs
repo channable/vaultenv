@@ -184,7 +184,8 @@ vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds (oRetryBaseDelay
 main :: IO ()
 main = do
   localEnvVars <- getEnvironment
-  envFileSettings <- readConfigFromEnvFiles
+
+  envFileSettings <- readConfigFromEnvFiles Nothing
 
   -- Deduplicate, give precedence to set env vars over .env files
   let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y) (localEnvVars ++ envFileSettings)

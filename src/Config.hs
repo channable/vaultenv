@@ -18,7 +18,6 @@ module Config
 
 import Control.Applicative ((<*>), (<|>))
 import Data.List (intercalate, nubBy)
-import Data.Maybe (fromJust)
 import Data.Monoid ((<>))
 import Data.Version (showVersion)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
@@ -352,7 +351,7 @@ readValueFromEnvWithDefault key defVal envVars
 readConfigFromEnvFiles :: IO [(String, String)]
 readConfigFromEnvFiles = do
   xdgDir <- (Just <$> Dir.getXdgDirectory Dir.XdgConfig "vaultenv")
-    `catchIOError` (const $ pure Nothing)
+    `catchIOError` const (pure Nothing)
   cwd <- Dir.getCurrentDirectory
   let
     machineConfigFile = "/etc/vaultenv.conf"
@@ -361,25 +360,25 @@ readConfigFromEnvFiles = do
     userConfigFile = fmap (++ "/vaultenv.conf") xdgDir
     cwdConfigFile = cwd ++ "/.env"
 
-  -- @doesFileExist@ doesn't throw exceptions, it catches @IOError@s and
-  -- returns @False@ if those are encountered.
-  machineConfigExists <- Dir.doesFileExist machineConfigFile
-  machineConfig <- if machineConfigExists
-    then DotEnv.parseFile machineConfigFile
-    else pure []
+  userConfig <- case userConfigFile of
+     Nothing -> pure []
+     Just fp -> readEnvFile fp
 
-  userConfigExists <- case userConfigFile of
-     Nothing -> pure False
-     Just fp -> Dir.doesFileExist fp
-  userConfig <- if userConfigExists
-    then DotEnv.parseFile (fromJust userConfigFile) -- safe because of loadUserConfig
-    else pure []
-
-  cwdConfigExists <- Dir.doesFileExist cwdConfigFile
-  cwdConfig <- if cwdConfigExists
-    then DotEnv.parseFile cwdConfigFile
-    else pure []
+  machineConfig <- readEnvFile machineConfigFile
+  cwdConfig <- readEnvFile cwdConfigFile
 
   -- Deduplicate, user config takes precedence over machine config
   let config = nubBy (\(x, _) (y, _) -> x == y) $ cwdConfig ++ userConfig ++ machineConfig
   pure config
+
+-- | Take a path to an environment file and try to parse it.
+-- If the file exists, return the key-value pairs in it, else return an empty
+-- list.
+readEnvFile :: FilePath -> IO [(String, String)]
+readEnvFile path = do
+    -- @doesFileExist@ doesn't throw exceptions, it catches @IOError@s and
+    -- returns @False@ if those are encountered.
+    fileExists <- Dir.doesFileExist path
+    if fileExists
+    then DotEnv.parseFile path
+    else pure []

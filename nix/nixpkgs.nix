@@ -5,10 +5,12 @@ let
       sha256 = "sha256:1hnmp637r99qd6g0sbx4w3za564gbzwl5c4z0x7fvn7kfi2jp1hx";
     };
   nixpkgsConfig = {
+    allowBroken = true;
     packageOverrides = pkgsOld: {
-      haskellPackages = pkgsOld.haskellPackages.override {
+      haskellPackages = pkgsOld.haskell.packages.integer-simple.ghc865.override {
         overrides = haskellNew: haskellOld: {
           dotenv = haskellOld.callPackage ./dotenv.nix {};
+          cryptonite = pkgsOld.haskell.lib.appendConfigureFlag (haskellOld.cryptonite) "-f-integer-gmp";
         };
       };
     };

@@ -11,8 +11,12 @@ let
         overrides = haskellNew: haskellOld: {
           dotenv = haskellOld.callPackage ./dotenv.nix {};
           cryptonite = pkgsOld.haskell.lib.appendConfigureFlag (haskellOld.cryptonite) "-f-integer-gmp";
+
         };
       };
+      curl = (pkgsOld.curl.override { gssSupport = false; }).overrideAttrs (old: {
+        dontDisableStatic = true;
+      });
     };
   };
 in

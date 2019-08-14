@@ -27,12 +27,10 @@ library
     , async
     , base
     , bytestring
-    , connection
     , containers
+    , curl
     , directory
     , dotenv
-    , http-client
-    , http-conduit
     , megaparsec
     , mtl
     , optparse-applicative
@@ -56,12 +54,10 @@ executable vaultenv
     , async
     , base
     , bytestring
-    , connection
     , containers
+    , curl
     , directory
     , dotenv
-    , http-client
-    , http-conduit
     , megaparsec
     , mtl
     , optparse-applicative
@@ -88,15 +84,13 @@ test-suite vaultenv-test
     , async
     , base
     , bytestring
-    , connection
     , containers
+    , curl
     , directory
     , dotenv
     , hspec
     , hspec-discover
     , hspec-expectations
-    , http-client
-    , http-conduit
     , megaparsec
     , mtl
     , optparse-applicative

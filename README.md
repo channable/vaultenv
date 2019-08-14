@@ -25,7 +25,7 @@ All of the above should not be done by a secret fetching tool. This should be
 left to a service manager, like systemd.
 
 `vaultenv` calls a syscall from the `exec` family after fetching secrets for
-you. This means that `vaultenv` replaces it's own process with whatever you want.
+you. This means that `vaultenv` replaces its own process with whatever you want.
 After your service has started, `vaultenv` is not running anymore.
 
 This approach does mean that we cannot automatically restart services if
@@ -68,7 +68,7 @@ set -u
 echo "${PRODUCTION_THIRD_PARTY_API_KEY}"
 ```
 
-This program will fail without `PRODUCTION_THIRD_PARTY_API_KEY` in it's
+This program will fail without `PRODUCTION_THIRD_PARTY_API_KEY` in its
 environment:
 
 ```
@@ -161,7 +161,7 @@ Let's first discuss secrets files.
 
 ### Secret specification
 
-There are two versions of this specification format. The first version shipped
+There are two versions of the secret specification format. The first version shipped
 with the initial version of Vaultenv, but doesn't allow users to specify custom
 mountpoints for backends. Vaultenv would always fetch from the generic secret
 backend mounted at `secret/`. Version 2 of the format supports custom mount
@@ -235,7 +235,7 @@ VAULT_PORT="8200"
 VAULTENV_INHERIT_ENV="yes"
 ```
 
-This is mostly useful for use on development machines. It allows you to:
+This is mostly useful on development machines. It allows you to:
 
  - Set global connection options on a per-machine basis. Useful if you run a
    Vault instance in your VPN.

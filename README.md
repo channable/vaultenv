@@ -235,7 +235,7 @@ VAULT_PORT="8200"
 VAULTENV_INHERIT_ENV="yes"
 ```
 
-This is mostly useful on development machines. It allows you to:
+This is useful on development machines. It allows you to:
 
  - Set global connection options on a per-machine basis. Useful if you run a
    Vault instance in your VPN.

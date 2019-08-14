@@ -1,0 +1,110 @@
+cabal-version: 1.12
+
+name:           vaultenv
+version:        0.10.0
+synopsis:       Runs processes with secrets from HashiCorp Vault
+homepage:       https://github.com/channable/vaultenv#readme
+bug-reports:    https://github.com/channable/vaultenv/issues
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/channable/vaultenv
+
+library
+  exposed-modules:
+      Config
+      SecretsFile
+  other-modules:
+      Paths_vaultenv
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Werror
+  build-depends:
+      aeson
+    , async
+    , base
+    , bytestring
+    , connection
+    , containers
+    , directory
+    , dotenv
+    , http-client
+    , http-conduit
+    , megaparsec
+    , mtl
+    , optparse-applicative
+    , parser-combinators
+    , retry
+    , text
+    , unix
+    , unordered-containers
+    , utf8-string
+  default-language: Haskell2010
+
+executable vaultenv
+  main-is: Main.hs
+  other-modules:
+      Paths_vaultenv
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -Werror
+  build-depends:
+      aeson
+    , async
+    , base
+    , bytestring
+    , connection
+    , containers
+    , directory
+    , dotenv
+    , http-client
+    , http-conduit
+    , megaparsec
+    , mtl
+    , optparse-applicative
+    , parser-combinators
+    , retry
+    , text
+    , unix
+    , unordered-containers
+    , utf8-string
+    , vaultenv
+  default-language: Haskell2010
+
+test-suite vaultenv-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      SecretFileSpec
+      Paths_vaultenv
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Werror -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , async
+    , base
+    , bytestring
+    , connection
+    , containers
+    , directory
+    , dotenv
+    , hspec
+    , hspec-discover
+    , hspec-expectations
+    , http-client
+    , http-conduit
+    , megaparsec
+    , mtl
+    , optparse-applicative
+    , parser-combinators
+    , retry
+    , text
+    , unix
+    , unordered-containers
+    , utf8-string
+    , vaultenv
+  default-language: Haskell2010

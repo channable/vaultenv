@@ -1,14 +1,14 @@
-{ mkDerivation, async, base, bytestring, connection, containers
-, directory, dotenv, hpack, hspec, hspec-discover, hspec-expectations
-, http-client, http-conduit, lens, lens-aeson, megaparsec, mtl
+{ mkDerivation, async, base, bytestring, containers
+, directory, dotenv, hspec, hspec-discover, hspec-expectations
+, http-client, http-client-openssl, lens, lens-aeson, megaparsec, mtl
 , optparse-applicative, parser-combinators, retry, stdenv, text
 , unix, unordered-containers, utf8-string, fetchzip, pkgs
 }:
 
 let
   commonDeps = [
-    async base bytestring connection containers dotenv http-client
-    http-conduit lens lens-aeson megaparsec mtl optparse-applicative
+    async base bytestring containers dotenv http-client
+    http-client-openssl lens lens-aeson megaparsec mtl optparse-applicative
     parser-combinators retry text unix unordered-containers utf8-string
   ];
   gitignore = import ./nix/gitignore.nix;
@@ -19,15 +19,12 @@ in
 
     src = gitignore ./.;
 
-    buildTools = [ hpack ];
-
     isLibrary = false;
     isExecutable = true;
     executableHaskellDepends = commonDeps;
     testHaskellDepends = commonDeps ++ [
       directory hspec hspec-discover hspec-expectations
     ];
-    preConfigure = "hpack";
 
     # Enable static linking by passing extra libs from Nixpkgs.
     enableSharedExecutables = false;

@@ -18,11 +18,11 @@ module Config
 
 import Control.Applicative ((<*>), (<|>))
 import Data.List (intercalate, nubBy)
-import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Data.Version (showVersion)
+import Data.Void (Void)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
-                            str, argument, many, strOption)
+                            str, argument, many, strOption, maybeReader)
 import Paths_vaultenv (version) -- Magic to get the version field from cabal.
 import System.IO.Error (catchIOError)
 
@@ -30,6 +30,8 @@ import qualified Configuration.Dotenv as DotEnv
 import qualified Options.Applicative as OptParse
 import qualified System.Directory as Dir
 import qualified Text.Read as Read
+import qualified Text.Megaparsec as MP
+import qualified Text.Megaparsec.Char as MPC
 
 -- | Type alias for enviornment variables, used for readability in this module.
 type EnvVar = (String, String)
@@ -54,6 +56,7 @@ data Options = Options
   , oRetryAttempts   :: Int
   , oLogLevel        :: LogLevel
   , oUsePath         :: Bool
+  , oConfigFiles     :: [FilePath]
   } deriving (Eq)
 
 instance Show Options where
@@ -71,6 +74,7 @@ instance Show Options where
     , "Retry attempts: " ++ (show $ oRetryAttempts opts)
     , "Log-level:      " ++ (show $ oLogLevel opts)
     , "Use PATH:       " ++ (show $ oUsePath opts)
+    , "Config files:   " ++ (show $ oConfigFiles opts)
     ]
 
 -- | Behavior flags that we allow users to set via environment variables.
@@ -102,10 +106,11 @@ instance Read LogLevel where
 
 -- | Parse program options from the command line and the process environment.
 parseOptionsFromEnvAndCli :: [EnvVar] -> IO Options
-parseOptionsFromEnvAndCli envVars =
+parseOptionsFromEnvAndCli envVars = do
+  defaultConfigFiles <- defaultEnvFiles
   let envFlags = parseEnvFlags envVars
-      parser = optionsParserWithInfo envFlags envVars
-  in OptParse.execParser parser
+      parser = optionsParserWithInfo envFlags defaultConfigFiles envVars
+  OptParse.execParser parser
 
 -- | Parses behavior flags from a list of environment variables. If an
 -- environment variable corresponding to the flag is set to @"true"@ or
@@ -131,10 +136,10 @@ parseEnvFlags envVars
 
 -- | This function adds metadata to the @Options@ parser so it can be used with
 -- execParser.
-optionsParserWithInfo :: EnvFlags -> [EnvVar] -> OptParse.ParserInfo Options
-optionsParserWithInfo envFlags localEnvVars =
+optionsParserWithInfo :: EnvFlags -> [FilePath] -> [EnvVar] -> OptParse.ParserInfo Options
+optionsParserWithInfo envFlags defaultConfigFiles localEnvVars =
   OptParse.info
-    (OptParse.helper <*> versionOption <*> optionsParser envFlags localEnvVars)
+    (OptParse.helper <*> versionOption <*> optionsParser envFlags defaultConfigFiles localEnvVars)
     (OptParse.fullDesc <> OptParse.header header)
   where
     versionOption = OptParse.infoOption (showVersion version) (long "version" <> help "Show version")
@@ -193,8 +198,8 @@ optionsParserWithInfo envFlags localEnvVars =
 -- the default values of the different behaviour switches. So, if an
 -- environment variable is used to configure the TLS option, that value will
 -- always be used, except if it is overridden on the CLI.
-optionsParser :: EnvFlags -> [EnvVar] -> OptParse.Parser Options
-optionsParser envFlags envVars = Options
+optionsParser :: EnvFlags -> [FilePath] -> [EnvVar] -> OptParse.Parser Options
+optionsParser envFlags defaultConfigFiles envVars= Options
     <$> host
     <*> port
     <*> token
@@ -208,6 +213,7 @@ optionsParser envFlags envVars = Options
     <*> retryAttempts
     <*> logLevel
     <*> usePath
+    <*> configFiles
   where
     host
       =  strOption
@@ -300,6 +306,14 @@ optionsParser envFlags envVars = Options
       <> help ("Use PATH for finding the executable that vaultenv should call. Default: " ++
               "don't search PATH. Also configurable via VAULTENV_USE_PATH.")
 
+    configFiles
+      =    option (maybeReader (MP.parseMaybe listParser))
+        $  long "config-files"
+        <> listFromEnvWithDefault "VAULTENV_CONFIG_FILES" defaultConfigFiles envVars
+        <> help ("Override the list of config files to load. Default: " ++
+                 "'/etc/vaultenv.conf,~/.config/vaultenv/vaultenv.conf,.env'. " ++
+                 "Also configurable via VAULTENV_CONFIG_FILES.")
+
 
 -- | Specialization of @readValueFromEnv@ that does not use a @Read@ instance.
 -- This is useful for "plain" string values, so the user does not have to
@@ -343,19 +357,38 @@ readValueFromEnvWithDefault key defVal envVars
   =  value defVal
   <> readValueFromEnv key envVars
 
--- | Either search for environment files in default locations or load a set of
--- already given environment files.
---
--- If given a list of file paths to load, this function will load them using
--- 'readEnvFiles' and return the result.
--- Otherwise, it attempts to load configuration files from these locations:
+-- | Variant of 'readValueFromEnv' that parses a comma-separated list.
+listFromEnv :: (OptParse.HasValue f)
+            => String
+            -> [EnvVar]
+            -> OptParse.Mod f [String]
+listFromEnv key envVars =
+  let parseResult = lookup key envVars >>= MP.parseMaybe listParser
+  in foldMap value parseResult
+
+-- | Variant of 'readValueFromEnvWithDefault' for comma-separated lists.
+listFromEnvWithDefault :: (OptParse.HasValue f)
+                       => String
+                       -> [String]
+                       -> [EnvVar]
+                       -> OptParse.Mod f [String]
+listFromEnvWithDefault key defVal envVars = value defVal <> listFromEnv key envVars
+
+-- | Megaparsec parser to parse a list of comma-separated strings
+listParser :: MP.Parsec Void String [String]
+listParser = many (MPC.satisfy (/= ',')) `MP.sepBy1` MPC.char ','
+
+-- | Return the list of default configuration files to read.
+-- This list consists of the following:
 --
 --   - @\/etc\/vaultenv.conf@ (the machine config file),
 --   - @$XDG_CONFIG_HOME\/vaultenv\/vaultenv.conf@ (the user config file, if
 --   the XDG config directory exists), and
 --   - @$CWD\/.env@ (the local config file).
-readConfigFromEnvFiles :: Maybe [FilePath] -> IO [(String, String)]
-readConfigFromEnvFiles Nothing = do
+--
+-- The returned paths are absolute.
+defaultEnvFiles :: IO [FilePath]
+defaultEnvFiles = do
   xdgDir <- (Just <$> Dir.getXdgDirectory Dir.XdgConfig "vaultenv")
     `catchIOError` const (pure Nothing)
 
@@ -366,20 +399,28 @@ readConfigFromEnvFiles Nothing = do
     machineConfigFile = "/etc/vaultenv.conf"
     cwdConfigFile = cwd ++ "/.env"
 
-    userConfigFile :: Maybe FilePath
-    userConfigFile = fmap (++ "/vaultenv.conf") xdgDir
+  case xdgDir of
+    Nothing -> return [machineConfigFile, cwdConfigFile]
+    Just dir -> return [machineConfigFile, dir ++ "/vaultenv.conf", cwdConfigFile]
 
-    userConfigFiles = fromMaybe [] userConfigFile
-    -- Singleton list if the XDG config directory exists, else []
-
-  readEnvFiles ([cwdConfigFile] ++ [userConfigFiles] ++ [machineConfigFile])
+-- | Either search for environment files in the default locations or load a set of
+-- already given environment files.
+--
+-- If given a list of file paths to load, this function will load them using
+-- 'readEnvFiles' and return the result.
+-- Otherwise, it attempts to load configuration files from the default
+-- locations defined by 'defaultEnvFiles'.
+readConfigFromEnvFiles :: Maybe [FilePath] -> IO [EnvVar]
+readConfigFromEnvFiles Nothing = do
+  defaultLocations <- defaultEnvFiles
+  readEnvFiles defaultLocations
 
 readConfigFromEnvFiles (Just fps) = readEnvFiles fps
 
 -- | Take a list of paths to environment files, and try to open and parse each of them.
 -- Return the list of key-value pairs read from the files, where values in
 -- later files override files read from files earlier in the list.
-readEnvFiles :: [FilePath] -> IO [(String, String)]
+readEnvFiles :: [FilePath] -> IO [EnvVar]
 readEnvFiles fps = do
   values <- mapM readEnvFile fps
   pure $ nubBy (\x y -> fst x == fst y) (concat $ reverse values)
@@ -387,7 +428,7 @@ readEnvFiles fps = do
 -- | Take a path to an environment file and try to parse it.
 -- If the file exists, return the key-value pairs in it, else return an empty
 -- list.
-readEnvFile :: FilePath -> IO [(String, String)]
+readEnvFile :: FilePath -> IO [EnvVar]
 readEnvFile path = do
     -- @doesFileExist@ doesn't throw exceptions, it catches @IOError@s and
     -- returns @False@ if those are encountered.

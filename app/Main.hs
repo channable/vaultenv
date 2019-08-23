@@ -12,14 +12,6 @@ import Data.HashMap.Strict    (HashMap, lookupDefault, mapMaybe)
 import Data.List              (nubBy)
 import Data.Monoid            ((<>))
 import Data.Text              (Text, pack)
-import Network.Connection     (TLSSettings(..))
-import Network.HTTP.Client    (defaultManagerSettings)
-import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
-import Network.HTTP.Simple    (HttpException(..), Request, Response,
-                               defaultRequest, setRequestHeader, setRequestPort,
-                               setRequestPath, setRequestHost, setRequestManager,
-                               setRequestSecure, httpLBS, getResponseBody,
-                               getResponseStatusCode)
 import System.Environment     (getEnvironment)
 import System.Posix.Process   (executeFile)
 import Control.Monad.Except   (ExceptT (..), MonadError, runExceptT, mapExceptT, throwError, liftEither, withExceptT)
@@ -28,10 +20,9 @@ import qualified Control.Concurrent.Async   as Async
 import qualified Control.Retry              as Retry
 import qualified Data.Aeson                 as Aeson
 import qualified Data.ByteString.Char8      as SBS
-import qualified Data.ByteString.Lazy       as LBS hiding (unpack)
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Foldable              as Foldable
 import qualified Data.Map                   as Map
+import qualified Network.Curl               as Curl
 import qualified System.Exit                as Exit
 
 import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds,
@@ -55,7 +46,6 @@ data Context
   = Context
   { cLocalEnvVars :: [EnvVar]
   , cCliOptions :: Options
-  , cHttpManager :: Manager
   }
 
 -- | The different types of Engine that Vautlenv supports
@@ -160,15 +150,15 @@ data VaultError
   = SecretNotFound    String
   | SecretFileError   SFError
   | KeyNotFound       Secret
-  | BadRequest        LBS.ByteString
   | Forbidden
   | BadJSONResp       String
-  | ServerError       LBS.ByteString
-  | ServerUnavailable LBS.ByteString
-  | ServerUnreachable HttpException
+  | BadRequest        String
+  | ServerError       String
+  | ServerUnavailable String
+  | ServerUnreachable
   | InvalidUrl        String
   | DuplicateVar      String
-  | Unspecified       Int LBS.ByteString
+  | Unspecified       Int String
 
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
@@ -195,31 +185,13 @@ main = do
     then print cliAndEnvAndEnvFileOptions
     else pure ()
 
-  httpManager <- getHttpManager cliAndEnvAndEnvFileOptions
-
   let context = Context { cLocalEnvVars = envAndEnvFileConfig
                         , cCliOptions = cliAndEnvAndEnvFileOptions
-                        , cHttpManager = httpManager
                         }
 
   runExceptT (vaultEnv context) >>= \case
     Left err -> Exit.die (vaultErrorLogMessage err)
     Right newEnv -> runCommand cliAndEnvAndEnvFileOptions newEnv
-
--- | This function returns either a manager for plain HTTP or
--- for HTTPS connections. If TLS is wanted, we also check if the
--- user specified an option to disable the certificate check.
-getHttpManager :: Options -> IO Manager
-getHttpManager opts = newManager managerSettings
-  where
-    managerSettings = if oConnectTls opts
-                      then mkManagerSettings tlsSettings Nothing
-                      else defaultManagerSettings
-    tlsSettings = TLSSettingsSimple
-                { settingDisableCertificateValidation = not $ oValidateCerts opts
-                , settingDisableSession = False
-                , settingUseServerName = True
-                }
 
 -- | Main logic of our application. Reads a list of secrets, fetches
 -- each of them from Vault, checks for duplicates, and then yields
@@ -278,15 +250,11 @@ requestMountInfo :: Context -> ExceptT VaultError IO MountInfo
 requestMountInfo context =
   let
     cliOptions = cCliOptions context
-    request = setRequestManager (cHttpManager context)
-            $ setRequestHeader "x-vault-token" [SBS.pack (oVaultToken cliOptions)]
-            $ setRequestPath (SBS.pack "/v1/sys/mounts")
-            $ setRequestPort (oVaultPort cliOptions)
-            $ setRequestHost (SBS.pack (oVaultHost cliOptions))
-            $ setRequestSecure (oConnectTls cliOptions)
-            $ defaultRequest
+    headers = ["X-Vault-Token: " ++ oVaultToken cliOptions]
+    scheme = if oConnectTls cliOptions then "https://" else "http://"
+    requestUrl = scheme ++ oVaultHost cliOptions ++ ":" ++ oVaultPort cliOptions ++ "/v1/sys/mounts"
   in do
-    resp <- withExceptT ServerUnreachable (httpLBS request)
+    (code, body) <- liftIO $ Curl.curlGetString requestUrl headers
     withExceptT BadJSONResp (liftEither $ Aeson.eitherDecode' (getResponseBody resp))
 
 -- | Request all the data associated with a secret from the vault.
@@ -308,7 +276,7 @@ requestSecret context secretPath =
     shouldRetry _retryStatus res = pure $ case res of
       ServerError _ -> True
       ServerUnavailable _ -> True
-      ServerUnreachable _ -> True
+      ServerUnreachable -> True
       Unspecified _ _ -> True
       BadJSONResp _ -> True
 
@@ -325,7 +293,7 @@ requestSecret context secretPath =
       SecretFileError _ -> False
 
     retryAction :: Retry.RetryStatus -> ExceptT VaultError IO VaultData
-    retryAction _retryStatus = doRequest secretPath request
+    retryAction _retryStatus = _ secretPath request
   in
     retryingExceptT (vaultRetryPolicy cliOptions) shouldRetry retryAction
 
@@ -362,26 +330,13 @@ lookupSecrets mountInfo secrets vaultData = forM secrets $ \secret ->
       toEnvVar val = (sVarName secret, val)
   in maybe (Left $ KeyNotFound secret) (Right . toEnvVar) $ secretValue
 
--- | Send a request for secrets to the vault and parse the response.
-doRequest :: String -> Request -> ExceptT VaultError IO VaultData
-doRequest secretPath request = do
-  resp <- withExceptT exToErr (httpLBS request)
-  parseResponse secretPath resp
-  where
-    exToErr :: HttpException -> VaultError
-    exToErr e@(HttpExceptionRequest _ _) = ServerUnreachable e
-    exToErr (InvalidUrlException _ _) = InvalidUrl secretPath
-
 --
 -- HTTP response handling
 --
 
-parseResponse :: (Monad m) => String -> Response LBS.ByteString -> ExceptT VaultError m VaultData
-parseResponse secretPath response =
-  let
-    responseBody = getResponseBody response
-    statusCode = getResponseStatusCode response
-  in case statusCode of
+parseResponse :: (Monad m) => String -> (Int, String)-> ExceptT VaultError m VaultData
+parseResponse secretPath (statusCode, responseBody) =
+  case statusCode of
     200 -> liftEither (parseSuccessResponse responseBody)
     403 -> throwError Forbidden
     404 -> throwError $ SecretNotFound secretPath
@@ -390,7 +345,7 @@ parseResponse secretPath response =
     _   -> throwError $ Unspecified statusCode responseBody
 
 
-parseSuccessResponse :: LBS.ByteString -> Either VaultError VaultData
+parseSuccessResponse :: String -> Either VaultError VaultData
 parseSuccessResponse responseBody = first BadJSONResp $ Aeson.eitherDecode' responseBody
 
 --
@@ -408,8 +363,7 @@ vaultErrorLogMessage vaultError =
         "Key " <> (sKey secret) <> " not found for path " <> (sPath secret)
       DuplicateVar varName ->
         "Found duplicate environment variable \"" ++ varName ++ "\""
-      BadRequest resp ->
-        "Made a bad request: " <> (LBS.unpack resp)
+      BadRequest body -> "Made a bad request: " <> body
       Forbidden ->
         "Invalid Vault token"
       InvalidUrl secretPath ->
@@ -417,14 +371,13 @@ vaultErrorLogMessage vaultError =
       BadJSONResp msg ->
         "Received bad JSON from Vault: " <> msg
       ServerError resp ->
-        "Internal Vault error: " <> (LBS.unpack resp)
-      ServerUnavailable resp ->
+        "Internal Vault error: " <> resp
+      ServerUnavailable ->
         "Vault is unavailable for requests. It can be sealed, " <>
-        "under maintenance or enduring heavy load: " <> (LBS.unpack resp)
-      ServerUnreachable exception ->
-        "ServerUnreachable error: " <> show exception
+        "under maintenance or enduring heavy load."
+      ServerUnreachable -> "Server is unreachable"
       Unspecified status resp ->
         "Received an error that I don't know about (" <> show status
-        <> "): " <> (LBS.unpack resp)
+        <> "): " <> resp
   in
     "[ERROR] " <> description

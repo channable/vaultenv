@@ -16,20 +16,17 @@ module Config
   , parseOptionsFromEnvAndCli
   , LogLevel(..)
   , readConfigFromEnvFiles
-  , Specified(..)
-  , fromSpecifiedValue, isDefault, isSpecified
-  , emptyOptions, defaultOptions, isOptionsComplete, splitAddress, validateCopyAddr, mergeOptions, getOptionsValue
+  , emptyOptions, defaultOptions, isOptionsComplete
+  , splitAddress, validateCopyAddr, mergeOptions, getOptionsValue
   ) where
 
 import Control.Applicative ((<*>), (<|>))
-import Control.Arrow (first)
 import Control.Monad(when, unless)
 import Control.Monad.Except (runExcept, throwError)
 import Data.List (intercalate, isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
 import Data.Monoid ((<>))
 import Data.Char (isDigit)
-import Data.String (fromString)
 import Data.Either (lefts, rights, isLeft)
 import Data.Version (showVersion)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
@@ -48,34 +45,6 @@ type EnvVar = (String, String)
 -- | Newtype wrapper for millisecond values.
 newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
   deriving (Eq, Show)
-
--- |  Specified determines whether a value has been explicitly defined or has the default value.
---    Can be used whenever two values that should match, do not
-data Specified  a 
-  = Specified   a
-  | Default     a 
-  deriving (Eq, Show)
-
-instance Read (Specified String) where
-  readsPrec _ s = [(Specified (fromString s), "")]
-
-instance Read (Specified Int) where
-  readsPrec i s = map (first Specified) $ readsPrec i s
-
--- | Gets the value from the @Specified@ data type
-fromSpecifiedValue :: Specified a -> a
-fromSpecifiedValue (Specified x)  = x
-fromSpecifiedValue (Default x)    = x
-
--- | Determines whether a @Specified@ value is a Default constructor
-isDefault :: Specified a -> Bool
-isDefault (Specified _) = False
-isDefault (Default _) = True
-
--- | Determines whether a @Specified@ value is a Specified constructor
-isSpecified :: Specified a -> Bool
-isSpecified (Specified _) = True
-isSpecified (Default _) = False
 
 -- | @Options@ contains all the configuration we support in vaultenv. It is
 -- used in our @Main@ module to specify behavior.
@@ -155,7 +124,10 @@ instance Show Options where
       showSpecifiedString = fromMaybe "Unspecified"
 
 getOptionsValue :: String -> Maybe a -> a 
-getOptionsValue name = fromMaybe (error $ "No configuration was found with the name " ++ name ++ " but it is required")
+getOptionsValue name = 
+    fromMaybe (errorWithoutStackTrace 
+        ("No configuration was found with the name " ++ name ++ " but it is required")
+    )
 
 
 data OptionsError
@@ -183,9 +155,14 @@ validateCopyAddr :: Options -> Either OptionsError Options
 validateCopyAddr opts 
   | isNothing (oVaultAddr opts) = Right opts 
   | otherwise = runExcept $ do
-      let (mStrScheme, addrHost, addrStrPort) = splitAddress (fromMaybe (error "Addr not a Just in validation") $ oVaultAddr opts)
-      unless (all isDigit addrStrPort && not (null addrStrPort)) (throwError $ NonNumericPort addrStrPort)
-      unless (isJust mStrScheme) (throwError $ UnknownScheme addrHost)
+      let addr = fromMaybe 
+                      (errorWithoutStackTrace "Addr not a Just in validation") 
+                      (oVaultAddr opts)
+          (mStrScheme, addrHost, addrStrPort) = splitAddress addr
+      unless (all isDigit addrStrPort && not (null addrStrPort)) 
+          (throwError $ NonNumericPort addrStrPort)
+      unless (isJust mStrScheme) 
+          (throwError $ UnknownScheme addrHost)
       let mHost = oVaultHost opts
           mPort = oVaultPort opts
           mUseTLS = oConnectTls opts
@@ -211,11 +188,11 @@ validateCopyAddr opts
           oVaultHost = Just addrHost,
           oVaultPort = Just addrPort,
           oConnectTls = addrTLS
-          -- oVaultAddr = Nothing -- To prevent this address overwriting an explicit host, scheme or port in a next phase
         }
 
--- | This functions merges two options, where every specific option in the second options parameter is only used 
--- if for that option no value is specified in the first options parameter.
+-- | This functions merges two options, where every specific option in the 
+-- second options parameter is only used if for that option no value is 
+-- specified in the first options parameter.
 mergeOptions :: Options -> Options -> Options
 mergeOptions opts1 opts2 = let 
       combine :: (Options -> Maybe a) -> Maybe a
@@ -254,17 +231,25 @@ splitAddress addr =
           -- | Split the string on the last colon
           splitOnLastColon :: String -> (String, String)
           splitOnLastColon = splitOnLastColonHelper "" ""
-          -- | Helper that splits on the last colon, oneButLast contains everything before the last colon
-          -- lastAfter contains everything after the last colon
+          -- | Helper that splits on the last colon, oneButLast contains 
+          -- everything before the last colon lastAfter contains everything 
+          -- after the last colon
           splitOnLastColonHelper :: String -> String -> String -> (String, String)
-          splitOnLastColonHelper oneButLast lastAfter [] = (drop 1 (reverse oneButLast), reverse lastAfter)
+          splitOnLastColonHelper oneButLast lastAfter [] = 
+                      (drop 1 (reverse oneButLast), reverse lastAfter)
           splitOnLastColonHelper oneButLast lastAfter (c:cs) 
-              | c == ':' = splitOnLastColonHelper (lastAfter ++ ":" ++ oneButLast) "" cs
-              | otherwise = splitOnLastColonHelper oneButLast (c : lastAfter) cs
+              | c == ':'  = splitOnLastColonHelper 
+                                  (lastAfter ++ ":" ++ oneButLast) "" cs
+              | otherwise = splitOnLastColonHelper 
+                                  oneButLast (c : lastAfter) cs
+          
           (schemeHost, port) = splitOnLastColon addr
-          (scheme, host)  | isPrefixOf "http://" schemeHost = (Just "http://", drop (length "http://") schemeHost)
-                          | isPrefixOf "https://" schemeHost = (Just "https://", drop (length "https://") schemeHost)
-                          | otherwise = (Nothing, schemeHost)
+          (scheme, host)  
+              | isPrefixOf "http://" schemeHost = 
+                    (Just "http://", drop (length "http://") schemeHost)
+              | isPrefixOf "https://" schemeHost = 
+                    (Just "https://", drop (length "https://") schemeHost)
+              | otherwise = (Nothing, schemeHost)
         in (scheme, host, port)
         
           
@@ -464,8 +449,8 @@ optionsParser = Options
         $ long "addr"
         <> metavar "ADDR"
         <> value Nothing
-        <> help ("Vault address, the ip-address or DNS name, followed by the port, separated with a ':'" ++
-            "Cannot be combined with either VAULT_PORT or VAULT_HOST")
+        <> help ("Vault address, the ip-address or DNS name, followed by the port, " ++
+            "separated with a ':' Cannot be combined with either VAULT_PORT or VAULT_HOST")
     token
       =  maybeStrOption
       $  long "token"

@@ -18,6 +18,7 @@ module Config
   , readConfigFromEnvFiles
   , emptyOptions, defaultOptions, isOptionsComplete
   , splitAddress, validateCopyAddr, mergeOptions, getOptionsValue
+  , Validated(), Completed()
   ) where
 
 import Control.Applicative ((<*>), (<|>))
@@ -48,7 +49,7 @@ newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
 
 -- | @Options@ contains all the configuration we support in vaultenv. It is
 -- used in our @Main@ module to specify behavior.
-data Options = Options
+data Options validated completed = Options
   { oVaultHost       :: Maybe String
   , oVaultPort       :: Maybe Int
   , oVaultAddr       :: Maybe String
@@ -65,43 +66,80 @@ data Options = Options
   , oUsePath         :: Maybe Bool
   } deriving (Eq)
 
+-- | Phantom type that indicates that an option is 
+-- checked to be completed by ```isOptionsComplete``` and is validated by
+-- ```validateCopyAddr```
+data Completed
+
+data UnCompleted
+
+-- | Phantom type that indicates that an option is 
+-- validated by ```validateCopyAddr```
+data Validated
+
+-- | Phantom type that indicates that an option is 
+-- not validated by ```isOptionsComplete```
+data UnValidated
+
 -- An empty set of options, nothing is specified
-emptyOptions :: Options
+emptyOptions :: Options Validated UnCompleted
 emptyOptions = Options
-  Nothing -- Vault Host
-  Nothing -- Vault Port
-  Nothing -- Vault Addr
-  Nothing -- Vault Token
-  Nothing -- Secret File
-  Nothing -- Command
-  Nothing -- Arguments
-  Nothing -- Connect Tls
-  Nothing -- Validate Certs
-  Nothing -- InheritEnv
-  Nothing -- Retry Base Delay
-  Nothing -- Retry Attempts
-  Nothing -- Log Level
-  Nothing -- Use Path
+  { oVaultHost      = Nothing
+  , oVaultPort      = Nothing
+  , oVaultAddr      = Nothing
+  , oVaultToken     = Nothing
+  , oSecretFile     = Nothing
+  , oCmd            = Nothing
+  , oArgs           = Nothing
+  , oConnectTls     = Nothing
+  , oValidateCerts  = Nothing
+  , oInheritEnv     = Nothing
+  , oRetryBaseDelay = Nothing
+  , oRetryAttempts  = Nothing
+  , oLogLevel       = Nothing
+  , oUsePath        = Nothing
+  }
 
 -- | The default options that should be used when no value is specified
-defaultOptions :: Options
+defaultOptions :: Options Validated UnCompleted
 defaultOptions = Options
-  (Just "localhost")                -- Vault Host
-  (Just 8200)                       -- Vault Port
-  (Just "http://localhost:8200")    -- Vault Addr
-  Nothing                           -- Vault Token
-  Nothing                           -- Secret File
-  Nothing                           -- Command
-  (Just [])                         -- Arguments
-  (Just True)                       -- Connect Tls
-  (Just True)                       -- Validate Certs
-  (Just True)                       -- InheritEnv
-  (Just (MilliSeconds 40))          -- Retry Base Delay
-  (Just 9)                          -- Retry Attempts
-  (Just Error)                      -- Log Level
-  (Just True)                       -- Use Path
+  { oVaultHost      = Just "localhost"
+  , oVaultPort      = Just 8200
+  , oVaultAddr      = Just "http://localhost:8200"
+  , oVaultToken     = Nothing
+  , oSecretFile     = Nothing
+  , oCmd            = Nothing
+  , oArgs           = Just []
+  , oConnectTls     = Just True
+  , oValidateCerts  = Just True
+  , oInheritEnv     = Just True
+  , oRetryBaseDelay = Just (MilliSeconds 40)
+  , oRetryAttempts  = Just 9
+  , oLogLevel       = Just Error
+  , oUsePath        = Just True
+}
 
-instance Show Options where
+-- | Casts one options structure into antoher, use only when certain that 
+-- the validated and completed options can be given to a options file. 
+castOptions :: Options a b -> Options c d
+castOptions opts = Options
+  { oVaultHost      = oVaultHost opts
+  , oVaultPort      = oVaultPort opts
+  , oVaultAddr      = oVaultAddr opts
+  , oVaultToken     = oVaultToken opts
+  , oSecretFile     = oSecretFile opts
+  , oCmd            = oCmd opts 
+  , oArgs           = oArgs opts
+  , oConnectTls     = oConnectTls opts
+  , oValidateCerts  = oValidateCerts opts 
+  , oInheritEnv     = oInheritEnv opts
+  , oRetryBaseDelay = oRetryBaseDelay opts
+  , oRetryAttempts  = oRetryAttempts opts
+  , oLogLevel       = oLogLevel opts
+  , oUsePath        = oUsePath opts
+}
+
+instance Show (Options valid complete) where
   show opts = intercalate "\n"
     [ "Host:           " ++ showSpecifiedString (oVaultHost opts)
     , "Port:           " ++ showSpecified (oVaultPort opts)
@@ -123,6 +161,9 @@ instance Show Options where
       showSpecified Nothing = "Unspecified"
       showSpecifiedString = fromMaybe "Unspecified"
 
+-- | Gets the option from a Maybe, ```name``` should only be used for debugging
+-- purposes, as ```isOptionsComplete``` should verify that every property that
+-- does not have a default value, is present in the options.
 getOptionsValue :: String -> Maybe a -> a 
 getOptionsValue name = 
     fromMaybe (errorWithoutStackTrace 
@@ -151,9 +192,9 @@ instance Show OptionsError where
 
 -- | Validates for a set of options that any provided addr is valid and that either the 
 -- scheme, host and port or that any given addr matches the other provided information.
-validateCopyAddr :: Options -> Either OptionsError Options
+validateCopyAddr :: Options UnValidated completed -> Either OptionsError (Options Validated completed)
 validateCopyAddr opts 
-  | isNothing (oVaultAddr opts) = Right opts 
+  | isNothing (oVaultAddr opts) = Right (castOptions opts) 
   | otherwise = runExcept $ do
       let addr = fromMaybe 
                       (errorWithoutStackTrace "Addr not a Just in validation") 
@@ -193,9 +234,11 @@ validateCopyAddr opts
 -- | This functions merges two options, where every specific option in the 
 -- second options parameter is only used if for that option no value is 
 -- specified in the first options parameter.
-mergeOptions :: Options -> Options -> Options
+mergeOptions  :: Options Validated UnCompleted 
+              -> Options Validated UnCompleted 
+              -> Options Validated UnCompleted
 mergeOptions opts1 opts2 = let 
-      combine :: (Options -> Maybe a) -> Maybe a
+      combine :: (Options Validated UnCompleted -> Maybe a) -> Maybe a
       combine f | isJust (f opts1) = f opts1
                 | otherwise = f opts2 
     in 
@@ -217,13 +260,18 @@ mergeOptions opts1 opts2 = let
 
 
 
-isOptionsComplete :: Options -> [OptionsError]
-isOptionsComplete opts = concat
-      [
-        [UnspecifiedValue "Token"       | isNothing (oVaultToken opts)]
-      , [UnspecifiedValue "Command"     | isNothing (oCmd opts)]
-      , [UnspecifiedValue "Secret file" | isNothing (oSecretFile opts)]
-      ]
+isOptionsComplete :: Options Validated UnCompleted
+                  -> Either [OptionsError] (Options Validated Completed)
+isOptionsComplete opts = 
+      let errors = concat
+            [
+              [UnspecifiedValue "Token"       | isNothing (oVaultToken opts)]
+            , [UnspecifiedValue "Command"     | isNothing (oCmd opts)]
+            , [UnspecifiedValue "Secret file" | isNothing (oSecretFile opts)]
+            ]
+      in  if not (null errors) 
+          then Left errors 
+          else Right (castOptions opts)
 
 splitAddress :: String -> (Maybe String, String, String)
 splitAddress addr = 
@@ -271,7 +319,7 @@ instance Read LogLevel where
   readsPrec _ _ = []
 
 -- | Parse program options from the command line and the process environment.
-parseOptionsFromEnvAndCli :: [EnvVar] -> [[EnvVar]] -> IO Options
+parseOptionsFromEnvAndCli :: [EnvVar] -> [[EnvVar]] -> IO (Options Validated Completed)
 parseOptionsFromEnvAndCli localEnvVars envFileSettings =
   let eLocalEnvFlagsOptions = validateCopyAddr $ parseEnvFlags localEnvVars
       eEnvFileSettingsOptions = map (validateCopyAddr . parseEnvFlags) envFileSettings
@@ -280,7 +328,14 @@ parseOptionsFromEnvAndCli localEnvVars envFileSettings =
     let results = eEnvFileSettingsOptions ++ [eLocalEnvFlagsOptions, eParseResult]
     if any isLeft results then
       die ("[ERROR] " ++ unlines (map show $ lefts results))
-    else return $ foldl (flip mergeOptions) defaultOptions (rights results)
+    else 
+        let 
+          combined = foldl (flip mergeOptions) defaultOptions (rights results)
+          completed = isOptionsComplete combined
+          in either 
+                (\l -> die ("[ERROR] " ++ show l))
+                return
+                completed
 
 -- | Parses behavior flags from a list of environment variables. If an
 -- environment variable corresponding to the flag is set to @"true"@ or
@@ -288,7 +343,7 @@ parseOptionsFromEnvAndCli localEnvVars envFileSettings =
 --
 -- If these variables aren't present, we default to @False@. We print an error
 -- if they're set to anything else than @"true"@ or @"false"@.
-parseEnvFlags :: [EnvVar] -> Options
+parseEnvFlags :: [EnvVar] -> Options UnValidated UnCompleted
 parseEnvFlags envVars
   = emptyOptions
   { oVaultHost      = lookupEnvString   "VAULT_HOST"
@@ -350,7 +405,7 @@ Nothing -- Vault Host
 
 -- | This function adds metadata to the @Options@ parser so it can be used with
 -- execParser.
-optionsParserWithInfo :: OptParse.ParserInfo Options
+optionsParserWithInfo :: OptParse.ParserInfo (Options UnValidated UnCompleted)
 optionsParserWithInfo =
   OptParse.info
     (OptParse.helper <*> versionOption <*> optionsParser)
@@ -412,7 +467,7 @@ optionsParserWithInfo =
 -- the default values of the different behaviour switches. So, if an
 -- environment variable is used to configure the TLS option, that value will
 -- always be used, except if it is overridden on the CLI.
-optionsParser :: OptParse.Parser Options
+optionsParser :: OptParse.Parser (Options UnValidated UnCompleted)
 optionsParser = Options
     <$> host
     <*> port

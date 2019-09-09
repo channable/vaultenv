@@ -36,7 +36,8 @@ import qualified Data.Map                   as Map
 import qualified System.Exit                as Exit
 
 import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds,
-               LogLevel(..), readConfigFromEnvFiles, getOptionsValue)
+               LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
+               Validated, Completed)
 import SecretsFile (Secret(..), SFError(..), readSecretList)
 
 -- | Make a HTTP URL path from a secret. This is the path that Vault expects.
@@ -55,7 +56,7 @@ data MountInfo = MountInfo (HashMap Text EngineType)
 data Context
   = Context
   { cLocalEnvVars :: [EnvVar]
-  , cCliOptions :: Options
+  , cCliOptions :: Options Validated Completed
   , cHttpManager :: Manager
   }
 
@@ -158,23 +159,23 @@ instance FromJSON MountInfo where
 -- up the call stack and end up as a value of this type. We then have a single
 -- function which is responsible for printing an error message and exiting.
 data VaultError
-  = SecretNotFound        String
-  | SecretFileError       SFError
-  | KeyNotFound           Secret
-  | BadRequest            LBS.ByteString
+  = SecretNotFound String
+  | SecretFileError SFError
+  | KeyNotFound Secret
+  | BadRequest LBS.ByteString
   | Forbidden
-  | BadJSONResp           String
-  | ServerError           LBS.ByteString
-  | ServerUnavailable     LBS.ByteString
-  | ServerUnreachable     HttpException
-  | InvalidUrl            String
-  | DuplicateVar          String
-  | Unspecified           Int LBS.ByteString
+  | BadJSONResp String
+  | ServerError LBS.ByteString
+  | ServerUnavailable LBS.ByteString
+  | ServerUnreachable HttpException
+  | InvalidUrl String
+  | DuplicateVar String
+  | Unspecified Int LBS.ByteString
 
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
 -- fullJitterBackoff that comes with the Retry package.
-vaultRetryPolicy :: (MonadIO m) => Options -> Retry.RetryPolicyM m
+vaultRetryPolicy :: (MonadIO m) => Options Validated Completed -> Retry.RetryPolicyM m
 vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds 
                           (getOptionsValue "retry base delay" $ oRetryBaseDelay opts) * 1000
                         )
@@ -215,7 +216,7 @@ main = do
 -- | This function returns either a manager for plain HTTP or
 -- for HTTPS connections. If TLS is wanted, we also check if the
 -- user specified an option to disable the certificate check.
-getHttpManager :: Options -> IO Manager
+getHttpManager :: Options Validated Completed -> IO Manager
 getHttpManager opts = newManager managerSettings
   where
     managerSettings = if getOptionsValue "Connect TLS" $ oConnectTls opts
@@ -268,7 +269,7 @@ vaultEnv context = do
         else secretsEnv
 
 
-runCommand :: Options -> [EnvVar] -> IO a
+runCommand :: Options Validated Completed -> [EnvVar] -> IO a
 runCommand options env =
   let
     command = getOptionsValue "CMD" $ oCmd options

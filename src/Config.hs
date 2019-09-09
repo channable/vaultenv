@@ -147,7 +147,7 @@ instance Show OptionsError where
     "The scheme " ++ show scheme ++ 
     " , the host " ++ show host ++ 
     " and the port " ++ show port ++  
-    " do not match the provided addr" ++ show addr
+    " do not match the provided addr " ++ show addr
 
 -- | Validates for a set of options that any provided addr is valid and that either the 
 -- scheme, host and port or that any given addr matches the other provided information.
@@ -176,7 +176,7 @@ validateCopyAddr opts
           || 
           (isJust mPort && Just addrPort /= mPort)
           || 
-          (isJust mUseTLS && addrTLS == mUseTLS)
+          (isJust mUseTLS && addrTLS /= mUseTLS)
         )
         (throwError $ HostPortSchemeAddrMismatch 
             (fromMaybe "" mStrScheme) 
@@ -279,7 +279,7 @@ parseOptionsFromEnvAndCli localEnvVars envFileSettings =
     eParseResult <- validateCopyAddr <$> OptParse.execParser optionsParserWithInfo
     let results = eEnvFileSettingsOptions ++ [eLocalEnvFlagsOptions, eParseResult]
     if any isLeft results then
-      die (unlines (map show $ lefts results))
+      die ("[ERROR] " ++ unlines (map show $ lefts results))
     else return $ foldl (flip mergeOptions) defaultOptions (rights results)
 
 -- | Parses behavior flags from a list of environment variables. If an

@@ -25,7 +25,7 @@ import Control.Applicative ((<*>), (<|>))
 import Control.Arrow (first)
 import Control.Monad(when, unless)
 import Control.Monad.Except (runExcept, throwError)
-import Data.List (intercalate, nubBy, isPrefixOf)
+import Data.List (intercalate, isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
 import Data.Monoid ((<>))
 import Data.Char (isDigit)
@@ -33,7 +33,7 @@ import Data.String (fromString)
 import Data.Either (lefts, rights, isLeft)
 import Data.Version (showVersion)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
-                            str, argument, many, strOption)
+                            str, argument, many)
 import Paths_vaultenv (version) -- Magic to get the version field from cabal.
 import System.IO.Error (catchIOError)
 import System.Exit (die)
@@ -41,7 +41,6 @@ import System.Exit (die)
 import qualified Configuration.Dotenv as DotEnv
 import qualified Options.Applicative as OptParse
 import qualified System.Directory as Dir
-import qualified Text.Read as Read
 
 -- | Type alias for enviornment variables, used for readability in this module.
 type EnvVar = (String, String)
@@ -167,13 +166,16 @@ data OptionsError
   | HostPortSchemeAddrMismatch String String Int String -- UseTLS Host Port Addr
 
 instance Show OptionsError where
-    show (UnspecifiedValue s) = "The option " ++ s ++ " is required but not specified"
-    show (InvalidAddrFormat s) = "The address " ++ s ++ " has an invalid format"
-    show (UnknownScheme s)  = "The address " ++ s ++ " has no recognisable scheme, " 
-        ++ " expected http:// or https:// at the beginning of the address."
-    show (NonNumericPort s) = "The port " ++ s ++ " is not a valid int value"
-    show (HostPortSchemeAddrMismatch scheme host port addr) = "The scheme, host and " 
-        ++ "port do not match the provided addr"
+  show (UnspecifiedValue s) = "The option " ++ s ++ " is required but not specified"
+  show (InvalidAddrFormat s) = "The address " ++ s ++ " has an invalid format"
+  show (UnknownScheme s)  = "The address " ++ s ++ " has no recognisable scheme, " 
+      ++ " expected http:// or https:// at the beginning of the address."
+  show (NonNumericPort s) = "The port " ++ s ++ " is not a valid int value"
+  show (HostPortSchemeAddrMismatch scheme host port addr) = 
+    "The scheme " ++ show scheme ++ 
+    " , the host " ++ show host ++ 
+    " and the port " ++ show port ++  
+    " do not match the provided addr" ++ show addr
 
 -- | Validates for a set of options that any provided addr is valid and that either the 
 -- scheme, host and port or that any given addr matches the other provided information.
@@ -448,33 +450,33 @@ optionsParser = Options
       =  option (Just <$> str)
       $  long "host"
       <> metavar "HOST"
-      <> value Nothing -- specifiedStringFromEnvWithDefault "VAULT_HOST" "localhost" envVars
+      <> value Nothing
       <> help ("Vault host, either an IP address or DNS name. Defaults to localhost. " ++
                "Also configurable via VAULT_HOST.")
     port
       =  option (Just <$> auto)
       $  long "port"
       <> metavar "PORT"
-      <> value Nothing -- readValueFromEnvWithDefault "VAULT_PORT" (Default 8200) envVars
+      <> value Nothing
       <> help "Vault port. Defaults to 8200. Also configurable via VAULT_PORT."
     addr =
         option (Just <$> str)
         $ long "addr"
         <> metavar "ADDR"
-        <> value Nothing -- specifiedStringFromEnvWithDefault "VAULT_ADDR" "localhost:8200" envVars
+        <> value Nothing
         <> help ("Vault address, the ip-address or DNS name, followed by the port, separated with a ':'" ++
             "Cannot be combined with either VAULT_PORT or VAULT_HOST")
     token
       =  maybeStrOption
       $  long "token"
       <> metavar "TOKEN"
-      <> value Nothing -- stringFromEnv "VAULT_TOKEN" envVars
+      <> value Nothing
       <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN."
     secretsFile
       =  maybeStrOption
       $  long "secrets-file"
       <> metavar "FILENAME"
-      <> value Nothing -- stringFromEnv "VAULTENV_SECRETS_FILE" envVars
+      <> value Nothing
       <> help ("Config file specifying which secrets to request. Also configurable " ++
                "via VAULTENV_SECRETS_FILE." )
     cmd
@@ -547,56 +549,6 @@ optionsParser = Options
       <> help ("Use PATH for finding the executable that vaultenv should call. Default: " ++
               "don't search PATH. Also configurable via VAULTENV_USE_PATH.")
 
-
--- | Specialization of @readValueFromEnv@ that does not use a @Read@ instance.
--- This is useful for "plain" string values, so the user does not have to
--- format environment variables like @VAULT_HOST='"localhost"'@. Note the
--- double quoting.
-stringFromEnv :: OptParse.HasValue f
-              => String
-              -> [EnvVar]
-              -> OptParse.Mod f String
-stringFromEnv key envVars = foldMap value $ lookup key envVars
-
--- | Specialization of @stringFromEnv@ that adds the specified constructor to
--- the parsed value.
-stringFromEnvSpecified :: OptParse.HasValue f
-              => String
-              -> [EnvVar]
-              -> OptParse.Mod f (Specified String)
-stringFromEnvSpecified key envVars = foldMap (value . Specified) $ lookup key envVars
-
--- | Like @stringFromEnv@, but with a default value and a specified constructor.
-specifiedStringFromEnvWithDefault :: (OptParse.HasValue f)
-                         => String
-                         -> String
-                         -> [EnvVar]
-                         -> OptParse.Mod f (Specified String)
-specifiedStringFromEnvWithDefault key defVal envVars
-  =  value (Default defVal)
-  <> stringFromEnvSpecified key envVars
-
--- | Attempt to parse an optparse default value modifier from a list of
--- environment variables. This function returns an empty option modifier in
--- case the environment variable is missing or does not parse.
-readValueFromEnv :: (Read a, OptParse.HasValue f)
-                 => String
-                 -> [EnvVar]
-                 -> OptParse.Mod f a
-readValueFromEnv key envVars =
-  let parseResult = lookup key envVars >>= Read.readMaybe
-  in foldMap value parseResult
-
--- | Attempt to parse an optparse default value modifier from the process
--- environment with a default.
-readValueFromEnvWithDefault :: (Read a, OptParse.HasValue f)
-                            => String
-                            -> a
-                            -> [EnvVar]
-                            -> OptParse.Mod f a
-readValueFromEnvWithDefault key defVal envVars
-  =  value defVal
-  <> readValueFromEnv key envVars
 
 -- | Search for environment files in default locations and load them in order.
 --

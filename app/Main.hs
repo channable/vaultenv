@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Control.Applicative    ((<|>))
-import Control.Monad          (forM, unless, when)
+import Control.Monad          (forM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
 import Data.Aeson.Types       (parseMaybe)
@@ -12,7 +12,6 @@ import Data.HashMap.Strict    (HashMap, lookupDefault, mapMaybe)
 import Data.List              (nubBy)
 import Data.Monoid            ((<>))
 import Data.Text              (Text, pack)
-import Data.Char              (isDigit)
 import Network.Connection     (TLSSettings(..))
 import Network.HTTP.Client    (defaultManagerSettings)
 import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
@@ -36,8 +35,7 @@ import qualified Data.Map                   as Map
 import qualified System.Exit                as Exit
 
 import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds,
-               LogLevel(..), readConfigFromEnvFiles, 
-               Specified(..), fromSpecifiedValue, isDefault, isSpecified, getOptionsValue)
+               LogLevel(..), readConfigFromEnvFiles, getOptionsValue)
 import SecretsFile (Secret(..), SFError(..), readSecretList)
 
 -- | Make a HTTP URL path from a secret. This is the path that Vault expects.
@@ -171,8 +169,6 @@ data VaultError
   | InvalidUrl            String
   | DuplicateVar          String
   | Unspecified           Int LBS.ByteString
-  | AddrInvalidFormat     String
-  | AddrPortHostMismatch  String Int String -- Host Port Addr
 
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
@@ -372,8 +368,6 @@ requestSecret context secretPath =
       KeyNotFound _ -> False
       DuplicateVar _ -> False
       SecretFileError _ -> False
-      AddrPortHostMismatch{} -> False
-      AddrInvalidFormat _ -> False
 
     retryAction :: Retry.RetryStatus -> ExceptT VaultError IO VaultData
     retryAction _retryStatus = doRequest secretPath request
@@ -477,9 +471,5 @@ vaultErrorLogMessage vaultError =
       Unspecified status resp ->
         "Received an error that I don't know about (" <> show status
         <> "): " <> (LBS.unpack resp)
-      AddrPortHostMismatch host port addr -> concat [
-        "The host and port combined are different from the address, I do not know which to choose. Host:  ",
-        host, " Port: ", show port, " Address: ", addr]
-      AddrInvalidFormat addr -> "The address is of an invalid format, expected something like localhost:port, but got " <> addr  
   in
     "[ERROR] " <> description

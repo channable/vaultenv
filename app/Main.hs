@@ -194,7 +194,7 @@ main = do
 
   let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y) (localEnvVars ++ concat (reverse envFileSettings))
 
-  if True || getOptionsValue "Log level" (oLogLevel cliAndEnvAndEnvFileOptions) <= Info
+  if getOptionsValue "Log level" (oLogLevel cliAndEnvAndEnvFileOptions) <= Info
     then print cliAndEnvAndEnvFileOptions
     else pure ()
   print cliAndEnvAndEnvFileOptions
@@ -304,8 +304,8 @@ vaultEnv context = do
 
       buildEnv :: [EnvVar] -> [EnvVar]
       buildEnv secretsEnv =
-        if (getOptionsValue "CliOptions" . oInheritEnv . cCliOptions $ context)
-        then secretsEnv ++ (cLocalEnvVars context)
+        if getOptionsValue "CliOptions" . oInheritEnv . cCliOptions $ context
+        then secretsEnv ++ cLocalEnvVars context
         else secretsEnv
 
 

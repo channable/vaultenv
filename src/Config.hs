@@ -141,14 +141,14 @@ instance Show Options where
     , "Token:          " ++ maybe "Unspecified" (const "*****") (oVaultToken opts)
     , "Secret file:    " ++ showSpecifiedString (oSecretFile opts)
     , "Command:        " ++ showSpecifiedString (oCmd opts)
-    , "Arguments:      " ++ (showSpecified $ oArgs opts)
-    , "Use TLS:        " ++ (showSpecified $ oConnectTls opts)
-    , "Validate certs: " ++ (showSpecified $ oValidateCerts opts)
-    , "Inherit env:    " ++ (showSpecified $ oInheritEnv opts)
-    , "Base delay:     " ++ (showSpecified $ (unMilliSeconds <$> oRetryBaseDelay opts))
-    , "Retry attempts: " ++ (showSpecified $ oRetryAttempts opts)
-    , "Log-level:      " ++ (showSpecified $ oLogLevel opts)
-    , "Use PATH:       " ++ (showSpecified $ oUsePath opts)
+    , "Arguments:      " ++ showSpecified (oArgs opts)
+    , "Use TLS:        " ++ showSpecified (oConnectTls opts)
+    , "Validate certs: " ++ showSpecified (oValidateCerts opts)
+    , "Inherit env:    " ++ showSpecified (oInheritEnv opts)
+    , "Base delay:     " ++ showSpecified (unMilliSeconds <$> oRetryBaseDelay opts)
+    , "Retry attempts: " ++ showSpecified (oRetryAttempts opts)
+    , "Log-level:      " ++ showSpecified (oLogLevel opts)
+    , "Use PATH:       " ++ showSpecified (oUsePath opts)
     ] where 
       showSpecified :: Show a => Maybe a -> String
       showSpecified (Just x) = show x
@@ -293,9 +293,7 @@ parseOptionsFromEnvAndCli localEnvVars envFileSettings =
     let results = eEnvFileSettingsOptions ++ [eLocalEnvFlagsOptions, eParseResult]
     if any isLeft results then
       die (unlines (map show $ lefts results))
-    else do
-      --print results
-      return $ foldl (flip mergeOptions) defaultOptions (rights results)
+    else return $ foldl (flip mergeOptions) defaultOptions (rights results)
 
 -- | Parses behavior flags from a list of environment variables. If an
 -- environment variable corresponding to the flag is set to @"true"@ or
@@ -521,12 +519,13 @@ optionsParser = Options
       <> help ("Always merge the parent environment with the secrets file. Default: " ++
                 "merge environments. Can be used to override VAULTENV_INHERIT_ENV.")
     baseDelayMs
-      =  fmap MilliSeconds <$> (option (Just <$> auto)
-      $  long "retry-base-delay-milliseconds"
+      =  fmap MilliSeconds <$> option (Just <$> auto)
+      (  long "retry-base-delay-milliseconds"
       <> metavar "MILLISECONDS"
       <> value Nothing
       <> help ("Base delay for vault connection retrying. Defaults to 40ms. " ++
-                "Also configurable via VAULTENV_RETRY_BASE_DELAY_MS."))
+                "Also configurable via VAULTENV_RETRY_BASE_DELAY_MS.")
+      )
     retryAttempts
       =  option (Just <$> auto)
       $  long "retry-attempts"
@@ -608,7 +607,7 @@ readValueFromEnvWithDefault key defVal envVars
 readConfigFromEnvFiles :: IO [[(String, String)]]
 readConfigFromEnvFiles = do
   xdgDir <- (Just <$> Dir.getXdgDirectory Dir.XdgConfig "vaultenv")
-    `catchIOError` (const $ pure Nothing)
+    `catchIOError` const (pure Nothing)
   cwd <- Dir.getCurrentDirectory
   let
     machineConfigFile = "/etc/vaultenv.conf"

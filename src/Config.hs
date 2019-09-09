@@ -64,18 +64,19 @@ data Options validated completed = Options
   , oUsePath         :: Maybe Bool
   } deriving (Eq)
 
--- | Phantom type that indicates that an option is 
+-- | Phantom type that indicates that an option is
 -- checked to be completed by ```isOptionsComplete``` and is validated by
 -- ```validateCopyAddr```
 data Completed
 
+-- | Phantom type that indicates that an option is not yet checked to be complete
 data UnCompleted
 
--- | Phantom type that indicates that an option is 
+-- | Phantom type that indicates that an option is
 -- validated by ```validateCopyAddr```
 data Validated
 
--- | Phantom type that indicates that an option is 
+-- | Phantom type that indicates that an option is
 -- not validated by ```isOptionsComplete```
 data UnValidated
 
@@ -99,6 +100,7 @@ emptyOptions = Options
   }
 
 -- | The default options that should be used when no value is specified
+-- If this default changes, please update the function isOptionsComplete if needed.
 defaultOptions :: Options Validated UnCompleted
 defaultOptions = Options
   { oVaultHost      = Just "localhost"
@@ -117,8 +119,8 @@ defaultOptions = Options
   , oUsePath        = Just True
 }
 
--- | Casts one options structure into antoher, use only when certain that 
--- the validated and completed options can be given to a options file. 
+-- | Casts one options structure into antoher, use only when certain that
+-- the validated and completed options can be given to a options file.
 castOptions :: Options a b -> Options c d
 castOptions opts = Options
   { oVaultHost      = oVaultHost opts
@@ -126,10 +128,10 @@ castOptions opts = Options
   , oVaultAddr      = oVaultAddr opts
   , oVaultToken     = oVaultToken opts
   , oSecretFile     = oSecretFile opts
-  , oCmd            = oCmd opts 
+  , oCmd            = oCmd opts
   , oArgs           = oArgs opts
   , oConnectTls     = oConnectTls opts
-  , oValidateCerts  = oValidateCerts opts 
+  , oValidateCerts  = oValidateCerts opts
   , oInheritEnv     = oInheritEnv opts
   , oRetryBaseDelay = oRetryBaseDelay opts
   , oRetryAttempts  = oRetryAttempts opts
@@ -153,7 +155,7 @@ instance Show (Options valid complete) where
     , "Retry attempts: " ++ showSpecified (oRetryAttempts opts)
     , "Log-level:      " ++ showSpecified (oLogLevel opts)
     , "Use PATH:       " ++ showSpecified (oUsePath opts)
-    ] where 
+    ] where
       showSpecified :: Show a => Maybe a -> String
       showSpecified (Just x) = show x
       showSpecified Nothing = "Unspecified"
@@ -162,45 +164,49 @@ instance Show (Options valid complete) where
 -- | Gets the option from a Maybe, ```name``` should only be used for debugging
 -- purposes, as ```isOptionsComplete``` should verify that every property that
 -- does not have a default value, is present in the options.
-getOptionsValue :: String -> Maybe a -> a 
-getOptionsValue name = 
-    fromMaybe (errorWithoutStackTrace 
-        ("No configuration was found with the name " ++ name ++ " but it is required")
-    )
+getOptionsValue :: (Options Validated Completed -> Maybe c) -> Options Validated Completed -> c
+getOptionsValue f opts=
+    fromMaybe (error "Complete options has an unknown key") (f opts)
 
-
+-- | The possible errors that can occur in the construction of an Options datatype
 data OptionsError
-  = UnspecifiedValue String
-  | InvalidAddrFormat String
-  | UnknownScheme String
-  | NonNumericPort String
-  | HostPortSchemeAddrMismatch String String Int String -- UseTLS Host Port Addr
+  = UnspecifiedValue String -- ^ A value is missing and no default is specified
+  | InvalidAddrFormat String -- ^ The format of the address is invalid
+  | UnknownScheme String -- ^ The scheme of the address is invalid, e.g. ftp://
+  | NonNumericPort String -- ^ The port of the address is not an valid integer
+  | HostPortSchemeAddrMismatch -- ^ The host, port and scheme do not match the provided address
+        Bool -- ^ Whether to use TLS or not
+        String -- ^ The host that was given
+        Int -- ^ The port that was given
+        String -- ^The address that was given
+
+
 
 instance Show OptionsError where
   show (UnspecifiedValue s) = "The option " ++ s ++ " is required but not specified"
   show (InvalidAddrFormat s) = "The address " ++ s ++ " has an invalid format"
-  show (UnknownScheme s)  = "The address " ++ s ++ " has no recognisable scheme, " 
+  show (UnknownScheme s)  = "The address " ++ s ++ " has no recognisable scheme, "
       ++ " expected http:// or https:// at the beginning of the address."
   show (NonNumericPort s) = "The port " ++ s ++ " is not a valid int value"
-  show (HostPortSchemeAddrMismatch scheme host port addr) = 
-    "The scheme " ++ show scheme ++ 
-    " , the host " ++ show host ++ 
-    " and the port " ++ show port ++  
+  show (HostPortSchemeAddrMismatch useTLs host port addr) =
+    "The use TLs " ++ show useTLs ++
+    " , the host " ++ show host ++
+    " and the port " ++ show port ++
     " do not match the provided addr " ++ show addr
 
--- | Validates for a set of options that any provided addr is valid and that either the 
+-- | Validates for a set of options that any provided addr is valid and that either the
 -- scheme, host and port or that any given addr matches the other provided information.
 validateCopyAddr :: Options UnValidated completed -> Either OptionsError (Options Validated completed)
-validateCopyAddr opts 
-  | isNothing (oVaultAddr opts) = Right (castOptions opts) 
+validateCopyAddr opts
+  | isNothing (oVaultAddr opts) = Right (castOptions opts)
   | otherwise = runExcept $ do
-      let addr = fromMaybe 
-                      (errorWithoutStackTrace "Addr not a Just in validation") 
+      let addr = fromMaybe
+                      (errorWithoutStackTrace "Addr not a Just in validation")
                       (oVaultAddr opts)
           (mStrScheme, addrHost, addrStrPort) = splitAddress addr
-      unless (all isDigit addrStrPort && not (null addrStrPort)) 
+      unless (all isDigit addrStrPort && not (null addrStrPort))
           (throwError $ NonNumericPort addrStrPort)
-      unless (isJust mStrScheme) 
+      unless (isJust mStrScheme)
           (throwError $ UnknownScheme addrHost)
       let mHost = oVaultHost opts
           mPort = oVaultPort opts
@@ -209,38 +215,38 @@ validateCopyAddr opts
           addrTLS | mStrScheme == Just "http://" = Just False
                   | mStrScheme == Just "https://" = Just True
                   | otherwise = Nothing -- This should never occur!
-      when 
+      when
         (
-          (isJust mHost && Just addrHost /= mHost) 
-          || 
+          (isJust mHost && Just addrHost /= mHost)
+          ||
           (isJust mPort && Just addrPort /= mPort)
-          || 
+          ||
           (isJust mUseTLS && addrTLS /= mUseTLS)
         )
-        (throwError $ HostPortSchemeAddrMismatch 
-            (fromMaybe "" mStrScheme) 
-            (fromMaybe "" mHost) 
-            (fromMaybe (-1) mPort) 
+        (throwError $ HostPortSchemeAddrMismatch
+            (fromMaybe False mUseTLS)
+            (fromMaybe "" mHost)
+            (fromMaybe (-1) mPort)
             (fromMaybe "" $ oVaultAddr opts)
         )
-      return opts{
-          oVaultHost = Just addrHost,
-          oVaultPort = Just addrPort,
-          oConnectTls = addrTLS
+      pure opts
+        { oVaultHost = Just addrHost
+        , oVaultPort = Just addrPort
+        , oConnectTls = addrTLS
         }
 
--- | This functions merges two options, where every specific option in the 
--- second options parameter is only used if for that option no value is 
+-- | This functions merges two options, where every specific option in the
+-- second options parameter is only used if for that option no value is
 -- specified in the first options parameter.
-mergeOptions  :: Options Validated UnCompleted 
-              -> Options Validated UnCompleted 
+mergeOptions  :: Options Validated UnCompleted
               -> Options Validated UnCompleted
-mergeOptions opts1 opts2 = let 
+              -> Options Validated UnCompleted
+mergeOptions opts1 opts2 = let
     combine :: (Options Validated UnCompleted -> Maybe a) -> Maybe a
     combine f | isJust (f opts1) = f opts1
-              | otherwise = f opts2 
-  in 
-  Options 
+              | otherwise = f opts2
+  in
+  Options
   { oVaultHost      = combine oVaultHost
   , oVaultPort      = combine oVaultPort
   , oVaultAddr      = combine oVaultAddr
@@ -259,48 +265,70 @@ mergeOptions opts1 opts2 = let
 
 
 
-
+-- | Verifies that either an ```Options``` is complete, according to the test,
+-- or it gives a list of errors. Only checks for values that are not included
+-- in the default.
 isOptionsComplete :: Options Validated UnCompleted
                   -> Either [OptionsError] (Options Validated Completed)
-isOptionsComplete opts = 
+isOptionsComplete opts =
       let errors = concat
             [
               [UnspecifiedValue "Token"       | isNothing (oVaultToken opts)]
             , [UnspecifiedValue "Command"     | isNothing (oCmd opts)]
             , [UnspecifiedValue "Secret file" | isNothing (oSecretFile opts)]
             ]
-      in  if not (null errors) 
-          then Left errors 
+      in  if not (null errors)
+          then Left errors
           else Right (castOptions opts)
 
-splitAddress :: String -> (Maybe String, String, String)
-splitAddress addr = 
+-- | The host part of an address
+type Host       = String
+-- | The port part of an address (without parsing to an integer)
+type StringPort = String
+-- | The scheme part of address
+type Scheme     = String
+
+-- | This function splits the address into three different parts. The first part,
+-- is a Maybe Scheme, which menas that it is equal to either Just "http://", Just
+-- "https://" or Nothing. The Host part of the return type is the part between the
+-- scheme and the last colon in the address. The StringPort is the part after the
+-- colon, which will hopefully be an integer that indicates the port. As this
+-- function does not return any errors, the port is not yet converted to an Int.
+--
+-- Examples:
+-- http://localhost:80 -> (Just "http://", "localhost", "80")
+-- https://localhost:80 -> (Just "https://", "localhost", "80")
+-- ftp://localhost:80 -> (Nothing, "ftp://localhost", "80")
+-- localhost:80 -> (Nothing, "localhost", "80")
+-- http://localhost:80/foo/bar -> (Just "http://","localhost","80/foo/bar")
+splitAddress :: String -> (Maybe Scheme, Host, StringPort)
+splitAddress addr =
         let
           -- | Split the string on the last colon
           splitOnLastColon :: String -> (String, String)
           splitOnLastColon = splitOnLastColonHelper "" ""
-          -- | Helper that splits on the last colon, oneButLast contains 
-          -- everything before the last colon lastAfter contains everything 
+          -- | Helper that splits on the last colon, oneButLast contains
+          -- everything before the last colon lastAfter contains everything
           -- after the last colon
           splitOnLastColonHelper :: String -> String -> String -> (String, String)
-          splitOnLastColonHelper oneButLast lastAfter [] = 
+          splitOnLastColonHelper oneButLast lastAfter [] =
                       (drop 1 (reverse oneButLast), reverse lastAfter)
-          splitOnLastColonHelper oneButLast lastAfter (c:cs) 
-              | c == ':'  = splitOnLastColonHelper 
+          splitOnLastColonHelper oneButLast lastAfter (c:cs)
+              | c == ':'  = splitOnLastColonHelper
                                   (lastAfter ++ ":" ++ oneButLast) "" cs
-              | otherwise = splitOnLastColonHelper 
+              | otherwise = splitOnLastColonHelper
                                   oneButLast (c : lastAfter) cs
-          
+
           (schemeHost, port) = splitOnLastColon addr
-          (scheme, host)  
-              | isPrefixOf "http://" schemeHost = 
+          (scheme, host)
+              | isPrefixOf "http://" schemeHost =
                     (Just "http://", drop (length "http://") schemeHost)
-              | isPrefixOf "https://" schemeHost = 
+              | isPrefixOf "https://" schemeHost =
                     (Just "https://", drop (length "https://") schemeHost)
               | otherwise = (Nothing, schemeHost)
         in (scheme, host, port)
-        
-          
+
+
 
 -- | LogLevel to run vaultenv under. Under @Error@, which is the default, we
 -- will print error messages in error cases. Examples: Vault gives 404s, our
@@ -328,27 +356,26 @@ parseOptions localEnvVars envFileSettings =
     let results = eEnvFileSettingsOptions ++ [eLocalEnvFlagsOptions, eParseResult]
     if any isLeft results then
       die ("[ERROR] " ++ unlines (map show $ lefts results))
-    else 
-        let 
+    else
+        let
           combined = foldl (flip mergeOptions) defaultOptions (rights results)
           completed = isOptionsComplete combined
-          in either 
+          in either
                 (\l -> die ("[ERROR] " ++ show l))
                 return
                 completed
 
--- | Parses behavior flags from a list of environment variables. If an
+-- | Parses options from a list of environment variables. If an
 -- environment variable corresponding to the flag is set to @"true"@ or
 -- @"false"@, we use that as the default on the corresponding CLI option.
---
--- If these variables aren't present, we default to @False@. We print an error
--- if they're set to anything else than @"true"@ or @"false"@.
+-- Other options are either String, Int, [String] or LogLevel.
+
 parseEnvOptions :: [EnvVar] -> Options UnValidated UnCompleted
 parseEnvOptions envVars
-  = emptyOptions
+  = Options
   { oVaultHost      = lookupEnvString   "VAULT_HOST"
   , oVaultPort      = lookupEnvInt      "VAULT_PORT"
-  , oVaultAddr      = lookupEnvString   "VAULT_ADDR"  
+  , oVaultAddr      = lookupEnvString   "VAULT_ADDR"
   , oVaultToken     = lookupEnvString   "VAULT_TOKEN"
   , oSecretFile     = lookupEnvString   "VAULTENV_SECRETS_FILE"
   , oCmd            = lookupEnvString   "CMD"
@@ -367,10 +394,10 @@ parseEnvOptions envVars
     err key = errorWithoutStackTrace $ "[ERROR]: Invalid value for environment variable " ++ key
     -- | Lookup a string in the ```envVars``` list
     lookupEnvString key = lookup key envVars
-    -- | Lookup an integer using ```lookupEnvString```, 
+    -- | Lookup an integer using ```lookupEnvString```,
     -- parses is to a Just, Nothing means not an Int
     lookupEnvInt :: String -> Maybe Int
-    lookupEnvInt key 
+    lookupEnvInt key
       | isNothing sVal = Nothing
       | not (null sVal) && all isDigit (fromJust sVal) = read <$> sVal
       | otherwise = err key
@@ -378,7 +405,7 @@ parseEnvOptions envVars
     -- | Lookup a list of strings using ```lookupEnvString```
     lookupStringList key = words <$> lookupEnvString key
     -- | Lookup an log level using ```lookupEnvString```
-    lookupEnvLogLevel key = 
+    lookupEnvLogLevel key =
       case lookup key envVars of
         Just "info" -> Just Info
         Just "error" -> Just Error
@@ -514,7 +541,7 @@ optionsParser = Options
       <> help "command to run after fetching secrets"
       <> value Nothing
     cmdArgs
-      = (\lst -> if null lst then Nothing else Just lst) <$> 
+      = (\lst -> if null lst then Nothing else Just lst) <$>
         many ( argument str
         (     metavar "ARGS..."
           <>  help "Arguments to pass to CMD, defaults to nothing")
@@ -530,12 +557,12 @@ optionsParser = Options
       <> help ("Always connect to Vault via TLS. Default: use TLS. Can be used " ++
                 "to override VAULTENV_CONNECT_TLS.")
     noValidateCerts
-      =  flag Nothing (Just True) 
+      =  flag Nothing (Just True)
       $  long "no-validate-certs"
       <> help ("Don't validate TLS certificates when connecting to Vault. Default: " ++
               "validate certs. Also configurable via VAULTENV_VALIDATE_CERTS.")
     validateCerts
-      =  flag Nothing (Just True) 
+      =  flag Nothing (Just True)
       $  long "validate-certs"
       <> help ("Always validate TLS certificates when connecting to Vault. Default: " ++
                 "validate certs. Can be used to override VAULTENV_CONNECT_TLS.")
@@ -569,7 +596,7 @@ optionsParser = Options
       $  long "log-level"
       <> value Nothing
       <> metavar "error | info"
-      
+
       <> help ("Log-level to run vaultenv under. Options: 'error' or 'info'. " ++
                "Defaults to 'error'. Also configurable via VAULTENV_LOG_LEVEL")
     usePath

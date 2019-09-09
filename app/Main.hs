@@ -177,10 +177,10 @@ data VaultError
 -- fullJitterBackoff that comes with the Retry package.
 vaultRetryPolicy :: (MonadIO m) => Options Validated Completed -> Retry.RetryPolicyM m
 vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds 
-                          (getOptionsValue "retry base delay" $ oRetryBaseDelay opts) * 1000
+                          (getOptionsValue oRetryBaseDelay opts) * 1000
                         )
                      <> Retry.limitRetries (
-                          getOptionsValue "Retry attempts" $ oRetryAttempts opts
+                          getOptionsValue oRetryAttempts opts
                         )
 
 --
@@ -197,7 +197,7 @@ main = do
   let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y) 
                                   (localEnvVars ++ concat (reverse envFileSettings))
 
-  if getOptionsValue "Log level" (oLogLevel cliAndEnvAndEnvFileOptions) <= Info
+  if getOptionsValue oLogLevel cliAndEnvAndEnvFileOptions <= Info
     then print cliAndEnvAndEnvFileOptions
     else pure ()
 
@@ -219,12 +219,12 @@ main = do
 getHttpManager :: Options Validated Completed -> IO Manager
 getHttpManager opts = newManager managerSettings
   where
-    managerSettings = if getOptionsValue "Connect TLS" $ oConnectTls opts
+    managerSettings = if getOptionsValue oConnectTls opts
                       then mkManagerSettings tlsSettings Nothing
                       else defaultManagerSettings
     tlsSettings = TLSSettingsSimple
                 { settingDisableCertificateValidation = 
-                      not $ getOptionsValue "Validate Certs" $ oValidateCerts opts
+                      not $ getOptionsValue oValidateCerts opts
                 , settingDisableSession = False
                 , settingUseServerName = True
                 }
@@ -244,7 +244,7 @@ vaultEnv context = do
   secretEnv <- requestSecrets context mountInfo secrets
   checkNoDuplicates (buildEnv secretEnv)
     where
-      secretFile = getOptionsValue "Secret file" $ oSecretFile (cCliOptions context)
+      secretFile = getOptionsValue oSecretFile (cCliOptions context)
       checkNoDuplicates :: MonadError VaultError m => [EnvVar] -> m [EnvVar]
       checkNoDuplicates e =
         either (throwError . DuplicateVar) (return . const e) $ dups (map fst e)
@@ -264,7 +264,7 @@ vaultEnv context = do
 
       buildEnv :: [EnvVar] -> [EnvVar]
       buildEnv secretsEnv =
-        if getOptionsValue "CliOptions" . oInheritEnv . cCliOptions $ context
+        if getOptionsValue oInheritEnv . cCliOptions $ context
         then secretsEnv ++ cLocalEnvVars context
         else secretsEnv
 
@@ -272,9 +272,9 @@ vaultEnv context = do
 runCommand :: Options Validated Completed -> [EnvVar] -> IO a
 runCommand options env =
   let
-    command = getOptionsValue "CMD" $ oCmd options
-    searchPath = getOptionsValue "Use path" $ oUsePath options
-    args = getOptionsValue "Args" $ oArgs options
+    command = getOptionsValue oCmd options
+    searchPath = getOptionsValue oUsePath options
+    args = getOptionsValue oArgs options
     env' = Just env
   in
     -- `executeFile` calls one of the syscalls in the execv* family, which
@@ -290,15 +290,15 @@ requestMountInfo context =
         = setRequestManager 
               (cHttpManager context)
         $ setRequestHeader "x-vault-token" 
-              [SBS.pack (getOptionsValue "Vault token" $ oVaultToken cliOptions)]
+              [SBS.pack (getOptionsValue oVaultToken cliOptions)]
         $ setRequestPath 
               (SBS.pack "/v1/sys/mounts")
         $ setRequestPort 
-              (getOptionsValue "Vault port" $ oVaultPort cliOptions)
+              (getOptionsValue oVaultPort cliOptions)
         $ setRequestHost 
-              (SBS.pack (getOptionsValue "Vault host" $ oVaultHost cliOptions))
+              (SBS.pack (getOptionsValue oVaultHost cliOptions))
         $ setRequestSecure 
-              (getOptionsValue "Connect TLS" $ oConnectTls cliOptions)
+              (getOptionsValue  oConnectTls cliOptions)
         $ defaultRequest
   in do
     resp <- withExceptT ServerUnreachable (httpLBS request)
@@ -312,16 +312,11 @@ requestSecret context secretPath =
     request 
         = setRequestManager 
             (cHttpManager context)
-        $ setRequestHeader "x-vault-token" 
-            [SBS.pack (getOptionsValue "Vault token" $ oVaultToken cliOptions)]
-        $ setRequestPath 
-            (SBS.pack secretPath)
-        $ setRequestPort 
-            (getOptionsValue "Port" $ oVaultPort cliOptions)
-        $ setRequestHost 
-            (SBS.pack (getOptionsValue "Host" $ oVaultHost cliOptions))
-        $ setRequestSecure 
-            (getOptionsValue "Connect TLs" $ oConnectTls cliOptions)
+        $ setRequestHeader "x-vault-token" [SBS.pack (getOptionsValue oVaultToken cliOptions)]
+        $ setRequestPath    (SBS.pack secretPath)
+        $ setRequestPort    (getOptionsValue oVaultPort cliOptions)
+        $ setRequestHost    (SBS.pack (getOptionsValue oVaultHost cliOptions))
+        $ setRequestSecure  (getOptionsValue oConnectTls cliOptions)
         $ defaultRequest
 
     -- Only retry on connection related failures

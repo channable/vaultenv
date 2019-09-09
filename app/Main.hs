@@ -35,7 +35,7 @@ import qualified Data.Foldable              as Foldable
 import qualified Data.Map                   as Map
 import qualified System.Exit                as Exit
 
-import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds,
+import Config (Options(..), parseOptions, unMilliSeconds,
                LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
                Validated, Completed)
 import SecretsFile (Secret(..), SFError(..), readSecretList)
@@ -192,7 +192,7 @@ main = do
   localEnvVars <- getEnvironment
   envFileSettings <- readConfigFromEnvFiles
 
-  cliAndEnvAndEnvFileOptions <- parseOptionsFromEnvAndCli localEnvVars envFileSettings
+  cliAndEnvAndEnvFileOptions <- parseOptions localEnvVars envFileSettings
 
   let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y) 
                                   (localEnvVars ++ concat (reverse envFileSettings))
@@ -200,7 +200,7 @@ main = do
   if getOptionsValue "Log level" (oLogLevel cliAndEnvAndEnvFileOptions) <= Info
     then print cliAndEnvAndEnvFileOptions
     else pure ()
-  print cliAndEnvAndEnvFileOptions
+
   httpManager <- getHttpManager cliAndEnvAndEnvFileOptions
 
   let context = Context { cLocalEnvVars = envAndEnvFileConfig

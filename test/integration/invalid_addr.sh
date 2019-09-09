@@ -2,6 +2,7 @@
 
 echo "1..5"
 
+#test if the addr is accepted when the same as the host, port and scheme (no tls)
 stack exec -- vaultenv \
   --no-connect-tls \
   --host ${VAULT_HOST} \
@@ -14,6 +15,7 @@ if [ $? -ne 0 ]; then
   echo "not ok 1 - vaultenv didn't complete"
 fi
 
+#test if the addr is accepted when the same as the host, port and scheme (use tls)
 stack exec -- vaultenv \
   --connect-tls \
   --host ${VAULT_HOST} \
@@ -24,6 +26,7 @@ stack exec -- vaultenv \
 
 echo "ok 2 - vault rejected the scheme"
 
+#test if rejected with a different scheme (https vs no-tls)
 stack exec -- vaultenv \
   --no-connect-tls \
   --host ${VAULT_HOST} \
@@ -34,6 +37,7 @@ stack exec -- vaultenv \
 
 echo "ok 3 - vault rejected the scheme"
 
+#test if rejected with an invalid host
 stack exec -- vaultenv \
   --no-connect-tls \
   --host invalidhost \
@@ -44,6 +48,7 @@ stack exec -- vaultenv \
 
 echo "ok 4 - vault rejected the host"
 
+#test if rejected with an invalid port
 stack exec -- vaultenv \
   --no-connect-tls \
   --host ${VAULT_HOST} \

@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleInstances 
-#-}
 {-|
 Module      : Config
 Description : Read config from CLI options and environment
@@ -8,12 +6,12 @@ This module uses optparse-applicative to parse CLI options. It augments the
 optparse parser with a mechanism to allow for overrides in environment
 variables.
 
-The main entry point is @parseOptionsFromEnvAndCli@.
+The main entry point is @parseOptions@.
 -}
 module Config
   ( Options(..)
   , MilliSeconds(..)
-  , parseOptionsFromEnvAndCli
+  , parseOptions
   , LogLevel(..)
   , readConfigFromEnvFiles
   , emptyOptions, defaultOptions, isOptionsComplete
@@ -238,25 +236,27 @@ mergeOptions  :: Options Validated UnCompleted
               -> Options Validated UnCompleted 
               -> Options Validated UnCompleted
 mergeOptions opts1 opts2 = let 
-      combine :: (Options Validated UnCompleted -> Maybe a) -> Maybe a
-      combine f | isJust (f opts1) = f opts1
-                | otherwise = f opts2 
-    in 
-    Options 
-      (combine oVaultHost) -- Vault Host
-      (combine oVaultPort) -- Vault Port
-      (combine oVaultAddr) -- Vault Addr
-      (combine oVaultToken) -- Vault Token
-      (combine oSecretFile) -- Secret File
-      (combine oCmd) -- Command
-      (combine oArgs) -- Arguments
-      (combine oConnectTls) -- Connect Tls
-      (combine oValidateCerts) -- Validate Certs
-      (combine oInheritEnv) -- InheritEnv
-      (combine oRetryBaseDelay) -- Retry Base Delay
-      (combine oRetryAttempts) -- Retry Attempts
-      (combine oLogLevel) -- Log Level
-      (combine oUsePath) -- Use Path
+    combine :: (Options Validated UnCompleted -> Maybe a) -> Maybe a
+    combine f | isJust (f opts1) = f opts1
+              | otherwise = f opts2 
+  in 
+  Options 
+  { oVaultHost      = combine oVaultHost
+  , oVaultPort      = combine oVaultPort
+  , oVaultAddr      = combine oVaultAddr
+  , oVaultToken     = combine oVaultToken
+  , oSecretFile     = combine oSecretFile
+  , oCmd            = combine oCmd
+  , oArgs           = combine oArgs
+  , oConnectTls     = combine oConnectTls
+  , oValidateCerts  = combine oValidateCerts
+  , oInheritEnv     = combine oInheritEnv
+  , oRetryBaseDelay = combine oRetryBaseDelay
+  , oRetryAttempts  = combine oRetryAttempts
+  , oLogLevel       = combine oLogLevel
+  , oUsePath        = combine oUsePath
+  }
+
 
 
 
@@ -319,10 +319,10 @@ instance Read LogLevel where
   readsPrec _ _ = []
 
 -- | Parse program options from the command line and the process environment.
-parseOptionsFromEnvAndCli :: [EnvVar] -> [[EnvVar]] -> IO (Options Validated Completed)
-parseOptionsFromEnvAndCli localEnvVars envFileSettings =
-  let eLocalEnvFlagsOptions = validateCopyAddr $ parseEnvFlags localEnvVars
-      eEnvFileSettingsOptions = map (validateCopyAddr . parseEnvFlags) envFileSettings
+parseOptions :: [EnvVar] -> [[EnvVar]] -> IO (Options Validated Completed)
+parseOptions localEnvVars envFileSettings =
+  let eLocalEnvFlagsOptions = validateCopyAddr $ parseEnvOptions localEnvVars
+      eEnvFileSettingsOptions = map (validateCopyAddr . parseEnvOptions) envFileSettings
   in do
     eParseResult <- validateCopyAddr <$> OptParse.execParser optionsParserWithInfo
     let results = eEnvFileSettingsOptions ++ [eLocalEnvFlagsOptions, eParseResult]
@@ -343,8 +343,8 @@ parseOptionsFromEnvAndCli localEnvVars envFileSettings =
 --
 -- If these variables aren't present, we default to @False@. We print an error
 -- if they're set to anything else than @"true"@ or @"false"@.
-parseEnvFlags :: [EnvVar] -> Options UnValidated UnCompleted
-parseEnvFlags envVars
+parseEnvOptions :: [EnvVar] -> Options UnValidated UnCompleted
+parseEnvOptions envVars
   = emptyOptions
   { oVaultHost      = lookupEnvString   "VAULT_HOST"
   , oVaultPort      = lookupEnvInt      "VAULT_PORT"
@@ -362,46 +362,35 @@ parseEnvFlags envVars
   , oUsePath        = lookupEnvFlag     "VAULTENV_USE_PATH"
   }
   where
+    -- | Throws an error for an invalid key
     err :: String -> a
     err key = errorWithoutStackTrace $ "[ERROR]: Invalid value for environment variable " ++ key
+    -- | Lookup a string in the ```envVars``` list
     lookupEnvString key = lookup key envVars
+    -- | Lookup an integer using ```lookupEnvString```, 
+    -- parses is to a Just, Nothing means not an Int
     lookupEnvInt :: String -> Maybe Int
     lookupEnvInt key 
       | isNothing sVal = Nothing
       | not (null sVal) && all isDigit (fromJust sVal) = read <$> sVal
       | otherwise = err key
       where sVal = lookupEnvString key
+    -- | Lookup a list of strings using ```lookupEnvString```
     lookupStringList key = words <$> lookupEnvString key
+    -- | Lookup an log level using ```lookupEnvString```
     lookupEnvLogLevel key = 
       case lookup key envVars of
         Just "info" -> Just Info
         Just "error" -> Just Error
         Nothing -> Nothing
         _ -> err key
+    -- | Lookup a boolean flag using ```lookupEnvString```
     lookupEnvFlag key =
       case lookup key envVars of
         Just "true" -> Just True
         Just "false" -> Just False
         Nothing -> Nothing
         _ -> err key
-
-{-
-Nothing -- Vault Host
-  Nothing -- Vault Port
-  Nothing -- Vault Addr
-  Nothing -- Vault Token
-  Nothing -- Secret File
-  Nothing -- Command
-  Nothing -- Arguments
-  Nothing -- Connect Tls
-  Nothing -- Validate Certs
-  Nothing -- InheritEnv
-  Nothing -- Retry Base Delay
-  Nothing -- Retry Attempts
-  Nothing -- Log Level
-  Nothing -- Use Path
-
--}
 
 -- | This function adds metadata to the @Options@ parser so it can be used with
 -- execParser.
@@ -487,7 +476,7 @@ optionsParser = Options
     maybeStr = Just <$> str
     maybeStrOption = option maybeStr
     host
-      =  option (Just <$> str)
+      =  maybeStrOption
       $  long "host"
       <> metavar "HOST"
       <> value Nothing
@@ -500,7 +489,7 @@ optionsParser = Options
       <> value Nothing
       <> help "Vault port. Defaults to 8200. Also configurable via VAULT_PORT."
     addr =
-        option (Just <$> str)
+      maybeStrOption
         $ long "addr"
         <> metavar "ADDR"
         <> value Nothing

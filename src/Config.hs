@@ -401,8 +401,10 @@ parseEnvOptions envVars
       | otherwise = err key
       where sVal = lookupEnvString key
     -- | Lookup a list of strings using ```lookupEnvString```
+    lookupStringList :: String -> Maybe [String]
     lookupStringList key = words <$> lookupEnvString key
     -- | Lookup an log level using ```lookupEnvString```
+    lookupEnvLogLevel :: String -> Maybe LogLevel
     lookupEnvLogLevel key =
       case lookup key envVars of
         Just "info" -> Just Info
@@ -410,6 +412,7 @@ parseEnvOptions envVars
         Nothing -> Nothing
         _ -> err key
     -- | Lookup a boolean flag using ```lookupEnvString```
+    lookupEnvFlag :: String -> Maybe Bool
     lookupEnvFlag key =
       case lookup key envVars of
         Just "true" -> Just True

@@ -80,7 +80,7 @@ data Validated
 -- not validated by ```isOptionsComplete```
 data UnValidated
 
--- An empty set of options, nothing is specified
+-- | An empty set of options, nothing is specified
 emptyOptions :: Options Validated UnCompleted
 emptyOptions = Options
   { oVaultHost      = Nothing
@@ -174,11 +174,9 @@ data OptionsError
   | InvalidAddrFormat String -- ^ The format of the address is invalid
   | UnknownScheme String -- ^ The scheme of the address is invalid, e.g. ftp://
   | NonNumericPort String -- ^ The port of the address is not an valid integer
-  | HostPortSchemeAddrMismatch -- ^ The host, port and scheme do not match the provided address
-        Bool -- ^ Whether to use TLS or not
-        String -- ^ The host that was given
-        Int -- ^ The port that was given
-        String -- ^The address that was given
+  | HostPortSchemeAddrMismatch Bool String Int String
+      -- ^ The useTls, host, port and scheme do not match the provided address
+
 
 
 

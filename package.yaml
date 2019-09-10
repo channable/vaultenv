@@ -52,3 +52,4 @@ tests:
     - hspec-discover
     - hspec-expectations
     - directory
+    - QuickCheck

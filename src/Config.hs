@@ -213,14 +213,13 @@ validateCopyAddr opts
           addrTLS | mStrScheme == Just "http://" = Just False
                   | mStrScheme == Just "https://" = Just True
                   | otherwise = Nothing -- This should never occur!
-      when
-        (
-          (isJust mHost && Just addrHost /= mHost)
-          ||
-          (isJust mPort && Just addrPort /= mPort)
-          ||
-          (isJust mUseTLS && addrTLS /= mUseTLS)
-        )
+          doesAddrDiffer =
+              (isJust mHost && Just addrHost /= mHost) -- Is the Host set and the same
+              ||
+              (isJust mPort && Just addrPort /= mPort) -- Is the Port set and the same
+              ||
+              (isJust mUseTLS && addrTLS /= mUseTLS) -- Is the UseTLS set and the same
+      when doesAddrDiffer
         (throwError $ HostPortSchemeAddrMismatch
             (fromMaybe False mUseTLS)
             (fromMaybe "" mHost)
@@ -350,7 +349,7 @@ parseOptions localEnvVars envFileSettings =
   let eLocalEnvFlagsOptions = validateCopyAddr $ parseEnvOptions localEnvVars
       eEnvFileSettingsOptions = map (validateCopyAddr . parseEnvOptions) envFileSettings
   in do
-    eParseResult <- validateCopyAddr <$> OptParse.execParser optionsParserWithInfo
+    eParseResult <- validateCopyAddr <$> OptParse.execParser parserCliOptions
     let results = eEnvFileSettingsOptions ++ [eLocalEnvFlagsOptions, eParseResult]
     if any isLeft results then
       die ("[ERROR] " ++ unlines (map show $ lefts results))
@@ -367,7 +366,6 @@ parseOptions localEnvVars envFileSettings =
 -- environment variable corresponding to the flag is set to @"true"@ or
 -- @"false"@, we use that as the default on the corresponding CLI option.
 -- Other options are either String, Int, [String] or LogLevel.
-
 parseEnvOptions :: [EnvVar] -> Options UnValidated UnCompleted
 parseEnvOptions envVars
   = Options
@@ -422,8 +420,8 @@ parseEnvOptions envVars
 
 -- | This function adds metadata to the @Options@ parser so it can be used with
 -- execParser.
-optionsParserWithInfo :: OptParse.ParserInfo (Options UnValidated UnCompleted)
-optionsParserWithInfo =
+parserCliOptions :: OptParse.ParserInfo (Options UnValidated UnCompleted)
+parserCliOptions =
   OptParse.info
     (OptParse.helper <*> versionOption <*> optionsParser)
     (OptParse.fullDesc <> OptParse.header header)

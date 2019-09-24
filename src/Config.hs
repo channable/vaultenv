@@ -14,7 +14,7 @@ module Config
   , parseOptions
   , LogLevel(..)
   , readConfigFromEnvFiles
-  , emptyOptions, defaultOptions, isOptionsComplete
+  , defaultOptions, isOptionsComplete, castOptions
   , splitAddress, validateCopyAddr, mergeOptions, getOptionsValue
   , Validated(), Completed()
   ) where
@@ -80,32 +80,13 @@ data Validated
 -- not validated by ```isOptionsComplete```
 data UnValidated
 
--- | An empty set of options, nothing is specified
-emptyOptions :: Options Validated UnCompleted
-emptyOptions = Options
-  { oVaultHost      = Nothing
-  , oVaultPort      = Nothing
-  , oVaultAddr      = Nothing
-  , oVaultToken     = Nothing
-  , oSecretFile     = Nothing
-  , oCmd            = Nothing
-  , oArgs           = Nothing
-  , oConnectTls     = Nothing
-  , oValidateCerts  = Nothing
-  , oInheritEnv     = Nothing
-  , oRetryBaseDelay = Nothing
-  , oRetryAttempts  = Nothing
-  , oLogLevel       = Nothing
-  , oUsePath        = Nothing
-  }
-
 -- | The default options that should be used when no value is specified
 -- If this default changes, please update the function isOptionsComplete if needed.
 defaultOptions :: Options Validated UnCompleted
 defaultOptions = Options
   { oVaultHost      = Just "localhost"
   , oVaultPort      = Just 8200
-  , oVaultAddr      = Just "http://localhost:8200"
+  , oVaultAddr      = Just "https://localhost:8200"
   , oVaultToken     = Nothing
   , oSecretFile     = Nothing
   , oCmd            = Nothing
@@ -137,7 +118,7 @@ castOptions opts = Options
   , oRetryAttempts  = oRetryAttempts opts
   , oLogLevel       = oLogLevel opts
   , oUsePath        = oUsePath opts
-}
+  }
 
 instance Show (Options valid complete) where
   show opts = intercalate "\n"
@@ -174,8 +155,8 @@ data OptionsError
   | InvalidAddrFormat String -- ^ The format of the address is invalid
   | UnknownScheme String -- ^ The scheme of the address is invalid, e.g. ftp://
   | NonNumericPort String -- ^ The port of the address is not an valid integer
-  | HostPortSchemeAddrMismatch Bool String Int String
-      -- ^ The useTls, host, port and scheme do not match the provided address
+  | HostPortSchemeAddrMismatch String (Maybe Bool) (Maybe String) (Maybe Int) (Maybe String)
+      -- ^ The source, useTls, host, port and scheme do not match the provided address
 
 
 
@@ -186,51 +167,57 @@ instance Show OptionsError where
   show (UnknownScheme s)  = "The address " ++ s ++ " has no recognisable scheme, "
       ++ " expected http:// or https:// at the beginning of the address."
   show (NonNumericPort s) = "The port " ++ s ++ " is not a valid int value"
-  show (HostPortSchemeAddrMismatch useTLs host port addr) =
-    "The use TLs " ++ show useTLs ++
-    " , the host " ++ show host ++
-    " and the port " ++ show port ++
-    " do not match the provided addr " ++ show addr
+  show (HostPortSchemeAddrMismatch source useTLs host port addr) =
+    concat [
+      "Confliciting configuration values in ", source, "\n",
+      "Vault address: ", maybe "Unspecified" show addr, "\n",
+      "Vault host: ",  maybe "Unspecified" show host, "\n",
+      "Vault port: ",  maybe "Unspecified" show port, "\n",
+      "Use TLS: ",  maybe "Unspecified" show useTLs, "\n",
+      "Hint: This can happen when you provide a `addr` which ",
+      "conflicts with `port`, `host`, or `[no-]connect-tls` in either the environment variables or the CLI.\n"
+    ]
 
 -- | Validates for a set of options that any provided addr is valid and that either the
 -- scheme, host and port or that any given addr matches the other provided information.
-validateCopyAddr :: Options UnValidated completed -> Either OptionsError (Options Validated completed)
-validateCopyAddr opts
+validateCopyAddr :: String -> Options UnValidated completed -> Either OptionsError (Options Validated completed)
+validateCopyAddr source opts
   | isNothing (oVaultAddr opts) = Right (castOptions opts)
   | otherwise = runExcept $ do
-      let addr = fromMaybe
-                      (errorWithoutStackTrace "Addr not a Just in validation")
-                      (oVaultAddr opts)
-          (mStrScheme, addrHost, addrStrPort) = splitAddress addr
-      unless (all isDigit addrStrPort && not (null addrStrPort))
-          (throwError $ NonNumericPort addrStrPort)
-      unless (isJust mStrScheme)
-          (throwError $ UnknownScheme addrHost)
-      let mHost = oVaultHost opts
-          mPort = oVaultPort opts
-          mUseTLS = oConnectTls opts
-          addrPort = read addrStrPort
-          addrTLS | mStrScheme == Just "http://" = Just False
-                  | mStrScheme == Just "https://" = Just True
-                  | otherwise = Nothing -- This should never occur!
-          doesAddrDiffer =
-              (isJust mHost && Just addrHost /= mHost) -- Is the Host set and the same
-              ||
-              (isJust mPort && Just addrPort /= mPort) -- Is the Port set and the same
-              ||
-              (isJust mUseTLS && addrTLS /= mUseTLS) -- Is the UseTLS set and the same
-      when doesAddrDiffer
-        (throwError $ HostPortSchemeAddrMismatch
-            (fromMaybe False mUseTLS)
-            (fromMaybe "" mHost)
-            (fromMaybe (-1) mPort)
-            (fromMaybe "" $ oVaultAddr opts)
-        )
-      pure opts
-        { oVaultHost = Just addrHost
-        , oVaultPort = Just addrPort
-        , oConnectTls = addrTLS
-        }
+    let addr = fromMaybe
+                (errorWithoutStackTrace "Addr not a Just in validation")
+                (oVaultAddr opts)
+        (mStrScheme, addrHost, addrStrPort) = splitAddress addr
+    unless (all isDigit addrStrPort && not (null addrStrPort))
+        (throwError $ NonNumericPort addrStrPort)
+    unless (isJust mStrScheme)
+        (throwError $ UnknownScheme addrHost)
+    let mHost = oVaultHost opts
+        mPort = oVaultPort opts
+        mUseTLS = oConnectTls opts
+        addrPort = read addrStrPort
+        addrTLS | mStrScheme == Just "http://" = Just False
+                | mStrScheme == Just "https://" = Just True
+                | otherwise = Nothing -- This should never occur!
+        doesAddrDiffer =
+            (isJust mHost && Just addrHost /= mHost) -- Is the Host set and the same
+            ||
+            (isJust mPort && Just addrPort /= mPort) -- Is the Port set and the same
+            ||
+            (isJust mUseTLS && addrTLS /= mUseTLS) -- Is the UseTLS set and the same
+    when doesAddrDiffer
+      (throwError $ HostPortSchemeAddrMismatch
+          source
+          mUseTLS
+          mHost
+          mPort
+          (oVaultAddr opts)
+      )
+    pure opts
+      { oVaultHost = Just addrHost
+      , oVaultPort = Just addrPort
+      , oConnectTls = addrTLS
+      }
 
 -- | This functions merges two options, where every specific option in the
 -- second options parameter is only used if for that option no value is
@@ -300,30 +287,29 @@ type Scheme     = String
 -- http://localhost:80/foo/bar -> (Just "http://","localhost","80/foo/bar")
 splitAddress :: String -> (Maybe Scheme, Host, StringPort)
 splitAddress addr =
-        let
-          -- | Split the string on the last colon
-          splitOnLastColon :: String -> (String, String)
-          splitOnLastColon = splitOnLastColonHelper "" ""
-          -- | Helper that splits on the last colon, oneButLast contains
-          -- everything before the last colon lastAfter contains everything
-          -- after the last colon
-          splitOnLastColonHelper :: String -> String -> String -> (String, String)
-          splitOnLastColonHelper oneButLast lastAfter [] =
-                      (drop 1 (reverse oneButLast), reverse lastAfter)
-          splitOnLastColonHelper oneButLast lastAfter (c:cs)
-              | c == ':'  = splitOnLastColonHelper
-                                  (lastAfter ++ ":" ++ oneButLast) "" cs
-              | otherwise = splitOnLastColonHelper
-                                  oneButLast (c : lastAfter) cs
-
-          (schemeHost, port) = splitOnLastColon addr
-          (scheme, host)
-              | isPrefixOf "http://" schemeHost =
-                    (Just "http://", drop (length "http://") schemeHost)
-              | isPrefixOf "https://" schemeHost =
-                    (Just "https://", drop (length "https://") schemeHost)
-              | otherwise = (Nothing, schemeHost)
-        in (scheme, host, port)
+  let
+    -- | Split the string on the last colon
+    splitOnLastColon :: String -> (String, String)
+    splitOnLastColon = splitOnLastColonHelper "" ""
+    -- | Helper that splits on the last colon, oneButLast contains
+    -- everything before the last colon lastAfter contains everything
+    -- after the last colon
+    splitOnLastColonHelper :: String -> String -> String -> (String, String)
+    splitOnLastColonHelper oneButLast lastAfter [] =
+      (drop 1 (reverse oneButLast), reverse lastAfter)
+    splitOnLastColonHelper oneButLast lastAfter (c:cs)
+      | c == ':'  = splitOnLastColonHelper
+                          (lastAfter ++ ":" ++ oneButLast) "" cs
+      | otherwise = splitOnLastColonHelper
+                          oneButLast (c : lastAfter) cs
+    (schemeHost, port) = splitOnLastColon addr
+    (scheme, host)
+      | isPrefixOf "http://" schemeHost =
+            (Just "http://", drop (length "http://") schemeHost)
+      | isPrefixOf "https://" schemeHost =
+            (Just "https://", drop (length "https://") schemeHost)
+      | otherwise = (Nothing, schemeHost)
+  in (scheme, host, port)
 
 
 
@@ -346,19 +332,19 @@ instance Read LogLevel where
 -- | Parse program options from the command line and the process environment.
 parseOptions :: [EnvVar] -> [[EnvVar]] -> IO (Options Validated Completed)
 parseOptions localEnvVars envFileSettings =
-  let eLocalEnvFlagsOptions = validateCopyAddr $ parseEnvOptions localEnvVars
-      eEnvFileSettingsOptions = map (validateCopyAddr . parseEnvOptions) envFileSettings
+  let eLocalEnvFlagsOptions = validateCopyAddr "local environemnt variables" $ parseEnvOptions localEnvVars
+      eEnvFileSettingsOptions = map (validateCopyAddr "environment file" . parseEnvOptions) envFileSettings
   in do
-    eParseResult <- validateCopyAddr <$> OptParse.execParser parserCliOptions
+    eParseResult <- validateCopyAddr "cli options" <$> OptParse.execParser parserCliOptions
     let results = eEnvFileSettingsOptions ++ [eLocalEnvFlagsOptions, eParseResult]
     if any isLeft results then
-      die ("[ERROR] " ++ unlines (map show $ lefts results))
+      die (unlines (map (("[ERROR] "++). show) $ lefts results))
     else
         let
           combined = foldl (flip mergeOptions) defaultOptions (rights results)
           completed = isOptionsComplete combined
           in either
-                (\l -> die ("[ERROR] " ++ show l))
+                (\ls -> die (unlines (map (("[ERROR] "++). show) ls)))
                 return
                 completed
 

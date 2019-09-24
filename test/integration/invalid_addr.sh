@@ -15,7 +15,7 @@ if [ $? -ne 0 ]; then
   echo "not ok 1 - vaultenv didn't complete"
 fi
 
-#test if the addr is accepted when the same as the host, port and scheme (use tls)
+#test if the addr is rejected when the same as the host, port, but different form the scheme (use tls)
 stack exec -- vaultenv \
   --connect-tls \
   --host ${VAULT_HOST} \

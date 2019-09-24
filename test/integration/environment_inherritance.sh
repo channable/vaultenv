@@ -32,4 +32,3 @@ if [ $? -eq 0 ]; then
 else
   echo "not ok 2 - vaultenv passed through test var"
 fi
-

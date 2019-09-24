@@ -22,7 +22,7 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                getResponseStatusCode)
 import System.Environment     (getEnvironment)
 import System.Posix.Process   (executeFile)
-import Control.Monad.Except   (ExceptT (..), MonadError, runExceptT, mapExceptT, 
+import Control.Monad.Except   (ExceptT (..), MonadError, runExceptT, mapExceptT,
                                throwError, liftEither, withExceptT)
 
 import qualified Control.Concurrent.Async   as Async
@@ -176,7 +176,7 @@ data VaultError
 -- We use a limited exponential backoff with the policy
 -- fullJitterBackoff that comes with the Retry package.
 vaultRetryPolicy :: (MonadIO m) => Options Validated Completed -> Retry.RetryPolicyM m
-vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds 
+vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds
                           (getOptionsValue oRetryBaseDelay opts) * 1000
                         )
                      <> Retry.limitRetries (
@@ -194,7 +194,7 @@ main = do
 
   cliAndEnvAndEnvFileOptions <- parseOptions localEnvVars envFileSettings
 
-  let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y) 
+  let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y)
                                   (localEnvVars ++ concat (reverse envFileSettings))
 
   if getOptionsValue oLogLevel cliAndEnvAndEnvFileOptions <= Info
@@ -223,7 +223,7 @@ getHttpManager opts = newManager managerSettings
                       then mkManagerSettings tlsSettings Nothing
                       else defaultManagerSettings
     tlsSettings = TLSSettingsSimple
-                { settingDisableCertificateValidation = 
+                { settingDisableCertificateValidation =
                       not $ getOptionsValue oValidateCerts opts
                 , settingDisableSession = False
                 , settingUseServerName = True
@@ -286,18 +286,18 @@ requestMountInfo :: Context -> ExceptT VaultError IO MountInfo
 requestMountInfo context =
   let
     cliOptions = cCliOptions context
-    request 
-        = setRequestManager 
+    request
+        = setRequestManager
               (cHttpManager context)
-        $ setRequestHeader "x-vault-token" 
+        $ setRequestHeader "x-vault-token"
               [SBS.pack (getOptionsValue oVaultToken cliOptions)]
-        $ setRequestPath 
+        $ setRequestPath
               (SBS.pack "/v1/sys/mounts")
-        $ setRequestPort 
+        $ setRequestPort
               (getOptionsValue oVaultPort cliOptions)
-        $ setRequestHost 
+        $ setRequestHost
               (SBS.pack (getOptionsValue oVaultHost cliOptions))
-        $ setRequestSecure 
+        $ setRequestSecure
               (getOptionsValue  oConnectTls cliOptions)
         $ defaultRequest
   in do
@@ -309,8 +309,8 @@ requestSecret :: Context -> String -> ExceptT VaultError IO VaultData
 requestSecret context secretPath =
   let
     cliOptions = cCliOptions context
-    request 
-        = setRequestManager 
+    request
+        = setRequestManager
             (cHttpManager context)
         $ setRequestHeader "x-vault-token" [SBS.pack (getOptionsValue oVaultToken cliOptions)]
         $ setRequestPath    (SBS.pack secretPath)
@@ -334,7 +334,7 @@ requestSecret context secretPath =
       Forbidden -> False
       InvalidUrl _ -> False
       SecretNotFound _ -> False
-      
+
 
       -- Errors that cannot occur at this point, but we list for
       -- exhaustiveness checking.

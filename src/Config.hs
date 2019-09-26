@@ -6,30 +6,37 @@ This module uses optparse-applicative to parse CLI options. It augments the
 optparse parser with a mechanism to allow for overrides in environment
 variables.
 
-The main entry point is @parseOptionsFromEnvAndCli@.
+The main entry point is @parseOptions@.
 -}
 module Config
   ( Options(..)
   , MilliSeconds(..)
-  , parseOptionsFromEnvAndCli
+  , parseOptions
   , LogLevel(..)
   , readConfigFromEnvFiles
+  , defaultOptions, isOptionsComplete, castOptions
+  , splitAddress, validateCopyAddr, mergeOptions, getOptionsValue
+  , Validated(), Completed()
   ) where
 
 import Control.Applicative ((<*>), (<|>))
-import Data.List (intercalate, nubBy)
-import Data.Maybe (fromJust)
+import Control.Monad(when, unless)
+import Control.Monad.Except (runExcept, throwError)
+import Data.List (intercalate, isPrefixOf)
+import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
 import Data.Monoid ((<>))
+import Data.Char (isDigit)
+import Data.Either (lefts, rights, isLeft)
 import Data.Version (showVersion)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
-                            str, argument, many, strOption)
+                            str, argument, many)
 import Paths_vaultenv (version) -- Magic to get the version field from cabal.
 import System.IO.Error (catchIOError)
+import System.Exit (die)
 
 import qualified Configuration.Dotenv as DotEnv
 import qualified Options.Applicative as OptParse
 import qualified System.Directory as Dir
-import qualified Text.Read as Read
 
 -- | Type alias for enviornment variables, used for readability in this module.
 type EnvVar = (String, String)
@@ -40,49 +47,271 @@ newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
 
 -- | @Options@ contains all the configuration we support in vaultenv. It is
 -- used in our @Main@ module to specify behavior.
-data Options = Options
-  { oVaultHost       :: String
-  , oVaultPort       :: Int
-  , oVaultToken      :: String
-  , oSecretFile      :: FilePath
-  , oCmd             :: String
-  , oArgs            :: [String]
-  , oConnectTls      :: Bool
-  , oValidateCerts   :: Bool
-  , oInheritEnv      :: Bool
-  , oRetryBaseDelay  :: MilliSeconds
-  , oRetryAttempts   :: Int
-  , oLogLevel        :: LogLevel
-  , oUsePath         :: Bool
+data Options validated completed = Options
+  { oVaultHost       :: Maybe String
+  , oVaultPort       :: Maybe Int
+  , oVaultAddr       :: Maybe String
+  , oVaultToken      :: Maybe String
+  , oSecretFile      :: Maybe FilePath
+  , oCmd             :: Maybe String
+  , oArgs            :: Maybe [String]
+  , oConnectTls      :: Maybe Bool
+  , oValidateCerts   :: Maybe Bool
+  , oInheritEnv      :: Maybe Bool
+  , oRetryBaseDelay  :: Maybe MilliSeconds
+  , oRetryAttempts   :: Maybe Int
+  , oLogLevel        :: Maybe LogLevel
+  , oUsePath         :: Maybe Bool
   } deriving (Eq)
 
-instance Show Options where
+-- | Phantom type that indicates that an option is
+-- checked to be completed by ```isOptionsComplete``` and is validated by
+-- ```validateCopyAddr```
+data Completed
+
+-- | Phantom type that indicates that an option is not yet checked to be complete
+data UnCompleted
+
+-- | Phantom type that indicates that an option is
+-- validated by ```validateCopyAddr```
+data Validated
+
+-- | Phantom type that indicates that an option is
+-- not validated by ```isOptionsComplete```
+data UnValidated
+
+-- | The default options that should be used when no value is specified
+-- If this default changes, please update the function isOptionsComplete if needed.
+defaultOptions :: Options Validated UnCompleted
+defaultOptions = Options
+  { oVaultHost      = Just "localhost"
+  , oVaultPort      = Just 8200
+  , oVaultAddr      = Just "https://localhost:8200"
+  , oVaultToken     = Nothing
+  , oSecretFile     = Nothing
+  , oCmd            = Nothing
+  , oArgs           = Just []
+  , oConnectTls     = Just True
+  , oValidateCerts  = Just True
+  , oInheritEnv     = Just True
+  , oRetryBaseDelay = Just (MilliSeconds 40)
+  , oRetryAttempts  = Just 9
+  , oLogLevel       = Just Error
+  , oUsePath        = Just True
+}
+
+-- | Casts one options structure into antoher, use only when certain that
+-- the validated and completed options can be given to a options file.
+castOptions :: Options a b -> Options c d
+castOptions opts = Options
+  { oVaultHost      = oVaultHost opts
+  , oVaultPort      = oVaultPort opts
+  , oVaultAddr      = oVaultAddr opts
+  , oVaultToken     = oVaultToken opts
+  , oSecretFile     = oSecretFile opts
+  , oCmd            = oCmd opts
+  , oArgs           = oArgs opts
+  , oConnectTls     = oConnectTls opts
+  , oValidateCerts  = oValidateCerts opts
+  , oInheritEnv     = oInheritEnv opts
+  , oRetryBaseDelay = oRetryBaseDelay opts
+  , oRetryAttempts  = oRetryAttempts opts
+  , oLogLevel       = oLogLevel opts
+  , oUsePath        = oUsePath opts
+  }
+
+instance Show (Options valid complete) where
   show opts = intercalate "\n"
-    [ "Host:           " ++ oVaultHost opts
-    , "Port:           " ++ (show $ oVaultPort opts)
-    , "Token:          " ++ "*****"
-    , "Secret file:    " ++ oSecretFile opts
-    , "Command:        " ++ oCmd opts
-    , "Arguments:      " ++ (show $ oArgs opts)
-    , "Use TLS:        " ++ (show $ oConnectTls opts)
-    , "Validate certs: " ++ (show $ oValidateCerts opts)
-    , "Inherit env:    " ++ (show $ oInheritEnv opts)
-    , "Base delay:     " ++ (show . unMilliSeconds $ oRetryBaseDelay opts)
-    , "Retry attempts: " ++ (show $ oRetryAttempts opts)
-    , "Log-level:      " ++ (show $ oLogLevel opts)
-    , "Use PATH:       " ++ (show $ oUsePath opts)
+    [ "Host:           " ++ showSpecifiedString (oVaultHost opts)
+    , "Port:           " ++ showSpecified (oVaultPort opts)
+    , "Addr            " ++ showSpecifiedString (oVaultAddr opts)
+    , "Token:          " ++ maybe "Unspecified" (const "*****") (oVaultToken opts)
+    , "Secret file:    " ++ showSpecifiedString (oSecretFile opts)
+    , "Command:        " ++ showSpecifiedString (oCmd opts)
+    , "Arguments:      " ++ showSpecified (oArgs opts)
+    , "Use TLS:        " ++ showSpecified (oConnectTls opts)
+    , "Validate certs: " ++ showSpecified (oValidateCerts opts)
+    , "Inherit env:    " ++ showSpecified (oInheritEnv opts)
+    , "Base delay:     " ++ showSpecified (unMilliSeconds <$> oRetryBaseDelay opts)
+    , "Retry attempts: " ++ showSpecified (oRetryAttempts opts)
+    , "Log-level:      " ++ showSpecified (oLogLevel opts)
+    , "Use PATH:       " ++ showSpecified (oUsePath opts)
+    ] where
+      showSpecified :: Show a => Maybe a -> String
+      showSpecified (Just x) = show x
+      showSpecified Nothing = "Unspecified"
+      showSpecifiedString = fromMaybe "Unspecified"
+
+-- | Gets the option from a Maybe, ```name``` should only be used for debugging
+-- purposes, as ```isOptionsComplete``` should verify that every property that
+-- does not have a default value, is present in the options.
+getOptionsValue :: (Options Validated Completed -> Maybe c) -> Options Validated Completed -> c
+getOptionsValue f opts=
+    fromMaybe (error "Complete options has an unknown key") (f opts)
+
+-- | The possible errors that can occur in the construction of an Options datatype
+data OptionsError
+  = UnspecifiedValue String -- ^ A value is missing and no default is specified
+  | InvalidAddrFormat String -- ^ The format of the address is invalid
+  | UnknownScheme String -- ^ The scheme of the address is invalid, e.g. ftp://
+  | NonNumericPort String -- ^ The port of the address is not an valid integer
+  | HostPortSchemeAddrMismatch String (Maybe Bool) (Maybe String) (Maybe Int) (Maybe String)
+      -- ^ The source, useTls, host, port and scheme do not match the provided address
+
+
+
+
+instance Show OptionsError where
+  show (UnspecifiedValue s) = "The option " ++ s ++ " is required but not specified"
+  show (InvalidAddrFormat s) = "The address " ++ s ++ " has an invalid format"
+  show (UnknownScheme s)  = "The address " ++ s ++ " has no recognisable scheme, "
+      ++ " expected http:// or https:// at the beginning of the address."
+  show (NonNumericPort s) = "The port " ++ s ++ " is not a valid int value"
+  show (HostPortSchemeAddrMismatch source useTLs host port addr) =
+    concat [
+      "Confliciting configuration values in ", source, "\n",
+      "Vault address: ", maybe "Unspecified" show addr, "\n",
+      "Vault host: ",  maybe "Unspecified" show host, "\n",
+      "Vault port: ",  maybe "Unspecified" show port, "\n",
+      "Use TLS: ",  maybe "Unspecified" show useTLs, "\n",
+      "Hint: This can happen when you provide a `addr` which ",
+      "conflicts with `port`, `host`, or `[no-]connect-tls` in either the environment variables or the CLI.\n"
     ]
 
--- | Behavior flags that we allow users to set via environment variables.
--- This type is internal to the workings of this module. It is used as an
--- intermediate value to get optparse-applicative to play nice with environment
--- variables as used for behavior flags. All flags are off by default.
-data EnvFlags = EnvFlags
-  { efConnectTls :: Bool
-  , efValidateCerts :: Bool
-  , efInheritEnv :: Bool
-  , efUsePath :: Bool
+-- | Validates for a set of options that any provided addr is valid and that either the
+-- scheme, host and port or that any given addr matches the other provided information.
+validateCopyAddr :: String -> Options UnValidated completed -> Either OptionsError (Options Validated completed)
+validateCopyAddr source opts
+  | isNothing (oVaultAddr opts) = Right (castOptions opts)
+  | otherwise = runExcept $ do
+    let addr = fromMaybe
+                (errorWithoutStackTrace "Addr not a Just in validation")
+                (oVaultAddr opts)
+        (mStrScheme, addrHost, addrStrPort) = splitAddress addr
+    unless (all isDigit addrStrPort && not (null addrStrPort))
+        (throwError $ NonNumericPort addrStrPort)
+    unless (isJust mStrScheme)
+        (throwError $ UnknownScheme addrHost)
+    let mHost = oVaultHost opts
+        mPort = oVaultPort opts
+        mUseTLS = oConnectTls opts
+        addrPort = read addrStrPort
+        addrTLS | mStrScheme == Just "http://" = Just False
+                | mStrScheme == Just "https://" = Just True
+                | otherwise = Nothing -- This should never occur!
+        doesAddrDiffer =
+            (isJust mHost && Just addrHost /= mHost) -- Is the Host set and the same
+            ||
+            (isJust mPort && Just addrPort /= mPort) -- Is the Port set and the same
+            ||
+            (isJust mUseTLS && addrTLS /= mUseTLS) -- Is the UseTLS set and the same
+    when doesAddrDiffer
+      (throwError $ HostPortSchemeAddrMismatch
+          source
+          mUseTLS
+          mHost
+          mPort
+          (oVaultAddr opts)
+      )
+    pure opts
+      { oVaultHost = Just addrHost
+      , oVaultPort = Just addrPort
+      , oConnectTls = addrTLS
+      }
+
+-- | This functions merges two options, where every specific option in the
+-- second options parameter is only used if for that option no value is
+-- specified in the first options parameter.
+mergeOptions  :: Options Validated UnCompleted
+              -> Options Validated UnCompleted
+              -> Options Validated UnCompleted
+mergeOptions opts1 opts2 = let
+    combine :: (Options Validated UnCompleted -> Maybe a) -> Maybe a
+    combine f | isJust (f opts1) = f opts1
+              | otherwise = f opts2
+  in
+  Options
+  { oVaultHost      = combine oVaultHost
+  , oVaultPort      = combine oVaultPort
+  , oVaultAddr      = combine oVaultAddr
+  , oVaultToken     = combine oVaultToken
+  , oSecretFile     = combine oSecretFile
+  , oCmd            = combine oCmd
+  , oArgs           = combine oArgs
+  , oConnectTls     = combine oConnectTls
+  , oValidateCerts  = combine oValidateCerts
+  , oInheritEnv     = combine oInheritEnv
+  , oRetryBaseDelay = combine oRetryBaseDelay
+  , oRetryAttempts  = combine oRetryAttempts
+  , oLogLevel       = combine oLogLevel
+  , oUsePath        = combine oUsePath
   }
+
+
+
+-- | Verifies that either an ```Options``` is complete, according to the test,
+-- or it gives a list of errors. Only checks for values that are not included
+-- in the default.
+isOptionsComplete :: Options Validated UnCompleted
+                  -> Either [OptionsError] (Options Validated Completed)
+isOptionsComplete opts =
+      let errors = concat
+            [
+              [UnspecifiedValue "Token"       | isNothing (oVaultToken opts)]
+            , [UnspecifiedValue "Command"     | isNothing (oCmd opts)]
+            , [UnspecifiedValue "Secret file" | isNothing (oSecretFile opts)]
+            ]
+      in  if not (null errors)
+          then Left errors
+          else Right (castOptions opts)
+
+-- | The host part of an address
+type Host       = String
+-- | The port part of an address (without parsing to an integer)
+type StringPort = String
+-- | The scheme part of address
+type Scheme     = String
+
+-- | This function splits the address into three different parts. The first part,
+-- is a Maybe Scheme, which menas that it is equal to either Just "http://", Just
+-- "https://" or Nothing. The Host part of the return type is the part between the
+-- scheme and the last colon in the address. The StringPort is the part after the
+-- colon, which will hopefully be an integer that indicates the port. As this
+-- function does not return any errors, the port is not yet converted to an Int.
+--
+-- Examples:
+-- http://localhost:80 -> (Just "http://", "localhost", "80")
+-- https://localhost:80 -> (Just "https://", "localhost", "80")
+-- ftp://localhost:80 -> (Nothing, "ftp://localhost", "80")
+-- localhost:80 -> (Nothing, "localhost", "80")
+-- http://localhost:80/foo/bar -> (Just "http://","localhost","80/foo/bar")
+splitAddress :: String -> (Maybe Scheme, Host, StringPort)
+splitAddress addr =
+  let
+    -- | Split the string on the last colon
+    splitOnLastColon :: String -> (String, String)
+    splitOnLastColon = splitOnLastColonHelper "" ""
+    -- | Helper that splits on the last colon, oneButLast contains
+    -- everything before the last colon lastAfter contains everything
+    -- after the last colon
+    splitOnLastColonHelper :: String -> String -> String -> (String, String)
+    splitOnLastColonHelper oneButLast lastAfter [] =
+      (drop 1 (reverse oneButLast), reverse lastAfter)
+    splitOnLastColonHelper oneButLast lastAfter (c:cs)
+      | c == ':'  = splitOnLastColonHelper
+                          (lastAfter ++ ":" ++ oneButLast) "" cs
+      | otherwise = splitOnLastColonHelper
+                          oneButLast (c : lastAfter) cs
+    (schemeHost, port) = splitOnLastColon addr
+    (scheme, host)
+      | isPrefixOf "http://" schemeHost =
+            (Just "http://", drop (length "http://") schemeHost)
+      | isPrefixOf "https://" schemeHost =
+            (Just "https://", drop (length "https://") schemeHost)
+      | otherwise = (Nothing, schemeHost)
+  in (scheme, host, port)
+
+
 
 -- | LogLevel to run vaultenv under. Under @Error@, which is the default, we
 -- will print error messages in error cases. Examples: Vault gives 404s, our
@@ -101,40 +330,86 @@ instance Read LogLevel where
   readsPrec _ _ = []
 
 -- | Parse program options from the command line and the process environment.
-parseOptionsFromEnvAndCli :: [EnvVar] -> IO Options
-parseOptionsFromEnvAndCli envVars =
-  let envFlags = parseEnvFlags envVars
-      parser = optionsParserWithInfo envFlags envVars
-  in OptParse.execParser parser
+parseOptions :: [EnvVar] -> [[EnvVar]] -> IO (Options Validated Completed)
+parseOptions localEnvVars envFileSettings =
+  let eLocalEnvFlagsOptions = validateCopyAddr "local environemnt variables" $ parseEnvOptions localEnvVars
+      eEnvFileSettingsOptions = map (validateCopyAddr "environment file" . parseEnvOptions) envFileSettings
+  in do
+    eParseResult <- validateCopyAddr "cli options" <$> OptParse.execParser parserCliOptions
+    let results = eEnvFileSettingsOptions ++ [eLocalEnvFlagsOptions, eParseResult]
+    if any isLeft results then
+      die (unlines (map (("[ERROR] "++). show) $ lefts results))
+    else
+        let
+          combined = foldl (flip mergeOptions) defaultOptions (rights results)
+          completed = isOptionsComplete combined
+          in either
+                (\ls -> die (unlines (map (("[ERROR] "++). show) ls)))
+                return
+                completed
 
--- | Parses behavior flags from a list of environment variables. If an
+-- | Parses options from a list of environment variables. If an
 -- environment variable corresponding to the flag is set to @"true"@ or
 -- @"false"@, we use that as the default on the corresponding CLI option.
---
--- If these variables aren't present, we default to @False@. We print an error
--- if they're set to anything else than @"true"@ or @"false"@.
-parseEnvFlags :: [EnvVar] -> EnvFlags
-parseEnvFlags envVars
-  = EnvFlags
-  { efConnectTls = lookupEnvFlag "VAULTENV_CONNECT_TLS"
-  , efValidateCerts = lookupEnvFlag "VAULTENV_VALIDATE_CERTS"
-  , efInheritEnv = lookupEnvFlag "VAULTENV_INHERIT_ENV"
-  , efUsePath = lookupEnvFlag "VAULTENV_USE_PATH"
+-- Other options are either String, Int, [String] or LogLevel.
+parseEnvOptions :: [EnvVar] -> Options UnValidated UnCompleted
+parseEnvOptions envVars
+  = Options
+  { oVaultHost      = lookupEnvString   "VAULT_HOST"
+  , oVaultPort      = lookupEnvInt      "VAULT_PORT"
+  , oVaultAddr      = lookupEnvString   "VAULT_ADDR"
+  , oVaultToken     = lookupEnvString   "VAULT_TOKEN"
+  , oSecretFile     = lookupEnvString   "VAULTENV_SECRETS_FILE"
+  , oCmd            = lookupEnvString   "CMD"
+  , oArgs           = lookupStringList  "ARGS..."
+  , oConnectTls     = lookupEnvFlag     "VAULTENV_CONNECT_TLS"
+  , oValidateCerts  = lookupEnvFlag     "VAULTENV_VALIDATE_CERTS"
+  , oInheritEnv     = lookupEnvFlag     "VAULTENV_INHERIT_ENV"
+  , oRetryBaseDelay = MilliSeconds <$> lookupEnvInt      "VAULTENV_RETRY_BASE_DELAY"
+  , oRetryAttempts  = lookupEnvInt      "VAULTENV_RETRY_ATTEMPTS"
+  , oLogLevel       = lookupEnvLogLevel "VAULTENV_LOG_LEVEL"
+  , oUsePath        = lookupEnvFlag     "VAULTENV_USE_PATH"
   }
   where
+    -- | Throws an error for an invalid key
+    err :: String -> a
+    err key = errorWithoutStackTrace $ "[ERROR]: Invalid value for environment variable " ++ key
+    -- | Lookup a string in the ```envVars``` list
+    lookupEnvString key = lookup key envVars
+    -- | Lookup an integer using ```lookupEnvString```,
+    -- parses is to a Just, Nothing means not an Int
+    lookupEnvInt :: String -> Maybe Int
+    lookupEnvInt key
+      | isNothing sVal = Nothing
+      | not (null sVal) && all isDigit (fromJust sVal) = read <$> sVal
+      | otherwise = err key
+      where sVal = lookupEnvString key
+    -- | Lookup a list of strings using ```lookupEnvString```
+    lookupStringList :: String -> Maybe [String]
+    lookupStringList key = words <$> lookupEnvString key
+    -- | Lookup an log level using ```lookupEnvString```
+    lookupEnvLogLevel :: String -> Maybe LogLevel
+    lookupEnvLogLevel key =
+      case lookup key envVars of
+        Just "info" -> Just Info
+        Just "error" -> Just Error
+        Nothing -> Nothing
+        _ -> err key
+    -- | Lookup a boolean flag using ```lookupEnvString```
+    lookupEnvFlag :: String -> Maybe Bool
     lookupEnvFlag key =
       case lookup key envVars of
-        Just "true" -> True
-        Just "false" -> False
-        Nothing -> True
-        _ -> errorWithoutStackTrace $ "[ERROR]: Invalid value for environment variable " ++ key
+        Just "true" -> Just True
+        Just "false" -> Just False
+        Nothing -> Nothing
+        _ -> err key
 
 -- | This function adds metadata to the @Options@ parser so it can be used with
 -- execParser.
-optionsParserWithInfo :: EnvFlags -> [EnvVar] -> OptParse.ParserInfo Options
-optionsParserWithInfo envFlags localEnvVars =
+parserCliOptions :: OptParse.ParserInfo (Options UnValidated UnCompleted)
+parserCliOptions =
   OptParse.info
-    (OptParse.helper <*> versionOption <*> optionsParser envFlags localEnvVars)
+    (OptParse.helper <*> versionOption <*> optionsParser)
     (OptParse.fullDesc <> OptParse.header header)
   where
     versionOption = OptParse.infoOption (showVersion version) (long "version" <> help "Show version")
@@ -193,10 +468,11 @@ optionsParserWithInfo envFlags localEnvVars =
 -- the default values of the different behaviour switches. So, if an
 -- environment variable is used to configure the TLS option, that value will
 -- always be used, except if it is overridden on the CLI.
-optionsParser :: EnvFlags -> [EnvVar] -> OptParse.Parser Options
-optionsParser envFlags envVars = Options
+optionsParser :: OptParse.Parser (Options UnValidated UnCompleted)
+optionsParser = Options
     <$> host
     <*> port
+    <*> addr
     <*> token
     <*> secretsFile
     <*> cmd
@@ -209,139 +485,111 @@ optionsParser envFlags envVars = Options
     <*> logLevel
     <*> usePath
   where
+    maybeStr = Just <$> str
+    maybeStrOption = option maybeStr
     host
-      =  strOption
+      =  maybeStrOption
       $  long "host"
       <> metavar "HOST"
-      <> stringFromEnvWithDefault "VAULT_HOST" "localhost" envVars
+      <> value Nothing
       <> help ("Vault host, either an IP address or DNS name. Defaults to localhost. " ++
                "Also configurable via VAULT_HOST.")
     port
-      =  option auto
+      =  option (Just <$> auto)
       $  long "port"
       <> metavar "PORT"
-      <> readValueFromEnvWithDefault "VAULT_PORT" 8200 envVars
+      <> value Nothing
       <> help "Vault port. Defaults to 8200. Also configurable via VAULT_PORT."
+    addr =
+      maybeStrOption
+        $ long "addr"
+        <> metavar "ADDR"
+        <> value Nothing
+        <> help ("Vault address, the ip-address or DNS name, followed by the port, " ++
+            "separated with a ':' Cannot be combined with either VAULT_PORT or VAULT_HOST")
     token
-      =  strOption
+      =  maybeStrOption
       $  long "token"
       <> metavar "TOKEN"
-      <> stringFromEnv "VAULT_TOKEN" envVars
+      <> value Nothing
       <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN."
     secretsFile
-      =  strOption
+      =  maybeStrOption
       $  long "secrets-file"
       <> metavar "FILENAME"
-      <> stringFromEnv "VAULTENV_SECRETS_FILE" envVars
+      <> value Nothing
       <> help ("Config file specifying which secrets to request. Also configurable " ++
                "via VAULTENV_SECRETS_FILE." )
     cmd
-      =  argument str
+      =  argument maybeStr
       $  metavar "CMD"
       <> help "command to run after fetching secrets"
+      <> value Nothing
     cmdArgs
-      =  many $ argument str
-      (  metavar "ARGS..."
-      <> help "Arguments to pass to CMD, defaults to nothing")
+      = (\lst -> if null lst then Nothing else Just lst) <$>
+        many ( argument str
+        (     metavar "ARGS..."
+          <>  help "Arguments to pass to CMD, defaults to nothing")
+        )
     noConnectTls
-      =  flag (efConnectTls envFlags) False
+      =  flag Nothing (Just False)
       $  long "no-connect-tls"
       <> help ("Don't use TLS when connecting to Vault. Default: use TLS. Also " ++
               "configurable via VAULTENV_CONNECT_TLS.")
     connectTls
-      =  flag (efConnectTls envFlags) True
+      =  flag Nothing (Just True)
       $  long "connect-tls"
       <> help ("Always connect to Vault via TLS. Default: use TLS. Can be used " ++
                 "to override VAULTENV_CONNECT_TLS.")
     noValidateCerts
-      =  flag (efValidateCerts envFlags) False
+      =  flag Nothing (Just True)
       $  long "no-validate-certs"
       <> help ("Don't validate TLS certificates when connecting to Vault. Default: " ++
               "validate certs. Also configurable via VAULTENV_VALIDATE_CERTS.")
     validateCerts
-      =  flag (efValidateCerts envFlags) True
+      =  flag Nothing (Just True)
       $  long "validate-certs"
       <> help ("Always validate TLS certificates when connecting to Vault. Default: " ++
                 "validate certs. Can be used to override VAULTENV_CONNECT_TLS.")
     noInheritEnv
-      =  flag (efInheritEnv envFlags) False
+      =  flag Nothing (Just False)
       $  long "no-inherit-env"
       <> help ("Don't merge the parent environment with the secrets file. Default: " ++
               "merge environments. Also configurable via VAULTENV_INHERIT_ENV.")
     inheritEnv
-      =  flag (efInheritEnv envFlags) True
+      =  flag Nothing (Just True)
       $  long "inherit-env"
       <> help ("Always merge the parent environment with the secrets file. Default: " ++
                 "merge environments. Can be used to override VAULTENV_INHERIT_ENV.")
     baseDelayMs
-      =  MilliSeconds <$> (option auto
-      $  long "retry-base-delay-milliseconds"
+      =  fmap MilliSeconds <$> option (Just <$> auto)
+      (  long "retry-base-delay-milliseconds"
       <> metavar "MILLISECONDS"
-      <> readValueFromEnvWithDefault "VAULTENV_RETRY_BASE_DELAY_MS" 40 envVars
+      <> value Nothing
       <> help ("Base delay for vault connection retrying. Defaults to 40ms. " ++
-                "Also configurable via VAULTENV_RETRY_BASE_DELAY_MS."))
+                "Also configurable via VAULTENV_RETRY_BASE_DELAY_MS.")
+      )
     retryAttempts
-      =  option auto
+      =  option (Just <$> auto)
       $  long "retry-attempts"
       <> metavar "NUM"
-      <> readValueFromEnvWithDefault "VAULTENV_RETRY_ATTEMPTS" 9 envVars
+      <> value Nothing
       <> help ("Maximum number of vault connection retries. Defaults to 9. " ++
                "Also configurable through VAULTENV_RETRY_ATTEMPTS.")
     logLevel
-      =  option auto
+      =  option (Just <$> auto)
       $  long "log-level"
+      <> value Nothing
       <> metavar "error | info"
-      <> readValueFromEnvWithDefault "VAULTENV_LOG_LEVEL" Error envVars
+
       <> help ("Log-level to run vaultenv under. Options: 'error' or 'info'. " ++
                "Defaults to 'error'. Also configurable via VAULTENV_LOG_LEVEL")
     usePath
-      =  flag (efInheritEnv envFlags) True
+      =  flag Nothing (Just True)
       $  long "use-path"
       <> help ("Use PATH for finding the executable that vaultenv should call. Default: " ++
               "don't search PATH. Also configurable via VAULTENV_USE_PATH.")
 
-
--- | Specialization of @readValueFromEnv@ that does not use a @Read@ instance.
--- This is useful for "plain" string values, so the user does not have to
--- format environment variables like @VAULT_HOST='"localhost"'@. Note the
--- double quoting.
-stringFromEnv :: OptParse.HasValue f
-              => String
-              -> [EnvVar]
-              -> OptParse.Mod f String
-stringFromEnv key envVars = foldMap value $ lookup key envVars
-
--- | Like @stringFromEnv@, but with a default value.
-stringFromEnvWithDefault :: OptParse.HasValue f
-                         => String
-                         -> String
-                         -> [EnvVar]
-                         -> OptParse.Mod f String
-stringFromEnvWithDefault key defVal envVars
-  =  value defVal
-  <> stringFromEnv key envVars
-
--- | Attempt to parse an optparse default value modifier from a list of
--- environment variables. This function returns an empty option modifier in
--- case the environment variable is missing or does not parse.
-readValueFromEnv :: (Read a, OptParse.HasValue f)
-                 => String
-                 -> [EnvVar]
-                 -> OptParse.Mod f a
-readValueFromEnv key envVars =
-  let parseResult = lookup key envVars >>= Read.readMaybe
-  in foldMap value parseResult
-
--- | Attempt to parse an optparse default value modifier from the process
--- environment with a default.
-readValueFromEnvWithDefault :: (Read a, OptParse.HasValue f)
-                            => String
-                            -> a
-                            -> [EnvVar]
-                            -> OptParse.Mod f a
-readValueFromEnvWithDefault key defVal envVars
-  =  value defVal
-  <> readValueFromEnv key envVars
 
 -- | Search for environment files in default locations and load them in order.
 --
@@ -349,10 +597,10 @@ readValueFromEnvWithDefault key defVal envVars
 -- environment configuration. This is implicit behavior and allows the user to
 -- configure vaultenv without setting up environment variables or passing CLI
 -- flags. This is nicer for interactive usage.
-readConfigFromEnvFiles :: IO [(String, String)]
+readConfigFromEnvFiles :: IO [[(String, String)]]
 readConfigFromEnvFiles = do
   xdgDir <- (Just <$> Dir.getXdgDirectory Dir.XdgConfig "vaultenv")
-    `catchIOError` (const $ pure Nothing)
+    `catchIOError` const (pure Nothing)
   cwd <- Dir.getCurrentDirectory
   let
     machineConfigFile = "/etc/vaultenv.conf"
@@ -381,5 +629,5 @@ readConfigFromEnvFiles = do
     else pure []
 
   -- Deduplicate, user config takes precedence over machine config
-  let config = nubBy (\(x, _) (y, _) -> x == y) $ cwdConfig ++ userConfig ++ machineConfig
+  let config = [machineConfig, userConfig, cwdConfig]
   pure config

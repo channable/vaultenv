@@ -22,7 +22,8 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                getResponseStatusCode)
 import System.Environment     (getEnvironment)
 import System.Posix.Process   (executeFile)
-import Control.Monad.Except   (ExceptT (..), MonadError, runExceptT, mapExceptT, throwError, liftEither, withExceptT)
+import Control.Monad.Except   (ExceptT (..), MonadError, runExceptT, mapExceptT,
+                               throwError, liftEither, withExceptT)
 
 import qualified Control.Concurrent.Async   as Async
 import qualified Control.Retry              as Retry
@@ -34,8 +35,9 @@ import qualified Data.Foldable              as Foldable
 import qualified Data.Map                   as Map
 import qualified System.Exit                as Exit
 
-import Config (Options(..), parseOptionsFromEnvAndCli, unMilliSeconds,
-               LogLevel(..), readConfigFromEnvFiles)
+import Config (Options(..), parseOptions, unMilliSeconds,
+               LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
+               Validated, Completed)
 import SecretsFile (Secret(..), SFError(..), readSecretList)
 
 -- | Make a HTTP URL path from a secret. This is the path that Vault expects.
@@ -54,7 +56,7 @@ data MountInfo = MountInfo (HashMap Text EngineType)
 data Context
   = Context
   { cLocalEnvVars :: [EnvVar]
-  , cCliOptions :: Options
+  , cCliOptions :: Options Validated Completed
   , cHttpManager :: Manager
   }
 
@@ -157,25 +159,29 @@ instance FromJSON MountInfo where
 -- up the call stack and end up as a value of this type. We then have a single
 -- function which is responsible for printing an error message and exiting.
 data VaultError
-  = SecretNotFound    String
-  | SecretFileError   SFError
-  | KeyNotFound       Secret
-  | BadRequest        LBS.ByteString
+  = SecretNotFound String
+  | SecretFileError SFError
+  | KeyNotFound Secret
+  | BadRequest LBS.ByteString
   | Forbidden
-  | BadJSONResp       String
-  | ServerError       LBS.ByteString
+  | BadJSONResp String
+  | ServerError LBS.ByteString
   | ServerUnavailable LBS.ByteString
   | ServerUnreachable HttpException
-  | InvalidUrl        String
-  | DuplicateVar      String
-  | Unspecified       Int LBS.ByteString
+  | InvalidUrl String
+  | DuplicateVar String
+  | Unspecified Int LBS.ByteString
 
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
 -- fullJitterBackoff that comes with the Retry package.
-vaultRetryPolicy :: (MonadIO m) => Options -> Retry.RetryPolicyM m
-vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds (oRetryBaseDelay opts) * 1000)
-                     <> Retry.limitRetries (oRetryAttempts opts)
+vaultRetryPolicy :: (MonadIO m) => Options Validated Completed -> Retry.RetryPolicyM m
+vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds
+                          (getOptionsValue oRetryBaseDelay opts) * 1000
+                        )
+                     <> Retry.limitRetries (
+                          getOptionsValue oRetryAttempts opts
+                        )
 
 --
 -- IO
@@ -186,12 +192,12 @@ main = do
   localEnvVars <- getEnvironment
   envFileSettings <- readConfigFromEnvFiles
 
-  -- Deduplicate, give precedence to set env vars over .env files
-  let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y) (localEnvVars ++ envFileSettings)
+  cliAndEnvAndEnvFileOptions <- parseOptions localEnvVars envFileSettings
 
-  cliAndEnvAndEnvFileOptions <- parseOptionsFromEnvAndCli envAndEnvFileConfig
+  let envAndEnvFileConfig = nubBy (\(x, _) (y, _) -> x == y)
+                                  (localEnvVars ++ concat (reverse envFileSettings))
 
-  if (oLogLevel cliAndEnvAndEnvFileOptions) <= Info
+  if getOptionsValue oLogLevel cliAndEnvAndEnvFileOptions <= Info
     then print cliAndEnvAndEnvFileOptions
     else pure ()
 
@@ -206,17 +212,19 @@ main = do
     Left err -> Exit.die (vaultErrorLogMessage err)
     Right newEnv -> runCommand cliAndEnvAndEnvFileOptions newEnv
 
+
 -- | This function returns either a manager for plain HTTP or
 -- for HTTPS connections. If TLS is wanted, we also check if the
 -- user specified an option to disable the certificate check.
-getHttpManager :: Options -> IO Manager
+getHttpManager :: Options Validated Completed -> IO Manager
 getHttpManager opts = newManager managerSettings
   where
-    managerSettings = if oConnectTls opts
+    managerSettings = if getOptionsValue oConnectTls opts
                       then mkManagerSettings tlsSettings Nothing
                       else defaultManagerSettings
     tlsSettings = TLSSettingsSimple
-                { settingDisableCertificateValidation = not $ oValidateCerts opts
+                { settingDisableCertificateValidation =
+                      not $ getOptionsValue oValidateCerts opts
                 , settingDisableSession = False
                 , settingUseServerName = True
                 }
@@ -236,7 +244,7 @@ vaultEnv context = do
   secretEnv <- requestSecrets context mountInfo secrets
   checkNoDuplicates (buildEnv secretEnv)
     where
-      secretFile = oSecretFile (cCliOptions context)
+      secretFile = getOptionsValue oSecretFile (cCliOptions context)
       checkNoDuplicates :: MonadError VaultError m => [EnvVar] -> m [EnvVar]
       checkNoDuplicates e =
         either (throwError . DuplicateVar) (return . const e) $ dups (map fst e)
@@ -256,17 +264,17 @@ vaultEnv context = do
 
       buildEnv :: [EnvVar] -> [EnvVar]
       buildEnv secretsEnv =
-        if (oInheritEnv . cCliOptions $ context)
-        then secretsEnv ++ (cLocalEnvVars context)
+        if getOptionsValue oInheritEnv . cCliOptions $ context
+        then secretsEnv ++ cLocalEnvVars context
         else secretsEnv
 
 
-runCommand :: Options -> [EnvVar] -> IO a
+runCommand :: Options Validated Completed -> [EnvVar] -> IO a
 runCommand options env =
   let
-    command = oCmd options
-    searchPath = oUsePath options
-    args = oArgs options
+    command = getOptionsValue oCmd options
+    searchPath = getOptionsValue oUsePath options
+    args = getOptionsValue oArgs options
     env' = Just env
   in
     -- `executeFile` calls one of the syscalls in the execv* family, which
@@ -278,13 +286,20 @@ requestMountInfo :: Context -> ExceptT VaultError IO MountInfo
 requestMountInfo context =
   let
     cliOptions = cCliOptions context
-    request = setRequestManager (cHttpManager context)
-            $ setRequestHeader "x-vault-token" [SBS.pack (oVaultToken cliOptions)]
-            $ setRequestPath (SBS.pack "/v1/sys/mounts")
-            $ setRequestPort (oVaultPort cliOptions)
-            $ setRequestHost (SBS.pack (oVaultHost cliOptions))
-            $ setRequestSecure (oConnectTls cliOptions)
-            $ defaultRequest
+    request
+        = setRequestManager
+              (cHttpManager context)
+        $ setRequestHeader "x-vault-token"
+              [SBS.pack (getOptionsValue oVaultToken cliOptions)]
+        $ setRequestPath
+              (SBS.pack "/v1/sys/mounts")
+        $ setRequestPort
+              (getOptionsValue oVaultPort cliOptions)
+        $ setRequestHost
+              (SBS.pack (getOptionsValue oVaultHost cliOptions))
+        $ setRequestSecure
+              (getOptionsValue  oConnectTls cliOptions)
+        $ defaultRequest
   in do
     resp <- withExceptT ServerUnreachable (httpLBS request)
     withExceptT BadJSONResp (liftEither $ Aeson.eitherDecode' (getResponseBody resp))
@@ -294,13 +309,15 @@ requestSecret :: Context -> String -> ExceptT VaultError IO VaultData
 requestSecret context secretPath =
   let
     cliOptions = cCliOptions context
-    request = setRequestManager (cHttpManager context)
-            $ setRequestHeader "x-vault-token" [SBS.pack (oVaultToken cliOptions)]
-            $ setRequestPath (SBS.pack secretPath)
-            $ setRequestPort (oVaultPort cliOptions)
-            $ setRequestHost (SBS.pack (oVaultHost cliOptions))
-            $ setRequestSecure (oConnectTls cliOptions)
-            $ defaultRequest
+    request
+        = setRequestManager
+            (cHttpManager context)
+        $ setRequestHeader "x-vault-token" [SBS.pack (getOptionsValue oVaultToken cliOptions)]
+        $ setRequestPath    (SBS.pack secretPath)
+        $ setRequestPort    (getOptionsValue oVaultPort cliOptions)
+        $ setRequestHost    (SBS.pack (getOptionsValue oVaultHost cliOptions))
+        $ setRequestSecure  (getOptionsValue oConnectTls cliOptions)
+        $ defaultRequest
 
     -- Only retry on connection related failures
     shouldRetry :: Applicative f => Retry.RetryStatus -> VaultError -> f Bool
@@ -317,6 +334,7 @@ requestSecret context secretPath =
       Forbidden -> False
       InvalidUrl _ -> False
       SecretNotFound _ -> False
+
 
       -- Errors that cannot occur at this point, but we list for
       -- exhaustiveness checking.

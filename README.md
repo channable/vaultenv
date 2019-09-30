@@ -116,9 +116,10 @@ Available options:
                            VAULT_HOST.
   --port PORT              Vault port. Defaults to 8200. Also configurable via
                            VAULT_PORT.
-  --addr ADDR              Vault address, the ip-address or DNS name, followed
-                           by the port, separated with a ':' Cannot be combined
-                           with either VAULT_PORT or VAULT_HOST
+  --addr ADDR              Vault address, the scheme, either http:// or
+                           https://, the ip-address or DNS name, followed by the
+                           port, separated with a ':'. Cannot be combined with
+                           either VAULT_PORT or VAULT_HOST
   --token TOKEN            Token to authenticate to Vault with. Also
                            configurable via VAULT_TOKEN.
   --secrets-file FILENAME  Config file specifying which secrets to request. Also
@@ -285,13 +286,13 @@ In cases where no default nor any value is specified, which is possible for `Tok
 
 Vaultenv also supports the `VAULT_ADDR` configuration. In such a case, without specifying separate
 parameters for host, port and whether to use TLS or not, one can specify these values in a single value.
-The address always starts with either `http` or `https://`, followed by a either a DNS name
+The address always starts with either `http://` or `https://`, followed by a either a DNS name
 or an ip-address. The port is specified at the end of the address, using a `:` to separate the host
 and the port. For example: `https://example.com:42` would create a TLS enabled connection
 to the host `example.com` on port `42`.
 
 Other errors can happen with the address configuration. There are two ways of specifying
-where the source files are located, either via the address of via a combination of
+where the secret files are located, either via the address of via a combination of
 the port, the host and whether to use TLS. As there are two ways of specifying this,
 it is also possible for these values to conflict. Consider the situation of where
 `VAULT_ADDR` is `http://example.com:8200` and `VAULT_PORT` is set to `42`. There

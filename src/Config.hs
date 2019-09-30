@@ -503,8 +503,9 @@ optionsParser = Options
         $ long "addr"
         <> metavar "ADDR"
         <> value Nothing
-        <> help ("Vault address, the ip-address or DNS name, followed by the port, " ++
-            "separated with a ':' Cannot be combined with either VAULT_PORT or VAULT_HOST")
+        <> help ("Vault address, the scheme, either http:// or https://, the ip-address or DNS name, " ++
+            "followed by the port, separated with a ':'." ++
+            " Cannot be combined with either VAULT_PORT or VAULT_HOST")
     token
       =  maybeStrOption
       $  long "token"

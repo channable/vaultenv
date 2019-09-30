@@ -283,6 +283,13 @@ Use PATH:       True
 In cases where no default nor any value is specified, which is possible for `Token`, `Secret file` and
 `Command`, Vaultenv will give an error that it requires these values to operate.
 
+Vaultenv also supports the `VAULT_ADDR` configuration. In such a case, without specifying separate
+parameters for host, port and whether to use TLS or not, one can specify these values in a single value.
+The address always starts with either `http` or `https://`, followed by a either a DNS name
+or an ip-address. The port is specified at the end of the address, using a `:` to separate the host
+and the port. For example: `https://example.com:42` would create a TLS enabled connection
+to the host `example.com` on port `42`.
+
 Other errors can happen with the address configuration. There are two ways of specifying
 where the source files are located, either via the address of via a combination of
 the port, the host and whether to use TLS. As there are two ways of specifying this,
@@ -293,9 +300,9 @@ being specified in the same configuration, like the same file or both as command
 line options, Vaultenv will not choose either way and will report an error.
 
 In the case they are specified in different configurations, like the address in a file
-and the port in the command line options, the higher presedent (as defined above)
+and the port in the command line options, the higher precedent (as defined above)
 is used for that specific value. In this case, this would result in a host of
-`example.com`, no useage of TLS, due to the `http://` scheme, and a port of `42`.
+`example.com`, no usage of TLS, due to the `http://` scheme, and a port of `42`.
 
 Other errors that can happen during parsing are:
 - A non-numeric port in the address, like `http://localhost:my_port`

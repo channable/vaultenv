@@ -245,6 +245,19 @@ VAULT_PORT="8200"
 VAULTENV_INHERIT_ENV="yes"
 ```
 
+All while running Vaultenv without any CLI args.
+
+#### Different levels of configuration
+
+It can happen that conflicting configuration values are send to Vaultenv. An example
+would be a global secret file, which is overwritten by a project specific configuration file.
+The order of precedence (from least precedence to most precedence) is as follows:
+ - `/etc/vaultenv.conf`
+ - `$HOME/.config/vaultenv/vaultenv.conf`
+ - `$CWD/.env`
+ - environment variables
+ - command line options
+
 This is useful on development machines. It allows you to:
 
  - Set global connection options on a per-machine basis. Useful if you run a
@@ -252,37 +265,28 @@ This is useful on development machines. It allows you to:
  - Set per-user tokens.
  - Set per-project secrets files.
 
-All while running Vaultenv without any CLI args.
-
-It can happen that conflicting configuration values are send to Vaultenv. An example
-would be a global secret file, which is overwritten by a project specific configuration file.
-The order of precedent (from least important to most important) is as follows:
- - `/etc/vaultenv.conf`
- - `$HOME/.config/vaultenv/vaultenv.conf`
- - `$CWD/.env`
- - environment variables
- - command line options
-
 This means that any command line option that is present would overwrite any other configuration.
 If an option is not specified, the default is used. The defaults are as follows:
 ```
-Host:           localhost
-Port:           8200
-Addr            https://localhost:8200
-Token:          Unspecified
-Secret file:    Unspecified
-Command:        Unspecified
-Arguments:      []
-Use TLS:        True
-Validate certs: True
-Inherit env:    True
-Base delay:     40
-Retry attempts: 9
-Log-level:      Error
-Use PATH:       True
+VAULT_HOST:                 localhost
+VAULT_PORT:                 8200
+VAULT_ADDR:                 https://localhost:8200
+VAULT_TOKEN:                Unspecified
+VAULTENV_SECRETS_FILE:      Unspecified
+CMD:                        Unspecified
+ARGS:                       []
+VAULTENV_CONNECT_TLS:       True
+VAULTENV_VALIDATE_CERTS:    True
+VAULTENV_INHERIT_ENV:       True
+VAULTENV_RETRY_BASE_DELAY:  40
+VAULTENV_RETRY_ATTEMPTS:    9
+VAULTENV_LOG_LEVEL:         Error
+VAULTENV_USE_PATH:          True
 ```
 In cases where no default nor any value is specified, which is possible for `Token`, `Secret file` and
 `Command`, Vaultenv will give an error that it requires these values to operate.
+
+#### Connection options
 
 Vaultenv also supports the `VAULT_ADDR` configuration. In such a case, without specifying separate
 parameters for host, port and whether to use TLS or not, one can specify these values in a single value.
@@ -292,20 +296,21 @@ and the port. For example: `https://example.com:42` would create a TLS enabled c
 to the host `example.com` on port `42`.
 
 Other errors can happen with the address configuration. There are two ways of specifying
-where the secret files are located, either via the address of via a combination of
+what the connection options are, either via the address of via a combination of
 the port, the host and whether to use TLS. As there are two ways of specifying this,
-it is also possible for these values to conflict. Consider the situation of where
+it is also possible for these values to conflict. Consider the situation where
 `VAULT_ADDR` is `http://example.com:8200` and `VAULT_PORT` is set to `42`. There
 are two ways Vaultenv can resolve this. In the case of the address and the port
 being specified in the same configuration, like the same file or both as command
 line options, Vaultenv will not choose either way and will report an error.
 
-In the case they are specified in different configurations, like the address in a file
-and the port in the command line options, the higher precedent (as defined above)
-is used for that specific value. In this case, this would result in a host of
-`example.com`, no usage of TLS, due to the `http://` scheme, and a port of `42`.
+In the case they are specified in different configuration levels, like the address in a file
+and the port in the command line options, the higher precedence (as defined
+[above](#Different-levels-of-configuration)) is used for that specific value.
+In this case, this would result in a host of `example.com`, no usage of TLS,
+due to the `http://` scheme, and a port of `42`.
 
-Other errors that can happen during parsing are:
+Other errors than the mismatch address error that can happen during parsing are:
 - A non-numeric port in the address, like `http://localhost:my_port`
 - A non-supported scheme in the address, like `ftp://example.com:42`
 ## Allowed characters in environment variables

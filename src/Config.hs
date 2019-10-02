@@ -124,7 +124,7 @@ instance Show (Options valid complete) where
   show opts = intercalate "\n"
     [ "Host:           " ++ showSpecifiedString (oVaultHost opts)
     , "Port:           " ++ showSpecified (oVaultPort opts)
-    , "Addr            " ++ showSpecifiedString (oVaultAddr opts)
+    , "Addr:           " ++ showSpecifiedString (oVaultAddr opts)
     , "Token:          " ++ maybe "Unspecified" (const "*****") (oVaultToken opts)
     , "Secret file:    " ++ showSpecifiedString (oSecretFile opts)
     , "Command:        " ++ showSpecifiedString (oCmd opts)

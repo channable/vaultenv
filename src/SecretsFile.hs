@@ -50,12 +50,12 @@ type Parser = MP.Parsec Void String
 --
 -- We either get IO errors because we cannot open the secrets file, or we
 -- cannot parse it.
-data SFError = IOErr IOError | ParseErr (MP.ParseError (MP.Token String) Void)
+data SFError = IOErr IOError | ParseErr (MP.ParseErrorBundle String Void)
 
 instance Show SFError where
   show sfErr = case sfErr of
     IOErr ioErr -> displayException ioErr
-    ParseErr pe -> MP.parseErrorPretty pe
+    ParseErr pe -> MP.errorBundlePretty pe
 
 -- | Helper for ExceptT stuff that we use in app/Main.hs
 readSecretList :: (MonadError SFError m, MonadIO m) => FilePath -> m [Secret]
@@ -78,7 +78,7 @@ safeReadFile :: FilePath -> IO (Either IOError String)
 safeReadFile fp = (try . readFile) fp
 
 -- | Parse a String as a SecretsFile.
-parseSecretsFile :: FilePath -> String -> Either (MP.ParseError (MP.Token String) Void) [Secret]
+parseSecretsFile :: FilePath -> String -> Either (MP.ParseErrorBundle String Void) [Secret]
 parseSecretsFile = MP.parse secretsFileP
 
 -- | SpaceConsumer parser, which is responsible for stripping all whitespace.
@@ -202,8 +202,8 @@ secretVarP :: Parser String
 secretVarP = do
   -- Environment variables have to start with a letter or underscore and can be
   -- followed by letters, underscores and digits.
-  varStart <- MPC.oneOf asciiLettersUnderscore
-  varRest <- MP.many $ MPC.oneOf (asciiLettersUnderscore ++ digits)
+  varStart <- MP.oneOf asciiLettersUnderscore
+  varRest <- MP.many $ MP.oneOf (asciiLettersUnderscore ++ digits)
   _ <- symbol "="
   pure (varStart:varRest)
 

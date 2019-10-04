@@ -1,5 +1,7 @@
 # vaultenv
 
+[![Build Status](https://travis-ci.com/channable/vaultenv.svg?branch=master)](https://travis-ci.com/channable/vaultenv)
+
 Run processes with secrets from [HashiCorp Vault]. It:
 
  1. Reads a list of required secrets

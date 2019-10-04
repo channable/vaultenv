@@ -30,7 +30,7 @@ import Data.Either (lefts, rights, isLeft)
 import Data.Version (showVersion)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
                             str, argument, many)
-import Paths_vaultenv (version) -- Magic to get the version field from cabal.
+import Paths_vaultenv_real (version) -- Magic to get the version field from cabal.
 import System.IO.Error (catchIOError)
 import System.Exit (die)
 

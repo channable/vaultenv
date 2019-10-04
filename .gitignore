@@ -3,4 +3,4 @@
 *.deb
 
 # auto-generated files
-vaultenv.cabal
+*.cabal

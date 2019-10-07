@@ -124,7 +124,7 @@ instance Show (Options valid complete) where
   show opts = intercalate "\n"
     [ "Host:           " ++ showSpecifiedString (oVaultHost opts)
     , "Port:           " ++ showSpecified (oVaultPort opts)
-    , "Addr            " ++ showSpecifiedString (oVaultAddr opts)
+    , "Addr:           " ++ showSpecifiedString (oVaultAddr opts)
     , "Token:          " ++ maybe "Unspecified" (const "*****") (oVaultToken opts)
     , "Secret file:    " ++ showSpecifiedString (oSecretFile opts)
     , "Command:        " ++ showSpecifiedString (oCmd opts)
@@ -152,7 +152,6 @@ getOptionsValue f opts=
 -- | The possible errors that can occur in the construction of an Options datatype
 data OptionsError
   = UnspecifiedValue String -- ^ A value is missing and no default is specified
-  | InvalidAddrFormat String -- ^ The format of the address is invalid
   | UnknownScheme String -- ^ The scheme of the address is invalid, e.g. ftp://
   | NonNumericPort String -- ^ The port of the address is not an valid integer
   | HostPortSchemeAddrMismatch String (Maybe Bool) (Maybe String) (Maybe Int) (Maybe String)
@@ -163,7 +162,6 @@ data OptionsError
 
 instance Show OptionsError where
   show (UnspecifiedValue s) = "The option " ++ s ++ " is required but not specified"
-  show (InvalidAddrFormat s) = "The address " ++ s ++ " has an invalid format"
   show (UnknownScheme s)  = "The address " ++ s ++ " has no recognisable scheme, "
       ++ " expected http:// or https:// at the beginning of the address."
   show (NonNumericPort s) = "The port " ++ s ++ " is not a valid int value"
@@ -505,8 +503,9 @@ optionsParser = Options
         $ long "addr"
         <> metavar "ADDR"
         <> value Nothing
-        <> help ("Vault address, the ip-address or DNS name, followed by the port, " ++
-            "separated with a ':' Cannot be combined with either VAULT_PORT or VAULT_HOST")
+        <> help ("Vault address, the scheme, either http:// or https://, the ip-address or DNS name, " ++
+            "followed by the port, separated with a ':'." ++
+            " Cannot be combined with either VAULT_PORT or VAULT_HOST")
     token
       =  maybeStrOption
       $  long "token"

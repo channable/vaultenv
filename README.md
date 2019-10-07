@@ -101,20 +101,25 @@ of `tutorial.sh`.
 ```
 vaultenv - run programs with secrets from HashiCorp Vault
 
-Usage: vaultenv [--host HOST] [--port PORT] --token TOKEN
-                --secrets-file FILENAME CMD [ARGS...] ([--no-connect-tls] |
-                [--connect-tls]) ([--no-validate-certs] | [--validate-certs])
-                ([--no-inherit-env] | [--inherit-env])
+Usage: vaultenv [--version] [--host HOST] [--port PORT] [--addr ADDR]
+                [--token TOKEN] [--secrets-file FILENAME] [CMD] [ARGS...]
+                ([--no-connect-tls] | [--connect-tls]) ([--no-validate-certs] |
+                [--validate-certs]) ([--no-inherit-env] | [--inherit-env])
                 [--retry-base-delay-milliseconds MILLISECONDS]
-                [--retry-attempts NUM] [--log-level error | info]
+                [--retry-attempts NUM] [--log-level error | info] [--use-path]
 
 Available options:
   -h,--help                Show this help text
+  --version                Show version
   --host HOST              Vault host, either an IP address or DNS name.
                            Defaults to localhost. Also configurable via
                            VAULT_HOST.
   --port PORT              Vault port. Defaults to 8200. Also configurable via
                            VAULT_PORT.
+  --addr ADDR              Vault address, the scheme, either http:// or
+                           https://, the ip-address or DNS name, followed by the
+                           port, separated with a ':'. Cannot be combined with
+                           either VAULT_PORT or VAULT_HOST
   --token TOKEN            Token to authenticate to Vault with. Also
                            configurable via VAULT_TOKEN.
   --secrets-file FILENAME  Config file specifying which secrets to request. Also
@@ -147,6 +152,9 @@ Available options:
   --log-level error | info Log-level to run vaultenv under. Options: 'error' or
                            'info'. Defaults to 'error'. Also configurable via
                            VAULTENV_LOG_LEVEL
+  --use-path               Use PATH for finding the executable that vaultenv
+                           should call. Default: don't search PATH. Also
+                           configurable via VAULTENV_USE_PATH.
 
 ```
 
@@ -237,6 +245,19 @@ VAULT_PORT="8200"
 VAULTENV_INHERIT_ENV="yes"
 ```
 
+All while running Vaultenv without any CLI args.
+
+#### Different levels of configuration
+
+It can happen that conflicting configuration values are send to Vaultenv. An example
+would be a global secret file, which is overwritten by a project specific configuration file.
+The order of precedence (from least precedence to most precedence) is as follows:
+ - `/etc/vaultenv.conf`
+ - `$HOME/.config/vaultenv/vaultenv.conf`
+ - `$CWD/.env`
+ - environment variables
+ - command line options
+
 This is useful on development machines. It allows you to:
 
  - Set global connection options on a per-machine basis. Useful if you run a
@@ -244,8 +265,54 @@ This is useful on development machines. It allows you to:
  - Set per-user tokens.
  - Set per-project secrets files.
 
-All while running Vaultenv without any CLI args.
+This means that any command line option that is present would overwrite any other configuration.
+If an option is not specified, the default is used. The defaults are as follows:
+```
+VAULT_HOST:                 localhost
+VAULT_PORT:                 8200
+VAULT_ADDR:                 https://localhost:8200
+VAULT_TOKEN:                Unspecified
+VAULTENV_SECRETS_FILE:      Unspecified
+CMD:                        Unspecified
+ARGS:                       []
+VAULTENV_CONNECT_TLS:       True
+VAULTENV_VALIDATE_CERTS:    True
+VAULTENV_INHERIT_ENV:       True
+VAULTENV_RETRY_BASE_DELAY:  40
+VAULTENV_RETRY_ATTEMPTS:    9
+VAULTENV_LOG_LEVEL:         Error
+VAULTENV_USE_PATH:          True
+```
+In cases where no default nor any value is specified, which is possible for `Token`, `Secret file` and
+`Command`, Vaultenv will give an error that it requires these values to operate.
 
+#### Connection options
+
+Vaultenv also supports the `VAULT_ADDR` configuration. In such a case, without specifying separate
+parameters for host, port and whether to use TLS or not, one can specify these values in a single value.
+The address always starts with either `http://` or `https://`, followed by a either a DNS name
+or an ip-address. The port is specified at the end of the address, using a `:` to separate the host
+and the port. For example: `https://example.com:42` would create a TLS enabled connection
+to the host `example.com` on port `42`.
+
+Other errors can happen with the address configuration. There are two ways of specifying
+what the connection options are, either via the address of via a combination of
+the port, the host and whether to use TLS. As there are two ways of specifying this,
+it is also possible for these values to conflict. Consider the situation where
+`VAULT_ADDR` is `http://example.com:8200` and `VAULT_PORT` is set to `42`. There
+are two ways Vaultenv can resolve this. In the case of the address and the port
+being specified in the same configuration, like the same file or both as command
+line options, Vaultenv will not choose either way and will report an error.
+
+In the case they are specified in different configuration levels, like the address in a file
+and the port in the command line options, the higher precedence (as defined
+[above](#Different-levels-of-configuration)) is used for that specific value.
+In this case, this would result in a host of `example.com`, no usage of TLS,
+due to the `http://` scheme, and a port of `42`.
+
+Other errors than the mismatch address error that can happen during parsing are:
+- A non-numeric port in the address, like `http://localhost:my_port`
+- A non-supported scheme in the address, like `ftp://example.com:42`
 ## Allowed characters in environment variables
 
 We disallow the following in any path to keep the parser and format simple and

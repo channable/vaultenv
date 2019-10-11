@@ -361,7 +361,7 @@ If you want a static binary, you can install [Nix](https://nixos.org/nix/) and
 run:
 
 ```
-$ $(nix-build --no-link -A full-build-script)
+$ $(nix-build --no-link -A full-build-script nix/vaultenv-static.nix)
 ```
 
 That will build vaultenv (and a bunch of dependencies). The final line of the

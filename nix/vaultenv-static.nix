@@ -4,7 +4,7 @@
 #
 # Run using:
 #
-#     $(nix-build --no-link -A full-build-script)
+#     $(nix-build --no-link -A full-build-script nix/vaultenv-static.nix)
 #
 # The invocation above will build a buildscript and then run it.
 # (The output of `nix-build --no-link -A full-build-script` is a
@@ -35,18 +35,16 @@ let
   # GHC it uses.
   compiler = "ghc865";
 
-  # Pin static-haskell-nix version.
-  static-haskell-nix = fetchTarball https://github.com/nh2/static-haskell-nix/archive/ff7715e0e13fb3f615e64a8d8c2e43faa4429b0f.tar.gz;
-
-  # Pin the version of nixpkgs to the one from `static-haskell-nix`.
-  pkgs = import "${static-haskell-nix}/nixpkgs.nix";
+  # Pin versions of static-haskell-nix and nixpkgs.
+  static-haskell-nix = import ./static-haskell-nix.nix;
+  pkgs = import ./nixpkgs.nix;
 
   # Generate a stack2nix script which will download a Stackage + Hackage
   # snapshot and convert it to Nix derivations for use in our final build
   # script.
   stack2nix-script = import "${static-haskell-nix}/static-stack2nix-builder/stack2nix-script.nix" {
     inherit pkgs;
-    stack-project-dir = toString ./.;
+    stack-project-dir = toString ../.;
     # Also pin the Hackage snapshot to a certain time for extra-deps without
     # hashes or revisions. Vaultenv doesn't have any, but it's there if it
     # ever turns out we need it.
@@ -68,7 +66,7 @@ let
     set -eu -o pipefail
     STACK2NIX_OUTPUT_PATH=$(${stack2nix-script})
     export NIX_PATH=nixpkgs=${pkgs.path}
-    ${pkgs.nix}/bin/nix-build --no-link -A static-package --argstr stack2nix-output-path "$STACK2NIX_OUTPUT_PATH" "$@"
+    ${pkgs.nix}/bin/nix-build --no-link -A static-package --argstr stack2nix-output-path "$STACK2NIX_OUTPUT_PATH" nix/vaultenv-static.nix "$@"
   '';
 
 in

@@ -357,6 +357,17 @@ stack exec vaultenv -- --token SECRET --secrets-file foo.env /usr/bin/env
 It is possible to `stack build` with `--split-objs` to produce a smaller binary.
 To take full advantage of this, the Stackage snapshot has to be rebuilt.
 
+If you want a static binary, you can install [Nix](https://nixos.org/nix/) and
+run:
+
+```
+$ $(nix-build --no-link -A full-build-script)
+```
+
+That will build vaultenv (and a bunch of dependencies). The final line of the
+output should be a path in `/nix/store` which contains the final vaultenv
+binary.
+
 ## Future work
 
  - Support DNS `SRV` record lookups, so users only need to specify the host

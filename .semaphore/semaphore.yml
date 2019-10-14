@@ -26,6 +26,7 @@ blocks:
             # everything can run through the Nix kmanaged environment as long
             # as the commands are prefixed with `nix run -c`.
             - "./nix/install-nix.sh"
+            - "source $HOME/.nix-profile/etc/profile.d/nix.sh"
 
             # Use our own public Cachix cache. Everyone can see/download stuff
             # from here. Take care with what you upload.

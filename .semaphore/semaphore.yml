@@ -30,6 +30,7 @@ blocks:
 
             # Use our own public Cachix cache. Everyone can see/download stuff
             # from here. Take care with what you upload.
+            - "nix run -c cachix use static-haskell-nix"
             - "nix run -c cachix use channable-public"
 
             # Build the static binary. Upload the results to the cache. See

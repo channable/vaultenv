@@ -28,6 +28,8 @@
   stack2nix-output-path ? "custom-stack2nix-output.nix",
 }:
 let
+  # Field from the hpack/cabal file. We append `-real` to work around
+  # vaultenv also being included in `nixpgks`, which leads to conflicts.
   cabal-package-name = "vaultenv-real";
 
   # This has to match the compiler used in the Stackage snapshot.
@@ -51,6 +53,16 @@ let
     hackageSnapshot = "2019-10-08T00:00:00Z";
   };
 
+  # `full-build-script` will eventually build the `static_package` attribute of
+  # this set. Note `nix-build -A static-package` in `full-build-script` and
+  # `static-package` in the `in` of this module.
+  #
+  # The `static_package` attribute boils down to `haskellPackages.vaultenv-real`
+  # with modifications to get static builds to work. `haskellPackages` is
+  # Nixpkgs' infrastructure for Haskell applications and libraries.
+  #
+  # Take a look at `survey/default.nix` in the `static-haskell-nix` repository
+  # if you want to know what patches have been applied to `haskellPackages`.
   static-stack2nix-builder = import "${static-haskell-nix}/static-stack2nix-builder/default.nix" {
     normalPkgs = pkgs;
     integer-simple = true;

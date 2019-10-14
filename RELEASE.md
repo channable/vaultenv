@@ -1,6 +1,6 @@
 # How to release `vaultenv`
 
- 1. Build `vautlenv` with `stack`. Run the tests.
+ 1. Build `vaultenv` with `stack`. Run the tests.
  1. Increment the `version` field in `package.yaml`
  1. Create a git commit
  1. Tag: `git tag -a v<VERSION>`. Write a changelog.

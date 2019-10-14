@@ -1,4 +1,4 @@
-# Changed the name here because nixpkgs also incldues a vaultenv and we haven't
+# Changed the name here because nixpkgs also includes a vaultenv and we haven't
 # figured out how to mask that when we build vaultenv with nix itself.
 name: vaultenv-real
 version: 0.10.0

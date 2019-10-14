@@ -2,6 +2,11 @@
 version: "v1.0"
 name: "Semaphore pipeline for Sharkmachine"
 
+agent:
+  machine:
+    type: "e1-standard-8"
+    os_image: "ubuntu1804"
+
 blocks:
   - name: "linux: build and test"
     dependencies: []

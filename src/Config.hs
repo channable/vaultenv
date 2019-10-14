@@ -30,7 +30,10 @@ import Data.Either (lefts, rights, isLeft)
 import Data.Version (showVersion)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
                             str, argument, many)
-import Paths_vaultenv (version) -- Magic to get the version field from cabal.
+-- Cabal generates the @Paths_vaultenv_real@ module, which contains a @version@
+-- binding with the value out of the Cabal file. This feature is documented at:
+-- https://www.haskell.org/cabal/users-guide/developing-packages.html#accessing-data-files-from-package-code
+import Paths_vaultenv_real (version)
 import System.IO.Error (catchIOError)
 import System.Exit (die)
 

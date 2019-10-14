@@ -357,6 +357,34 @@ stack exec vaultenv -- --token SECRET --secrets-file foo.env /usr/bin/env
 It is possible to `stack build` with `--split-objs` to produce a smaller binary.
 To take full advantage of this, the Stackage snapshot has to be rebuilt.
 
+If you want a fully static executable without a runtime dependency on `libc`
+and run GNU/Linux, you can install [Nix](https://nixos.org/nix/) and run:
+
+```
+$ $(nix-build --no-link -A full-build-script nix/vaultenv-static.nix)
+```
+
+This has not been tested on any other platform.
+
+That will build vaultenv (and a bunch of dependencies). The final line of the
+output should be a path in `/nix/store` which contains the final vaultenv
+binary.
+
+## Development
+
+If you want a convenient way to gather the development dependencies of
+`vaultenv`, you can use `nix`.
+
+The repository contains a `default.nix` which will get you `stack` and `vault`.
+You can then use this to get a shell with the tools in scope to work on and
+test `vaultenv`.
+
+Get this shell with:
+
+```
+$ nix run
+```
+
 ## Future work
 
  - Support DNS `SRV` record lookups, so users only need to specify the host

@@ -2,7 +2,7 @@
 
 set -eufo pipefail
 
-echo "1..6"
+echo "1..7"
 
 if [ $VAULT_TOKEN = "integration" ]; then
   echo "ok 1 - vault token set"
@@ -37,3 +37,10 @@ test_env_contents 4 "TEST__TEST" "testing42" ${VAULT_SEEDS}
 test_env_contents 5 "_TEST__TEST" "testing42" ${VAULT_SEEDS}
 
 test_env_contents 6 "SECRET_TESTING_KEY" "testing42" ${VAULT_SEEDS_V2}
+
+# Also test the happy path with `--vault-addr`
+export VAULT_ADDR="http://${VAULT_HOST}:${VAULT_PORT}"
+stack exec -- vaultenv \
+  --secrets-file ${VAULT_SEEDS} \
+  -- \
+  echo "ok 7 - Happy path from VAULT_ADDR"

@@ -37,7 +37,7 @@ blocks:
             # and what the script does. The `| cachix upload` ensures that
             # we upload all new artifacts to our Cachix cache after we're
             # done.
-            - "$(nix-build --no-link -A full-build-script nix/vaultenv-static.nix) | cachix push channable-public"
+            - "$(nix-build --no-link -A full-build-script nix/vaultenv-static.nix) | nix run -c cachix push channable-public"
 
       agent:
         machine:

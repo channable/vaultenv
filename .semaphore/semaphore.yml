@@ -7,6 +7,10 @@ blocks:
     dependencies: []
 
     task:
+      secrets:
+        # Contains CACHIX_SIGNING_KEY, which we need to upload new cache
+        # entries to Cachix, the Nix cache as a service.
+        - name: "cachix-channable-public"
       jobs:
         - name: "linux: build and test"
           commands:
@@ -27,7 +31,7 @@ blocks:
             # and what the script does. The `| cachix upload` ensures that
             # we upload all new artifacts to our Cachix cache after we're
             # done.
-            - "$(nix-build --no-link -A full-build-script nix/vaultenv-static.nix)"
+            - "$(nix-build --no-link -A full-build-script nix/vaultenv-static.nix) | cachix push channable-public"
 
       agent:
         machine:

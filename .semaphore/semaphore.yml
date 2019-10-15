@@ -33,6 +33,11 @@ blocks:
             - "nix run -c cachix use static-haskell-nix"
             - "nix run -c cachix use channable-public"
 
+            # TODO: Find out a way to background this so we upload  *all* Nix
+            # builds to the cachix store instead of just the vaultenv closure.
+            # (Otherwise we rebuild Cabal and build tools on every CI run).
+            # - "nix run -c cachix push -w channable-public
+
             # Build the static binary. Upload the results to the cache. See
             # `nix/vaultenv-static.nix` for documentation on this invocation
             # and what the script does. The `| cachix upload` ensures that

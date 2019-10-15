@@ -73,6 +73,10 @@ let
   # This build script invokes `nix-build` on this same file using nix build
   # from a pinned version of nixpkgs. It will build the `static_package`
   # attribute that we define in the set below.
+  #
+  # TODO: Run stack2nix separately and cache the results of that step
+  #  in the repository (only for the dependencies we care about). It's
+  #  wasteful do to this with every build.
   full-build-script = pkgs.writeScript "stack2nix-and-build-script.sh" ''
     #!/usr/bin/env bash
     set -eu -o pipefail

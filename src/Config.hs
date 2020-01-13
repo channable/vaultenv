@@ -584,7 +584,7 @@ optionsParser = Options
       <> value Nothing
       <> help ("Comma-separated list of environment variable names to remove from " ++
                "the environment before executing CMD. Also configurable via " ++
-               "VAULTENV_INHERIT_ENV_BLACKLIST.")
+               "VAULTENV_INHERIT_ENV_BLACKLIST. Has no effect if no-inherit-env is set!")
 
     baseDelayMs
       =  fmap MilliSeconds <$> option (Just <$> auto)

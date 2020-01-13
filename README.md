@@ -99,12 +99,13 @@ of `tutorial.sh`.
 ## Usage
 
 ```
-vaultenv - run programs with secrets from HashiCorp Vault
+vaultenv 0.11.0 - run programs with secrets from HashiCorp Vault
 
 Usage: vaultenv [--version] [--host HOST] [--port PORT] [--addr ADDR]
                 [--token TOKEN] [--secrets-file FILENAME] [CMD] [ARGS...]
                 ([--no-connect-tls] | [--connect-tls]) ([--no-validate-certs] |
                 [--validate-certs]) ([--no-inherit-env] | [--inherit-env])
+                [--inherit-env-blacklist COMMA_SEPARATED_NAMES]
                 [--retry-base-delay-milliseconds MILLISECONDS]
                 [--retry-attempts NUM] [--log-level error | info] [--use-path]
 
@@ -142,6 +143,11 @@ Available options:
   --inherit-env            Always merge the parent environment with the secrets
                            file. Default: merge environments. Can be used to
                            override VAULTENV_INHERIT_ENV.
+  --inherit-env-blacklist COMMA_SEPARATED_NAMES
+                           Comma-separated list of environment variable names to
+                           remove from the environment before executing CMD.
+                           Also configurable via VAULTENV_INHERIT_ENV_BLACKLIST.
+                           Has no effect if no-inherit-env is set!
   --retry-base-delay-milliseconds MILLISECONDS
                            Base delay for vault connection retrying. Defaults to
                            40ms. Also configurable via
@@ -155,7 +161,6 @@ Available options:
   --use-path               Use PATH for finding the executable that vaultenv
                            should call. Default: don't search PATH. Also
                            configurable via VAULTENV_USE_PATH.
-
 ```
 
 ## Configuration
@@ -268,20 +273,21 @@ This is useful on development machines. It allows you to:
 This means that any command line option that is present would overwrite any other configuration.
 If an option is not specified, the default is used. The defaults are as follows:
 ```
-VAULT_HOST:                 localhost
-VAULT_PORT:                 8200
-VAULT_ADDR:                 https://localhost:8200
-VAULT_TOKEN:                Unspecified
-VAULTENV_SECRETS_FILE:      Unspecified
-CMD:                        Unspecified
-ARGS:                       []
-VAULTENV_CONNECT_TLS:       True
-VAULTENV_VALIDATE_CERTS:    True
-VAULTENV_INHERIT_ENV:       True
-VAULTENV_RETRY_BASE_DELAY:  40
-VAULTENV_RETRY_ATTEMPTS:    9
-VAULTENV_LOG_LEVEL:         Error
-VAULTENV_USE_PATH:          True
+VAULT_HOST:                     localhost
+VAULT_PORT:                     8200
+VAULT_ADDR:                     https://localhost:8200
+VAULT_TOKEN:                    Unspecified
+VAULTENV_SECRETS_FILE:          Unspecified
+CMD:                            Unspecified
+ARGS:                           []
+VAULTENV_CONNECT_TLS:           True
+VAULTENV_VALIDATE_CERTS:        True
+VAULTENV_INHERIT_ENV:           True
+VAULTENV_INHERIT_ENV_BLACKLIST: []
+VAULTENV_RETRY_BASE_DELAY:      40
+VAULTENV_RETRY_ATTEMPTS:        9
+VAULTENV_LOG_LEVEL:             Error
+VAULTENV_USE_PATH:              True
 ```
 In cases where no default nor any value is specified, which is possible for `Token`, `Secret file` and
 `Command`, Vaultenv will give an error that it requires these values to operate.

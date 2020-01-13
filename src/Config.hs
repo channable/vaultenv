@@ -338,7 +338,7 @@ instance Read LogLevel where
 -- | Parse program options from the command line and the process environment.
 parseOptions :: [EnvVar] -> [[EnvVar]] -> IO (Options Validated Completed)
 parseOptions localEnvVars envFileSettings =
-  let eLocalEnvFlagsOptions = validateCopyAddr "local environemnt variables" $ parseEnvOptions localEnvVars
+  let eLocalEnvFlagsOptions = validateCopyAddr "local environment variables" $ parseEnvOptions localEnvVars
       eEnvFileSettingsOptions = map (validateCopyAddr "environment file" . parseEnvOptions) envFileSettings
   in do
     eParseResult <- validateCopyAddr "cli options" <$> OptParse.execParser parserCliOptions

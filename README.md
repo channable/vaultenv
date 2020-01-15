@@ -376,6 +376,19 @@ That will build vaultenv (and a bunch of dependencies). The final line of the
 output should be a path in `/nix/store` which contains the final vaultenv
 binary.
 
+It is possible to speed up the compilation process by copying some dependencies
+from a Nix cache, to not have to recompile all of Haskell and its dependencies.
+To set up the cache, execute these commands once before building:
+
+```console
+$ nix run -c cachix use static-haskell-nix
+$ nix run -c cachix use channable-public
+```
+
+Note that the build process via Nix is not (yet) reproducible, which means that
+different builds of the same source code may result in different Nix derivation
+hashes.
+
 ## Development
 
 If you want a convenient way to gather the development dependencies of

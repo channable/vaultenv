@@ -1,6 +1,7 @@
 # Build output
 /.stack-work
 *.deb
+/package/vaultenv-*-linux-musl
 
 # auto-generated files
 *.cabal

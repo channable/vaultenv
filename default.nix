@@ -6,6 +6,7 @@ in
     paths = [
       pkgs.stack
       pkgs.vault
+	  pkgs.cachix
     ];
   }
 

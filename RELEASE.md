@@ -5,7 +5,9 @@
  1. Create a git commit
  1. Tag: `git tag -a v<VERSION>`. Write a changelog.
  1. `git push origin master --tags`
- 1. Build a static version of `vaultenv` by following the instructions in
-    `default.nix`.
+ 1. `cd package`
+ 1. Build the static version of `vaultenv` and the Debian package by running
+    `./build_package.sh`.
  1. Go to https://github.com/channable/vaultenv/releases
- 1. Click "Draft a new release". Add a binary from the Nix output.
+ 1. Click "Draft a new release". Add the binary from the Nix output and the
+    .deb package.

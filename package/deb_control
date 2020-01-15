@@ -1,0 +1,6 @@
+Package: vaultenv
+Version: ${VERSION}
+Priority: optional
+Architecture: amd64
+Maintainer: Laurens Duijvesteijn <laurens@channable.com>
+Description: Run processes with secrets from HashiCorp Vault

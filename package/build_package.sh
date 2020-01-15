@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# This script builds a .deb package from the binaries in the .stack-work
-# directory.
+# This script builds a .deb package from the static binary build by Nix.
 #
 #   Usage: ./scripts/build_package.sh
 
@@ -24,10 +23,12 @@ mkdir -p "$PKGNAME/DEBIAN"
 mkdir -p "$PKGNAME/usr/bin"
 mkdir -p "$PKGNAME/etc/secrets.d"
 
-stack build
-stack install
-cp "$(stack path --local-install-root)/bin/vaultenv" "$PKGNAME/usr/bin/"
-cp "$(stack path --local-install-root)/bin/vaultenv" vaultenv-${VERSION}_x86_64-ubuntu-linux
+cd ..
+VAULTENV_NIX_PATH=$($(nix-build --no-link -A full-build-script nix/vaultenv-static.nix) | tail -n1)
+cd -
+
+cp "${VAULTENV_NIX_PATH}/bin/vaultenv" "$PKGNAME/usr/bin/"
+cp "${VAULTENV_NIX_PATH}/bin/vaultenv" "vaultenv-${VERSION}-linux-musl"
 
 # Write the package metadata file, substituting environment variables in the
 # template file.

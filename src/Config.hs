@@ -61,6 +61,7 @@ data Options validated completed = Options
   , oConnectTls      :: Maybe Bool
   , oValidateCerts   :: Maybe Bool
   , oInheritEnv      :: Maybe Bool
+  , oInheritEnvBlacklist :: Maybe [String]
   , oRetryBaseDelay  :: Maybe MilliSeconds
   , oRetryAttempts   :: Maybe Int
   , oLogLevel        :: Maybe LogLevel
@@ -97,6 +98,7 @@ defaultOptions = Options
   , oConnectTls     = Just True
   , oValidateCerts  = Just True
   , oInheritEnv     = Just True
+  , oInheritEnvBlacklist = Just []
   , oRetryBaseDelay = Just (MilliSeconds 40)
   , oRetryAttempts  = Just 9
   , oLogLevel       = Just Error
@@ -117,6 +119,7 @@ castOptions opts = Options
   , oConnectTls     = oConnectTls opts
   , oValidateCerts  = oValidateCerts opts
   , oInheritEnv     = oInheritEnv opts
+  , oInheritEnvBlacklist = oInheritEnvBlacklist opts
   , oRetryBaseDelay = oRetryBaseDelay opts
   , oRetryAttempts  = oRetryAttempts opts
   , oLogLevel       = oLogLevel opts
@@ -135,6 +138,7 @@ instance Show (Options valid complete) where
     , "Use TLS:        " ++ showSpecified (oConnectTls opts)
     , "Validate certs: " ++ showSpecified (oValidateCerts opts)
     , "Inherit env:    " ++ showSpecified (oInheritEnv opts)
+    , "Inherit env blacklist: " ++ showSpecified (oInheritEnvBlacklist opts)
     , "Base delay:     " ++ showSpecified (unMilliSeconds <$> oRetryBaseDelay opts)
     , "Retry attempts: " ++ showSpecified (oRetryAttempts opts)
     , "Log-level:      " ++ showSpecified (oLogLevel opts)
@@ -242,6 +246,7 @@ mergeOptions opts1 opts2 = let
   , oConnectTls     = combine oConnectTls
   , oValidateCerts  = combine oValidateCerts
   , oInheritEnv     = combine oInheritEnv
+  , oInheritEnvBlacklist = combine oInheritEnvBlacklist
   , oRetryBaseDelay = combine oRetryBaseDelay
   , oRetryAttempts  = combine oRetryAttempts
   , oLogLevel       = combine oLogLevel
@@ -333,7 +338,7 @@ instance Read LogLevel where
 -- | Parse program options from the command line and the process environment.
 parseOptions :: [EnvVar] -> [[EnvVar]] -> IO (Options Validated Completed)
 parseOptions localEnvVars envFileSettings =
-  let eLocalEnvFlagsOptions = validateCopyAddr "local environemnt variables" $ parseEnvOptions localEnvVars
+  let eLocalEnvFlagsOptions = validateCopyAddr "local environment variables" $ parseEnvOptions localEnvVars
       eEnvFileSettingsOptions = map (validateCopyAddr "environment file" . parseEnvOptions) envFileSettings
   in do
     eParseResult <- validateCopyAddr "cli options" <$> OptParse.execParser parserCliOptions
@@ -366,6 +371,7 @@ parseEnvOptions envVars
   , oConnectTls     = lookupEnvFlag     "VAULTENV_CONNECT_TLS"
   , oValidateCerts  = lookupEnvFlag     "VAULTENV_VALIDATE_CERTS"
   , oInheritEnv     = lookupEnvFlag     "VAULTENV_INHERIT_ENV"
+  , oInheritEnvBlacklist = lookupCommaSeparatedList "VAULTENV_INHERIT_ENV_BLACKLIST"
   , oRetryBaseDelay = MilliSeconds <$> lookupEnvInt      "VAULTENV_RETRY_BASE_DELAY"
   , oRetryAttempts  = lookupEnvInt      "VAULTENV_RETRY_ATTEMPTS"
   , oLogLevel       = lookupEnvLogLevel "VAULTENV_LOG_LEVEL"
@@ -388,6 +394,9 @@ parseEnvOptions envVars
     -- | Lookup a list of strings using ```lookupEnvString```
     lookupStringList :: String -> Maybe [String]
     lookupStringList key = words <$> lookupEnvString key
+    -- | Lookup a comma-separated list of strings using ```lookupEnvString```
+    lookupCommaSeparatedList :: String -> Maybe [String]
+    lookupCommaSeparatedList key = splitOn ',' <$> lookupEnvString key
     -- | Lookup an log level using ```lookupEnvString```
     lookupEnvLogLevel :: String -> Maybe LogLevel
     lookupEnvLogLevel key =
@@ -481,6 +490,7 @@ optionsParser = Options
     <*> (noConnectTls    <|> connectTls)
     <*> (noValidateCerts <|> validateCerts)
     <*> (noInheritEnv    <|> inheritEnv)
+    <*> inheritEnvBlacklist
     <*> baseDelayMs
     <*> retryAttempts
     <*> logLevel
@@ -563,6 +573,19 @@ optionsParser = Options
       $  long "inherit-env"
       <> help ("Always merge the parent environment with the secrets file. Default: " ++
                 "merge environments. Can be used to override VAULTENV_INHERIT_ENV.")
+
+    maybeStrList = Just . splitOn ',' <$> str
+    maybeStrListOption = option maybeStrList
+
+    inheritEnvBlacklist
+      = maybeStrListOption
+      $ long "inherit-env-blacklist"
+      <> metavar "COMMA_SEPARATED_NAMES"
+      <> value Nothing
+      <> help ("Comma-separated list of environment variable names to remove from " ++
+               "the environment before executing CMD. Also configurable via " ++
+               "VAULTENV_INHERIT_ENV_BLACKLIST. Has no effect if no-inherit-env is set!")
+
     baseDelayMs
       =  fmap MilliSeconds <$> option (Just <$> auto)
       (  long "retry-base-delay-milliseconds"
@@ -592,6 +615,18 @@ optionsParser = Options
       <> help ("Use PATH for finding the executable that vaultenv should call. Default: " ++
               "don't search PATH. Also configurable via VAULTENV_USE_PATH.")
 
+-- | Split a list of elements on the given separator, returning sublists without this
+-- separator item.
+--
+-- Example:
+--
+-- >>> splitOn ',' "somestring,anotherstring"
+-- ["somestring", "anotherstring"]
+splitOn :: (Eq a) => a -> [a] -> [[a]]
+splitOn sep x
+  = case span (/= sep) x of
+    (y, []) -> [y]
+    (y, ys) -> y : splitOn sep (tail ys)
 
 -- | Search for environment files in default locations and load them in order.
 --

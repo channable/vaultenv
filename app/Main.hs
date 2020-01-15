@@ -265,8 +265,12 @@ vaultEnv context = do
       buildEnv :: [EnvVar] -> [EnvVar]
       buildEnv secretsEnv =
         if getOptionsValue oInheritEnv . cCliOptions $ context
-        then secretsEnv ++ cLocalEnvVars context
+        then removeBlacklistedVars $ secretsEnv ++ cLocalEnvVars context
         else secretsEnv
+
+        where
+          inheritEnvBlacklist = getOptionsValue oInheritEnvBlacklist . cCliOptions $ context
+          removeBlacklistedVars = filter (not . flip elem inheritEnvBlacklist . fst)
 
 
 runCommand :: Options Validated Completed -> [EnvVar] -> IO a

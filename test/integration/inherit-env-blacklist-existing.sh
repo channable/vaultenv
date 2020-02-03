@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-echo "1..4"
+echo "1..6"
 
 TEMP_RUN_DIRECTORY=$(mktemp -d)
 vault_token_present() {
@@ -46,4 +46,32 @@ if [[ $(vault_token_present) -eq 0 ]]; then
 else
     echo "not ok 4 - VAULT_TOKEN present while blacklisted via config file"
 fi
+
+# Test that the blacklist from config can be disabled with the CLI
+vault_token_present_with_disabled_blacklist() {
+    stack exec --cwd $TEMP_RUN_DIRECTORY -- vaultenv \
+        --no-connect-tls \
+        --host ${VAULT_HOST} \
+        --port ${VAULT_PORT} \
+        --secrets-file ${VAULT_SEEDS} \
+        --inherit-env-blacklist '' \
+        "$@" \
+        /usr/bin/env | grep --count "VAULT_TOKEN=integration"
+}
+
+if [[ $(vault_token_present_with_disabled_blacklist) -eq 1 ]]; then
+    echo "ok 5 - VAULT_TOKEN present when blacklisted via config but blacklist disabled with CLI"
+else
+    echo "not ok 5 - VAULT_TOKEN absent when blacklisted via config but blacklist disabled with CLI"
+fi
+
+# Test that the blacklist from config can be disabled with the environment
+export VAULTENV_INHERIT_ENV_BLACKLIST=
+if [[ $(vault_token_present) -eq 1 ]]; then
+    echo "ok 6 - VAULT_TOKEN present when blacklisted via config but blacklist disabled with environment"
+else
+    echo "not ok 6 - VAULT_TOKEN absent when blacklisted via config but blacklist disabled with environment"
+fi
+unset VAULTENV_INHERIT_ENV_BLACKLIST
+
 rm "${TEMP_RUN_DIRECTORY}/.env"

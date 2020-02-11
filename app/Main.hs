@@ -254,7 +254,15 @@ vaultEnv context = do
       case secrets of
         Left error -> return $ Left $ SecretFileError error
         Right secrets' -> do
-          secretEnv <- requestSecrets context mountInfo' secrets'
+          -- NOTE: This retries fetching all the secrets if fetching one of the
+          -- secrets fails due to an error we should retry on. We would ideally
+          -- keep the secrets that were successfully fetched in memory and only
+          -- retry getting the ones we couldn't get yet, as this makes it less
+          -- likely to get a 'thundering herd' of Vaultenv processes all trying
+          -- and failing to get all of their secrets.
+          -- This would then need to happen in requestSecrets, but I don't want
+          -- to touch that right now.
+          secretEnv <- Retry.retrying retryPolicy isFailure (getSecrets mountInfo' secrets')
           case secretEnv of
             Left error -> return $ Left error
             Right secretEnv' -> return $ checkNoDuplicates (buildEnv secretEnv')
@@ -262,19 +270,24 @@ vaultEnv context = do
       retryPolicy = vaultRetryPolicy (cCliOptions context)
 
       getMountInfo _retryStatus = catch (requestMountInfo context) httpErrorHandler
+      getSecrets mountInfo secrets _retryStatus = catch (requestSecrets context mountInfo secrets) httpErrorHandler
 
-      -- | Indicator function for retrying to retry on VaultErrors (Lefts)
-      isFailure :: Retry.RetryStatus -> Either VaultError MountInfo -> IO Bool
-      isFailure _retryStatus x = pure $ isLeft x
+      -- | Indicator function for retrying to retry on VaultErrors (Lefts) that
+      -- shouldRetry thinks we should retry on.
+      isFailure :: Retry.RetryStatus -> Either VaultError a -> IO Bool
+      isFailure _retryStatus (Right _) = pure False
+      isFailure retryStatus (Left err) = shouldRetry retryStatus err
 
       -- | "Handle" a HttpException by wrapping it in a Left VaultError.
       -- TODO: Sanitize the contained request to not contain the Vault token.
       httpErrorHandler (e :: HttpException) = return $ Left $ ServerUnreachable e
 
       secretFile = getOptionsValue oSecretFile (cCliOptions context)
+
       checkNoDuplicates :: [EnvVar] -> Either VaultError [EnvVar]
-      checkNoDuplicates e =
-        either (throwError . DuplicateVar) (return . const e) $ dups (map fst e)
+      checkNoDuplicates vars = case dups (map fst vars) of
+        Right () -> Right vars
+        Left var -> Left $ DuplicateVar var
 
       -- We need to check duplicates in the environment and fail if
       -- there are any. `dups` runs in O(n^2),
@@ -396,7 +409,7 @@ retryingExceptT policy predicate action =
 
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in
--- order to avoid unnecessary round trips and DNS requets.
+-- order to avoid unnecessary round trips and DNS requests.
 requestSecrets :: Context -> MountInfo -> [Secret] -> IO (Either VaultError [EnvVar])
 requestSecrets context mountInfo secrets = do
   let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap (secretRequestPath mountInfo) secrets

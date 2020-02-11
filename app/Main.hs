@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import Control.Applicative    ((<|>))
+import Control.Exception      (Exception, throw)
 import Control.Monad          (forM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
@@ -171,6 +172,9 @@ data VaultError
   | InvalidUrl String
   | DuplicateVar String
   | Unspecified Int LBS.ByteString
+  deriving Show
+
+instance Exception VaultError
 
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
@@ -208,9 +212,11 @@ main = do
                         , cHttpManager = httpManager
                         }
 
-  runExceptT (vaultEnv context) >>= \case
-    Left err -> Exit.die (vaultErrorLogMessage err)
-    Right newEnv -> runCommand cliAndEnvAndEnvFileOptions newEnv
+  envVars <- vaultEnv context
+  print envVars
+  --case envVars of
+    --Left err -> Exit.die (vaultErrorLogMessage err)
+    --Right newEnv -> runCommand cliAndEnvAndEnvFileOptions newEnv
 
 
 -- | This function returns either a manager for plain HTTP or
@@ -237,9 +243,11 @@ getHttpManager opts = newManager managerSettings
 --
 -- Signals failure through a value of type VaultError, but can also
 -- throw HTTP exceptions.
-vaultEnv :: Context -> ExceptT VaultError IO [EnvVar]
+vaultEnv :: Context -> IO [EnvVar]
 vaultEnv context = do
   mountInfo <- requestMountInfo context
+  return []
+  {-
   secrets <- mapExceptT (fmap $ first SecretFileError) $ readSecretList secretFile
   secretEnv <- requestSecrets context mountInfo secrets
   checkNoDuplicates (buildEnv secretEnv)
@@ -271,6 +279,7 @@ vaultEnv context = do
         where
           inheritEnvBlacklist = getOptionsValue oInheritEnvBlacklist . cCliOptions $ context
           removeBlacklistedVars = filter (not . flip elem inheritEnvBlacklist . fst)
+          -}
 
 
 runCommand :: Options Validated Completed -> [EnvVar] -> IO a
@@ -286,7 +295,7 @@ runCommand options env =
     executeFile command searchPath args env'
 
 -- | Look up what mounts are available and what type they have.
-requestMountInfo :: Context -> ExceptT VaultError IO MountInfo
+requestMountInfo :: Context -> IO MountInfo
 requestMountInfo context =
   let
     cliOptions = cCliOptions context
@@ -305,8 +314,10 @@ requestMountInfo context =
               (getOptionsValue  oConnectTls cliOptions)
         $ defaultRequest
   in do
-    resp <- withExceptT ServerUnreachable (httpLBS request)
-    withExceptT BadJSONResp (liftEither $ Aeson.eitherDecode' (getResponseBody resp))
+    resp <- httpLBS request
+    case Aeson.eitherDecode' (getResponseBody resp) of
+      Left error -> throw $ BadJSONResp error
+      Right result -> return result
 
 -- | Request all the data associated with a secret from the vault.
 requestSecret :: Context -> String -> ExceptT VaultError IO VaultData
@@ -323,33 +334,31 @@ requestSecret context secretPath =
         $ setRequestSecure  (getOptionsValue oConnectTls cliOptions)
         $ defaultRequest
 
-    -- Only retry on connection related failures
-    shouldRetry :: Applicative f => Retry.RetryStatus -> VaultError -> f Bool
-    --shouldRetry _retryStatus _ =I--
-    shouldRetry _retryStatus res = pure $ case res of
-      ServerError _ -> True
-      ServerUnavailable _ -> True
-      ServerUnreachable _ -> True
-      Unspecified _ _ -> True
-      BadJSONResp _ -> True
-
-      -- Errors where we don't retry
-      BadRequest _ -> False
-      Forbidden -> False
-      InvalidUrl _ -> False
-      SecretNotFound _ -> False
-
-
-      -- Errors that cannot occur at this point, but we list for
-      -- exhaustiveness checking.
-      KeyNotFound _ -> False
-      DuplicateVar _ -> False
-      SecretFileError _ -> False
-
     retryAction :: Retry.RetryStatus -> ExceptT VaultError IO VaultData
     retryAction _retryStatus = doRequest secretPath request
   in
     retryingExceptT (vaultRetryPolicy cliOptions) shouldRetry retryAction
+
+-- | Determine whether to retry
+shouldRetry :: Applicative f => Retry.RetryStatus -> VaultError -> f Bool
+shouldRetry _retryStatus res = pure $ case res of
+  ServerError _ -> True
+  ServerUnavailable _ -> True
+  ServerUnreachable _ -> True
+  Unspecified _ _ -> True
+  BadJSONResp _ -> True
+
+  -- Errors where we don't retry
+  BadRequest _ -> False
+  Forbidden -> False
+  InvalidUrl _ -> False
+  SecretNotFound _ -> False
+
+  -- Errors that cannot occur at this point, but we list for
+  -- exhaustiveness checking.
+  KeyNotFound _ -> False
+  DuplicateVar _ -> False
+  SecretFileError _ -> False
 
 -- |
 -- Like 'Retry.retrying', but using 'ExceptT' instead of return values. The

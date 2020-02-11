@@ -252,7 +252,7 @@ vaultEnv context = do
     Right mountInfo' -> do
       secrets <- readSecretsFile secretFile
       case secrets of
-        Left error -> throw error
+        Left error -> return $ Left $ SecretFileError error
         Right secrets' -> do
           secretEnv <- requestSecrets context mountInfo' secrets'
           case secretEnv of

@@ -1,14 +1,16 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 import Control.Applicative    ((<|>))
-import Control.Exception      (Exception, throw)
+import Control.Exception      (Exception, throw, catch)
 import Control.Monad          (forM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
 import Data.Aeson.Types       (parseMaybe)
 import Data.Bifunctor         (first)
+import Data.Either            (isLeft)
 import Data.HashMap.Strict    (HashMap, lookupDefault, mapMaybe)
 import Data.List              (nubBy)
 import Data.Monoid            ((<>))
@@ -244,16 +246,31 @@ getHttpManager opts = newManager managerSettings
 -- throw HTTP exceptions.
 vaultEnv :: Context -> IO (Either VaultError [EnvVar])
 vaultEnv context = do
-  mountInfo <- requestMountInfo context
-  secrets <- readSecretsFile secretFile
-  case secrets of
-    Left error -> throw error
-    Right secrets' -> do
-      secretEnv <- requestSecrets context mountInfo secrets'
-      case secretEnv of
+  mountInfo <- Retry.retrying retryPolicy isFailure getMountInfo
+  case mountInfo of
+    Left error -> return $ Left error
+    Right mountInfo' -> do
+      secrets <- readSecretsFile secretFile
+      case secrets of
         Left error -> throw error
-        Right secretEnv' -> return $ checkNoDuplicates (buildEnv secretEnv')
+        Right secrets' -> do
+          secretEnv <- requestSecrets context mountInfo' secrets'
+          case secretEnv of
+            Left error -> return $ Left error
+            Right secretEnv' -> return $ checkNoDuplicates (buildEnv secretEnv')
     where
+      retryPolicy = vaultRetryPolicy (cCliOptions context)
+
+      getMountInfo _retryStatus = catch (requestMountInfo context) httpErrorHandler
+
+      -- | Indicator function for retrying to retry on VaultErrors (Lefts)
+      isFailure :: Retry.RetryStatus -> Either VaultError MountInfo -> IO Bool
+      isFailure _retryStatus x = pure $ isLeft x
+
+      -- | "Handle" a HttpException by wrapping it in a Left VaultError.
+      -- TODO: Sanitize the contained request to not contain the Vault token.
+      httpErrorHandler (e :: HttpException) = return $ Left $ ServerUnreachable e
+
       secretFile = getOptionsValue oSecretFile (cCliOptions context)
       checkNoDuplicates :: [EnvVar] -> Either VaultError [EnvVar]
       checkNoDuplicates e =
@@ -296,7 +313,7 @@ runCommand options env =
     executeFile command searchPath args env'
 
 -- | Look up what mounts are available and what type they have.
-requestMountInfo :: Context -> IO MountInfo
+requestMountInfo :: Context -> IO (Either VaultError MountInfo)
 requestMountInfo context =
   let
     cliOptions = cCliOptions context
@@ -316,9 +333,11 @@ requestMountInfo context =
         $ defaultRequest
   in do
     resp <- httpLBS request
-    case Aeson.eitherDecode' (getResponseBody resp) of
-      Left error -> throw $ BadJSONResp error
-      Right result -> return result
+    let decodeResult = Aeson.eitherDecode' (getResponseBody resp) :: Either String MountInfo
+
+    case decodeResult of
+      Left error -> return $ Left $ BadJSONResp error
+      Right result -> return $ Right result
 
 -- | Request all the data associated with a secret from the vault.
 requestSecret :: Context -> String -> IO (Either VaultError VaultData)

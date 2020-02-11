@@ -39,7 +39,7 @@ import qualified System.Exit                as Exit
 import Config (Options(..), parseOptions, unMilliSeconds,
                LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
                Validated, Completed)
-import SecretsFile (Secret(..), SFError(..), readSecretList)
+import SecretsFile (Secret(..), SFError(..), readSecretList, readSecretsFile)
 
 -- | Make a HTTP URL path from a secret. This is the path that Vault expects.
 secretRequestPath :: MountInfo -> Secret -> String
@@ -213,10 +213,9 @@ main = do
                         }
 
   envVars <- vaultEnv context
-  print envVars
-  --case envVars of
-    --Left err -> Exit.die (vaultErrorLogMessage err)
-    --Right newEnv -> runCommand cliAndEnvAndEnvFileOptions newEnv
+  case envVars of
+    Left err -> Exit.die (vaultErrorLogMessage err)
+    Right newEnv -> runCommand cliAndEnvAndEnvFileOptions newEnv
 
 
 -- | This function returns either a manager for plain HTTP or
@@ -243,17 +242,20 @@ getHttpManager opts = newManager managerSettings
 --
 -- Signals failure through a value of type VaultError, but can also
 -- throw HTTP exceptions.
-vaultEnv :: Context -> IO [EnvVar]
+vaultEnv :: Context -> IO (Either VaultError [EnvVar])
 vaultEnv context = do
   mountInfo <- requestMountInfo context
-  return []
-  {-
-  secrets <- mapExceptT (fmap $ first SecretFileError) $ readSecretList secretFile
-  secretEnv <- requestSecrets context mountInfo secrets
-  checkNoDuplicates (buildEnv secretEnv)
+  secrets <- readSecretsFile secretFile
+  case secrets of
+    Left error -> throw error
+    Right secrets' -> do
+      secretEnv <- requestSecrets context mountInfo secrets'
+      case secretEnv of
+        Left error -> throw error
+        Right secretEnv' -> return $ checkNoDuplicates (buildEnv secretEnv')
     where
       secretFile = getOptionsValue oSecretFile (cCliOptions context)
-      checkNoDuplicates :: MonadError VaultError m => [EnvVar] -> m [EnvVar]
+      checkNoDuplicates :: [EnvVar] -> Either VaultError [EnvVar]
       checkNoDuplicates e =
         either (throwError . DuplicateVar) (return . const e) $ dups (map fst e)
 
@@ -279,7 +281,6 @@ vaultEnv context = do
         where
           inheritEnvBlacklist = getOptionsValue oInheritEnvBlacklist . cCliOptions $ context
           removeBlacklistedVars = filter (not . flip elem inheritEnvBlacklist . fst)
-          -}
 
 
 runCommand :: Options Validated Completed -> [EnvVar] -> IO a
@@ -320,7 +321,7 @@ requestMountInfo context =
       Right result -> return result
 
 -- | Request all the data associated with a secret from the vault.
-requestSecret :: Context -> String -> ExceptT VaultError IO VaultData
+requestSecret :: Context -> String -> IO (Either VaultError VaultData)
 requestSecret context secretPath =
   let
     cliOptions = cCliOptions context
@@ -334,10 +335,8 @@ requestSecret context secretPath =
         $ setRequestSecure  (getOptionsValue oConnectTls cliOptions)
         $ defaultRequest
 
-    retryAction :: Retry.RetryStatus -> ExceptT VaultError IO VaultData
-    retryAction _retryStatus = doRequest secretPath request
   in
-    retryingExceptT (vaultRetryPolicy cliOptions) shouldRetry retryAction
+    doRequest secretPath request
 
 -- | Determine whether to retry
 shouldRetry :: Applicative f => Retry.RetryStatus -> VaultError -> f Bool
@@ -379,11 +378,11 @@ retryingExceptT policy predicate action =
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in
 -- order to avoid unnecessary round trips and DNS requets.
-requestSecrets :: Context -> MountInfo -> [Secret] -> ExceptT VaultError IO [EnvVar]
+requestSecrets :: Context -> MountInfo -> [Secret] -> IO (Either VaultError [EnvVar])
 requestSecrets context mountInfo secrets = do
   let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap (secretRequestPath mountInfo) secrets
-  secretData <- liftIO (Async.mapConcurrently (runExceptT . (requestSecret context)) secretPaths)
-  either throwError return $ sequence secretData >>= lookupSecrets mountInfo secrets
+  secretData <- liftIO (Async.mapConcurrently (requestSecret context) secretPaths)
+  return $ sequence secretData >>= lookupSecrets mountInfo secrets
 
 -- | Look for the requested keys in the secret data that has been previously fetched.
 lookupSecrets :: MountInfo -> [Secret] -> Map.Map String VaultData -> Either VaultError [EnvVar]
@@ -394,20 +393,16 @@ lookupSecrets mountInfo secrets vaultData = forM secrets $ \secret ->
   in maybe (Left $ KeyNotFound secret) (Right . toEnvVar) $ secretValue
 
 -- | Send a request for secrets to the vault and parse the response.
-doRequest :: String -> Request -> ExceptT VaultError IO VaultData
+doRequest :: String -> Request -> IO (Either VaultError VaultData)
 doRequest secretPath request = do
-  resp <- withExceptT exToErr (httpLBS request)
-  parseResponse secretPath resp
-  where
-    exToErr :: HttpException -> VaultError
-    exToErr e@(HttpExceptionRequest _ _) = ServerUnreachable e
-    exToErr (InvalidUrlException _ _) = InvalidUrl secretPath
+  resp <- httpLBS request
+  return $ parseResponse secretPath resp
 
 --
 -- HTTP response handling
 --
 
-parseResponse :: (Monad m) => String -> Response LBS.ByteString -> ExceptT VaultError m VaultData
+parseResponse :: String -> Response LBS.ByteString -> Either VaultError VaultData
 parseResponse secretPath response =
   let
     responseBody = getResponseBody response

@@ -22,7 +22,7 @@ If you are user, please see the README for more information.
 module SecretsFile where
 
 import Control.Applicative.Combinators (some, option, optional)
-import Control.Exception (Exception, try, displayException)
+import Control.Exception (try, displayException)
 import Data.Char (toUpper, isSpace, isControl)
 import Data.Functor (void)
 import Data.List (intercalate)
@@ -55,8 +55,6 @@ instance Show SFError where
   show sfErr = case sfErr of
     IOErr ioErr -> displayException ioErr
     ParseErr pe -> MP.errorBundlePretty pe
-
-instance Exception SFError
 
 -- | Read a list of secrets from a file
 readSecretsFile :: FilePath -> IO (Either SFError [Secret])

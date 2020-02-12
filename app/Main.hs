@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import Control.Applicative    ((<|>))
-import Control.Exception      (Exception, catch)
+import Control.Exception      (catch)
 import Control.Monad          (forM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
@@ -172,8 +172,6 @@ data VaultError
   | DuplicateVar String
   | Unspecified Int LBS.ByteString
   deriving Show
-
-instance Exception VaultError
 
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy

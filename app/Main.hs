@@ -241,7 +241,7 @@ getHttpManager opts = newManager managerSettings
 -- throw HTTP exceptions.
 vaultEnv :: Context -> IO (Either VaultError [EnvVar])
 vaultEnv context = do
-  mountInfo <- Retry.retrying retryPolicy isFailure getMountInfo
+  mountInfo <- doWithRetries getMountInfo
   case mountInfo of
     Left vaultError -> return $ Left vaultError
     Right mountInfo' -> do
@@ -257,21 +257,25 @@ vaultEnv context = do
           -- and failing to get all of their secrets.
           -- This would then need to happen in requestSecrets, but I don't want
           -- to touch that right now.
-          secretEnv <- Retry.retrying retryPolicy isFailure (getSecrets mountInfo' secrets')
+          secretEnv <- doWithRetries (getSecrets mountInfo' secrets')
           case secretEnv of
             Left vaultError -> return $ Left vaultError
             Right secretEnv' -> return $ checkNoDuplicates (buildEnv secretEnv')
     where
+      doWithRetries :: (Retry.RetryStatus -> IO (Either VaultError a)) -> IO (Either VaultError a)
+      doWithRetries = Retry.retrying retryPolicy isRetryableFailure
+
+      -- | Indicator function for retrying to retry on VaultErrors (Lefts) that
+      -- shouldRetry thinks we should retry on. Needs to be in IO because the
+      -- actions to perform are in IO as well.
+      isRetryableFailure :: Retry.RetryStatus -> Either VaultError a -> IO Bool
+      isRetryableFailure _retryStatus (Right _) = pure False
+      isRetryableFailure retryStatus (Left err) = shouldRetry retryStatus err
+
       retryPolicy = vaultRetryPolicy (cCliOptions context)
 
       getMountInfo _retryStatus = catch (requestMountInfo context) httpErrorHandler
       getSecrets mountInfo secrets _retryStatus = catch (requestSecrets context mountInfo secrets) httpErrorHandler
-
-      -- | Indicator function for retrying to retry on VaultErrors (Lefts) that
-      -- shouldRetry thinks we should retry on.
-      isFailure :: Retry.RetryStatus -> Either VaultError a -> IO Bool
-      isFailure _retryStatus (Right _) = pure False
-      isFailure retryStatus (Left err) = shouldRetry retryStatus err
 
       -- | "Handle" a HttpException by wrapping it in a Left VaultError.
       -- TODO: Sanitize the contained request to not contain the Vault token.
@@ -279,6 +283,8 @@ vaultEnv context = do
 
       secretFile = getOptionsValue oSecretFile (cCliOptions context)
 
+      -- | Check that the given list of EnvVars contains no duplicate
+      -- variables, return a DuplicateVar error if it does.
       checkNoDuplicates :: [EnvVar] -> Either VaultError [EnvVar]
       checkNoDuplicates vars = case dups (map fst vars) of
         Right () -> Right vars
@@ -297,6 +303,11 @@ vaultEnv context = do
 
       isDup x = foldr (\y acc -> acc || x == y) False
 
+      -- | Build the resulting environment for the process to start, given the
+      -- list of environment variables that were retrieved from Vault.  Return
+      -- either only the retrieved secrets (if --no-inherit-env is used), or
+      -- merge the retrieved variables with the environment where Vaultenv was
+      -- called and apply the blacklist.
       buildEnv :: [EnvVar] -> [EnvVar]
       buildEnv secretsEnv =
         if getOptionsValue oInheritEnv . cCliOptions $ context
@@ -365,7 +376,7 @@ requestSecret context secretPath =
   in
     doRequest secretPath request
 
--- | Determine whether to retry
+-- | Determine whether a request that resulted in the given VaultError should be retried.
 shouldRetry :: Applicative f => Retry.RetryStatus -> VaultError -> f Bool
 shouldRetry _retryStatus res = pure $ case res of
   ServerError _ -> True

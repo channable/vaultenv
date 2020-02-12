@@ -28,7 +28,7 @@ dependencies:
   - utf8-string
   - optparse-applicative
 
-# ghc-options: -Wall -Werror
+ghc-options: -Wall -Werror
 
 library:
   source-dirs: src

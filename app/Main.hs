@@ -4,13 +4,12 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import Control.Applicative    ((<|>))
-import Control.Exception      (Exception, throw, catch)
+import Control.Exception      (Exception, catch)
 import Control.Monad          (forM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
 import Data.Aeson.Types       (parseMaybe)
 import Data.Bifunctor         (first)
-import Data.Either            (isLeft)
 import Data.HashMap.Strict    (HashMap, lookupDefault, mapMaybe)
 import Data.List              (nubBy)
 import Data.Monoid            ((<>))
@@ -25,8 +24,6 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                getResponseStatusCode)
 import System.Environment     (getEnvironment)
 import System.Posix.Process   (executeFile)
-import Control.Monad.Except   (ExceptT (..), MonadError, runExceptT, mapExceptT,
-                               throwError, liftEither, withExceptT)
 
 import qualified Control.Concurrent.Async   as Async
 import qualified Control.Retry              as Retry
@@ -41,7 +38,7 @@ import qualified System.Exit                as Exit
 import Config (Options(..), parseOptions, unMilliSeconds,
                LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
                Validated, Completed)
-import SecretsFile (Secret(..), SFError(..), readSecretList, readSecretsFile)
+import SecretsFile (Secret(..), SFError(..), readSecretsFile)
 
 -- | Make a HTTP URL path from a secret. This is the path that Vault expects.
 secretRequestPath :: MountInfo -> Secret -> String
@@ -141,7 +138,7 @@ instance FromJSON VaultData where
 instance FromJSON MountInfo where
   parseJSON =
     let
-      getType = Aeson.withObject "MountSpec" $ \o -> do
+      getType = Aeson.withObject "MountSpec" $ \o ->
         o .: "type" >>= (Aeson.withText "mount type" $ (\case
           "kv" -> do
             options <- o .: "options"
@@ -153,7 +150,7 @@ instance FromJSON MountInfo where
                 _ -> fail "unknown version number") options
           _ -> fail "expected a KV type"))
     in
-      Aeson.withObject "MountResp" $ \obj -> do
+      Aeson.withObject "MountResp" $ \obj ->
         pure $ MountInfo (mapMaybe (\v -> parseMaybe getType v) obj)
 
 -- | Error modes of this program.
@@ -248,11 +245,11 @@ vaultEnv :: Context -> IO (Either VaultError [EnvVar])
 vaultEnv context = do
   mountInfo <- Retry.retrying retryPolicy isFailure getMountInfo
   case mountInfo of
-    Left error -> return $ Left error
+    Left vaultError -> return $ Left vaultError
     Right mountInfo' -> do
       secrets <- readSecretsFile secretFile
       case secrets of
-        Left error -> return $ Left $ SecretFileError error
+        Left sfError -> return $ Left $ SecretFileError sfError
         Right secrets' -> do
           -- NOTE: This retries fetching all the secrets if fetching one of the
           -- secrets fails due to an error we should retry on. We would ideally
@@ -264,7 +261,7 @@ vaultEnv context = do
           -- to touch that right now.
           secretEnv <- Retry.retrying retryPolicy isFailure (getSecrets mountInfo' secrets')
           case secretEnv of
-            Left error -> return $ Left error
+            Left vaultError -> return $ Left vaultError
             Right secretEnv' -> return $ checkNoDuplicates (buildEnv secretEnv')
     where
       retryPolicy = vaultRetryPolicy (cCliOptions context)
@@ -349,7 +346,7 @@ requestMountInfo context =
     let decodeResult = Aeson.eitherDecode' (getResponseBody resp) :: Either String MountInfo
 
     case decodeResult of
-      Left error -> return $ Left $ BadJSONResp error
+      Left errorMsg -> return $ Left $ BadJSONResp errorMsg
       Right result -> return $ Right result
 
 -- | Request all the data associated with a secret from the vault.
@@ -391,22 +388,6 @@ shouldRetry _retryStatus res = pure $ case res of
   DuplicateVar _ -> False
   SecretFileError _ -> False
 
--- |
--- Like 'Retry.retrying', but using 'ExceptT' instead of return values. The
--- predicate also only gets the error, not the return value.
-retryingExceptT
-  :: MonadIO m
-  => Retry.RetryPolicyM m
-  -> (Retry.RetryStatus -> e -> m Bool)
-  -> (Retry.RetryStatus -> ExceptT e m a)
-  -> ExceptT e m a
-retryingExceptT policy predicate action =
-  ExceptT $ Retry.retrying policy predicate' action'
-  where
-    predicate' _ (Right _) = pure False
-    predicate' s (Left e)  = predicate s e
-    action' = runExceptT . action
-
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in
 -- order to avoid unnecessary round trips and DNS requests.
@@ -440,12 +421,12 @@ parseResponse secretPath response =
     responseBody = getResponseBody response
     statusCode = getResponseStatusCode response
   in case statusCode of
-    200 -> liftEither (parseSuccessResponse responseBody)
-    403 -> throwError Forbidden
-    404 -> throwError $ SecretNotFound secretPath
-    500 -> throwError $ ServerError responseBody
-    503 -> throwError $ ServerUnavailable responseBody
-    _   -> throwError $ Unspecified statusCode responseBody
+    200 -> parseSuccessResponse responseBody
+    403 -> Left Forbidden
+    404 -> Left $ SecretNotFound secretPath
+    500 -> Left $ ServerError responseBody
+    503 -> Left $ ServerUnavailable responseBody
+    _   -> Left $ Unspecified statusCode responseBody
 
 
 parseSuccessResponse :: LBS.ByteString -> Either VaultError VaultData

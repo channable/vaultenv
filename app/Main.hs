@@ -278,8 +278,18 @@ vaultEnv context = do
       getSecrets mountInfo secrets _retryStatus = catch (requestSecrets context mountInfo secrets) httpErrorHandler
 
       -- | "Handle" a HttpException by wrapping it in a Left VaultError.
-      -- TODO: Sanitize the contained request to not contain the Vault token.
-      httpErrorHandler (e :: HttpException) = return $ Left $ ServerUnreachable e
+      -- We also edit the Request contained in the exception to remove the
+      -- Vault token, as it would otherwise get printed to stderr if we error
+      -- out.
+      httpErrorHandler (e :: HttpException) = case e of
+        (HttpExceptionRequest request reason) ->
+          let sanitizedRequest = sanitizeRequest request
+          in return $ Left $ ServerUnreachable (HttpExceptionRequest sanitizedRequest reason)
+        (InvalidUrlException url _reason) -> return $ Left $ InvalidUrl url
+
+        where
+          sanitizeRequest :: Request -> Request
+          sanitizeRequest = setRequestHeader "x-vault-token" ["**removed**"]
 
       secretFile = getOptionsValue oSecretFile (cCliOptions context)
 

@@ -23,7 +23,6 @@ module SecretsFile where
 
 import Control.Applicative.Combinators (some, option, optional)
 import Control.Exception (Exception, try, displayException)
-import Control.Monad.Except (MonadError, MonadIO, liftEither, liftIO)
 import Data.Char (toUpper, isSpace, isControl)
 import Data.Functor (void)
 import Data.List (intercalate)
@@ -58,10 +57,6 @@ instance Show SFError where
     ParseErr pe -> MP.errorBundlePretty pe
 
 instance Exception SFError
-
--- | Helper for ExceptT stuff that we use in app/Main.hs
-readSecretList :: (MonadError SFError m, MonadIO m) => FilePath -> m [Secret]
-readSecretList fp = liftEither =<< (liftIO $ readSecretsFile fp)
 
 -- | Read a list of secrets from a file
 readSecretsFile :: FilePath -> IO (Either SFError [Secret])

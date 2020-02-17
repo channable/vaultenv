@@ -231,23 +231,26 @@ getHttpManager opts = newManager managerSettings
                 , settingUseServerName = True
                 }
 
--- | Main logic of our application. Reads a list of secrets, fetches
--- each of them from Vault, checks for duplicates, and then yields
--- the list of environment variables to make available to the process
--- we want to run eventually. It either scrubs the environment that
--- already existed or keeps it.
+-- | Main logic of our application.
 --
--- Signals failure through a value of type VaultError, but can also
--- throw HTTP exceptions.
+-- We first retrieve the mount information from Vault, as this is needed to
+-- construct the URLs of the secrets to fetch.
+-- With this information we fetch the secrets from Vault, check for duplicates,
+-- and then yield the list of environment variables to make available to the
+-- process we want to run eventually.
+-- Based on the settings in the context we either scrub the environment that
+-- already existed or keep it (applying the inheritance blacklist if it exists).
+--
+-- Signals failure through a value of type VaultError.
 vaultEnv :: Context -> IO (Either VaultError [EnvVar])
 vaultEnv context = do
   mountInfo <- doWithRetries getMountInfo
   case mountInfo of
-    Left vaultError -> return $ Left vaultError
+    Left vaultError -> pure $ Left vaultError
     Right mountInfo' -> do
       secrets <- readSecretsFile secretFile
       case secrets of
-        Left sfError -> return $ Left $ SecretFileError sfError
+        Left sfError -> pure $ Left $ SecretFileError sfError
         Right secrets' -> do
           -- NOTE: This retries fetching all the secrets if fetching one of the
           -- secrets fails due to an error we should retry on. We would ideally
@@ -257,10 +260,11 @@ vaultEnv context = do
           -- and failing to get all of their secrets.
           -- This would then need to happen in requestSecrets, but I don't want
           -- to touch that right now.
+          -- Issue: https://github.com/channable/vaultenv/issues/90
           secretEnv <- doWithRetries (getSecrets mountInfo' secrets')
           case secretEnv of
-            Left vaultError -> return $ Left vaultError
-            Right secretEnv' -> return $ checkNoDuplicates (buildEnv secretEnv')
+            Left vaultError -> pure $ Left vaultError
+            Right secretEnv' -> pure $ checkNoDuplicates (buildEnv secretEnv')
     where
       doWithRetries :: (Retry.RetryStatus -> IO (Either VaultError a)) -> IO (Either VaultError a)
       doWithRetries = Retry.retrying retryPolicy isRetryableFailure
@@ -274,7 +278,10 @@ vaultEnv context = do
 
       retryPolicy = vaultRetryPolicy (cCliOptions context)
 
+      getMountInfo :: Retry.RetryStatus -> IO (Either VaultError MountInfo)
       getMountInfo _retryStatus = catch (requestMountInfo context) httpErrorHandler
+
+      getSecrets :: MountInfo -> [Secret] -> Retry.RetryStatus -> IO (Either VaultError [EnvVar])
       getSecrets mountInfo secrets _retryStatus = catch (requestSecrets context mountInfo secrets) httpErrorHandler
 
       -- | "Handle" a HttpException by wrapping it in a Left VaultError.
@@ -284,8 +291,8 @@ vaultEnv context = do
       httpErrorHandler (e :: HttpException) = case e of
         (HttpExceptionRequest request reason) ->
           let sanitizedRequest = sanitizeRequest request
-          in return $ Left $ ServerUnreachable (HttpExceptionRequest sanitizedRequest reason)
-        (InvalidUrlException url _reason) -> return $ Left $ InvalidUrl url
+          in pure $ Left $ ServerUnreachable (HttpExceptionRequest sanitizedRequest reason)
+        (InvalidUrlException url _reason) -> pure $ Left $ InvalidUrl url
 
         where
           sanitizeRequest :: Request -> Request
@@ -361,12 +368,14 @@ requestMountInfo context =
               (getOptionsValue  oConnectTls cliOptions)
         $ defaultRequest
   in do
+    -- 'httpLBS' throws an IO Exception ('HttpException') if it fails to complete the request.
+    -- We intentionally don't capture this here, but handle it with the retries in 'vaultEnv' instead.
     resp <- httpLBS request
     let decodeResult = Aeson.eitherDecode' (getResponseBody resp) :: Either String MountInfo
 
     case decodeResult of
-      Left errorMsg -> return $ Left $ BadJSONResp errorMsg
-      Right result -> return $ Right result
+      Left errorMsg -> pure $ Left $ BadJSONResp errorMsg
+      Right result -> pure $ Right result
 
 -- | Request all the data associated with a secret from the vault.
 requestSecret :: Context -> String -> IO (Either VaultError VaultData)
@@ -414,7 +423,7 @@ requestSecrets :: Context -> MountInfo -> [Secret] -> IO (Either VaultError [Env
 requestSecrets context mountInfo secrets = do
   let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap (secretRequestPath mountInfo) secrets
   secretData <- liftIO (Async.mapConcurrently (requestSecret context) secretPaths)
-  return $ sequence secretData >>= lookupSecrets mountInfo secrets
+  pure $ sequence secretData >>= lookupSecrets mountInfo secrets
 
 -- | Look for the requested keys in the secret data that has been previously fetched.
 lookupSecrets :: MountInfo -> [Secret] -> Map.Map String VaultData -> Either VaultError [EnvVar]
@@ -427,8 +436,10 @@ lookupSecrets mountInfo secrets vaultData = forM secrets $ \secret ->
 -- | Send a request for secrets to the vault and parse the response.
 doRequest :: String -> Request -> IO (Either VaultError VaultData)
 doRequest secretPath request = do
+  -- As in 'requestMountInfo': 'httpLBS' throws a 'HttpException' in IO if it
+  -- fails to complete the request, this is handled in 'vaultEnv' by the retry logic.
   resp <- httpLBS request
-  return $ parseResponse secretPath resp
+  pure $ parseResponse secretPath resp
 
 --
 -- HTTP response handling

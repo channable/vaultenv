@@ -209,8 +209,7 @@ main = do
                         , cHttpManager = httpManager
                         }
 
-  envVars <- vaultEnv context
-  case envVars of
+  vaultEnv context >>= \case
     Left err -> Exit.die (vaultErrorLogMessage err)
     Right newEnv -> runCommand cliAndEnvAndEnvFileOptions newEnv
 
@@ -288,6 +287,7 @@ vaultEnv context = do
       -- We also edit the Request contained in the exception to remove the
       -- Vault token, as it would otherwise get printed to stderr if we error
       -- out.
+      httpErrorHandler :: HttpException -> IO (Either VaultError b)
       httpErrorHandler (e :: HttpException) = case e of
         (HttpExceptionRequest request reason) ->
           let sanitizedRequest = sanitizeRequest request

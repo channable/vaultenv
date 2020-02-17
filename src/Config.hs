@@ -21,7 +21,6 @@ module Config
 
 import Control.Applicative ((<*>), (<|>))
 import Control.Monad(when, unless)
-import Control.Monad.Except (runExcept, throwError)
 import Data.List (intercalate, isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
 import Data.Monoid ((<>))
@@ -188,15 +187,15 @@ instance Show OptionsError where
 validateCopyAddr :: String -> Options UnValidated completed -> Either OptionsError (Options Validated completed)
 validateCopyAddr source opts
   | isNothing (oVaultAddr opts) = Right (castOptions opts)
-  | otherwise = runExcept $ do
+  | otherwise = do
     let addr = fromMaybe
                 (errorWithoutStackTrace "Addr not a Just in validation")
                 (oVaultAddr opts)
         (mStrScheme, addrHost, addrStrPort) = splitAddress addr
     unless (all isDigit addrStrPort && not (null addrStrPort))
-        (throwError $ NonNumericPort addrStrPort)
+        (Left $ NonNumericPort addrStrPort)
     unless (isJust mStrScheme)
-        (throwError $ UnknownScheme addrHost)
+        (Left $ UnknownScheme addrHost)
     let mHost = oVaultHost opts
         mPort = oVaultPort opts
         mUseTLS = oConnectTls opts
@@ -211,7 +210,7 @@ validateCopyAddr source opts
             ||
             (isJust mUseTLS && addrTLS /= mUseTLS) -- Is the UseTLS set and the same
     when doesAddrDiffer
-      (throwError $ HostPortSchemeAddrMismatch
+      (Left $ HostPortSchemeAddrMismatch
           source
           mUseTLS
           mHost

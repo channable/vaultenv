@@ -208,12 +208,7 @@ doWithRetries retryPolicy = Retry.retrying retryPolicy isRetryableFailure
     -- actions to perform are in IO as well.
     isRetryableFailure :: Retry.RetryStatus -> Either VaultError a -> IO Bool
     isRetryableFailure _retryStatus (Right _) = pure False
-    isRetryableFailure retryStatus (Left err) = shouldRetry retryStatus err
-
-    -- | Determine whether a request that resulted in the given VaultError
-    -- should be retried.
-    shouldRetry :: Applicative f => Retry.RetryStatus -> VaultError -> f Bool
-    shouldRetry _retryStatus res = pure $ case res of
+    isRetryableFailure _retryStatus (Left err) = pure $ case err of
       ServerError _ -> True
       ServerUnavailable _ -> True
       ServerUnreachable _ -> True

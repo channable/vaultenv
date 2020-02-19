@@ -173,6 +173,21 @@ data VaultError
   | Unspecified Int LBS.ByteString
   deriving Show
 
+-- | "Handle" a HttpException by wrapping it in a Left VaultError.
+-- We also edit the Request contained in the exception to remove the
+-- Vault token, as it would otherwise get printed to stderr if we error
+-- out.
+httpErrorHandler :: HttpException -> IO (Either VaultError b)
+httpErrorHandler (e :: HttpException) = case e of
+  (HttpExceptionRequest request reason) ->
+    let sanitizedRequest = sanitizeRequest request
+    in pure $ Left $ ServerUnreachable (HttpExceptionRequest sanitizedRequest reason)
+  (InvalidUrlException url _reason) -> pure $ Left $ InvalidUrl url
+
+  where
+    sanitizeRequest :: Request -> Request
+    sanitizeRequest = setRequestHeader "x-vault-token" ["**removed**"]
+
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
 -- fullJitterBackoff that comes with the Retry package.
@@ -183,6 +198,39 @@ vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds
                      <> Retry.limitRetries (
                           getOptionsValue oRetryAttempts opts
                         )
+
+-- | Perform the given action according to our retry policy.
+doWithRetries :: Retry.RetryPolicyM IO -> (Retry.RetryStatus -> IO (Either VaultError a)) -> IO (Either VaultError a)
+doWithRetries retryPolicy = Retry.retrying retryPolicy isRetryableFailure
+  where
+    -- | Indicator function for retrying to retry on VaultErrors (Lefts) that
+    -- shouldRetry thinks we should retry on. Needs to be in IO because the
+    -- actions to perform are in IO as well.
+    isRetryableFailure :: Retry.RetryStatus -> Either VaultError a -> IO Bool
+    isRetryableFailure _retryStatus (Right _) = pure False
+    isRetryableFailure retryStatus (Left err) = shouldRetry retryStatus err
+
+    -- | Determine whether a request that resulted in the given VaultError
+    -- should be retried.
+    shouldRetry :: Applicative f => Retry.RetryStatus -> VaultError -> f Bool
+    shouldRetry _retryStatus res = pure $ case res of
+      ServerError _ -> True
+      ServerUnavailable _ -> True
+      ServerUnreachable _ -> True
+      Unspecified _ _ -> True
+      BadJSONResp _ -> True
+
+      -- Errors where we don't retry
+      BadRequest _ -> False
+      Forbidden -> False
+      InvalidUrl _ -> False
+      SecretNotFound _ -> False
+
+      -- Errors that cannot occur at this point, but we list for
+      -- exhaustiveness checking.
+      KeyNotFound _ -> False
+      DuplicateVar _ -> False
+      SecretFileError _ -> False
 
 --
 -- IO
@@ -243,7 +291,7 @@ getHttpManager opts = newManager managerSettings
 -- Signals failure through a value of type VaultError.
 vaultEnv :: Context -> IO (Either VaultError [EnvVar])
 vaultEnv context = do
-  mountInfo <- doWithRetries getMountInfo
+  mountInfo <- doWithRetries retryPolicy getMountInfo
   case mountInfo of
     Left vaultError -> pure $ Left vaultError
     Right mountInfo' -> do
@@ -251,52 +299,15 @@ vaultEnv context = do
       case secrets of
         Left sfError -> pure $ Left $ SecretFileError sfError
         Right secrets' -> do
-          -- NOTE: This retries fetching all the secrets if fetching one of the
-          -- secrets fails due to an error we should retry on. We would ideally
-          -- keep the secrets that were successfully fetched in memory and only
-          -- retry getting the ones we couldn't get yet, as this makes it less
-          -- likely to get a 'thundering herd' of Vaultenv processes all trying
-          -- and failing to get all of their secrets.
-          -- This would then need to happen in requestSecrets, but I don't want
-          -- to touch that right now.
-          -- Issue: https://github.com/channable/vaultenv/issues/90
-          secretEnv <- doWithRetries (getSecrets mountInfo' secrets')
+          secretEnv <- requestSecrets context mountInfo' secrets'
           case secretEnv of
             Left vaultError -> pure $ Left vaultError
             Right secretEnv' -> pure $ checkNoDuplicates (buildEnv secretEnv')
     where
-      doWithRetries :: (Retry.RetryStatus -> IO (Either VaultError a)) -> IO (Either VaultError a)
-      doWithRetries = Retry.retrying retryPolicy isRetryableFailure
-
-      -- | Indicator function for retrying to retry on VaultErrors (Lefts) that
-      -- shouldRetry thinks we should retry on. Needs to be in IO because the
-      -- actions to perform are in IO as well.
-      isRetryableFailure :: Retry.RetryStatus -> Either VaultError a -> IO Bool
-      isRetryableFailure _retryStatus (Right _) = pure False
-      isRetryableFailure retryStatus (Left err) = shouldRetry retryStatus err
-
       retryPolicy = vaultRetryPolicy (cCliOptions context)
 
       getMountInfo :: Retry.RetryStatus -> IO (Either VaultError MountInfo)
       getMountInfo _retryStatus = catch (requestMountInfo context) httpErrorHandler
-
-      getSecrets :: MountInfo -> [Secret] -> Retry.RetryStatus -> IO (Either VaultError [EnvVar])
-      getSecrets mountInfo secrets _retryStatus = catch (requestSecrets context mountInfo secrets) httpErrorHandler
-
-      -- | "Handle" a HttpException by wrapping it in a Left VaultError.
-      -- We also edit the Request contained in the exception to remove the
-      -- Vault token, as it would otherwise get printed to stderr if we error
-      -- out.
-      httpErrorHandler :: HttpException -> IO (Either VaultError b)
-      httpErrorHandler (e :: HttpException) = case e of
-        (HttpExceptionRequest request reason) ->
-          let sanitizedRequest = sanitizeRequest request
-          in pure $ Left $ ServerUnreachable (HttpExceptionRequest sanitizedRequest reason)
-        (InvalidUrlException url _reason) -> pure $ Left $ InvalidUrl url
-
-        where
-          sanitizeRequest :: Request -> Request
-          sanitizeRequest = setRequestHeader "x-vault-token" ["**removed**"]
 
       secretFile = getOptionsValue oSecretFile (cCliOptions context)
 
@@ -378,10 +389,14 @@ requestMountInfo context =
       Right result -> pure $ Right result
 
 -- | Request all the data associated with a secret from the vault.
+--
+-- This function automatically retries the request if it fails according to the
+-- retryPolicy set in the given context.
 requestSecret :: Context -> String -> IO (Either VaultError VaultData)
 requestSecret context secretPath =
   let
     cliOptions = cCliOptions context
+    retryPolicy = vaultRetryPolicy (cCliOptions context)
     request
         = setRequestManager
             (cHttpManager context)
@@ -392,29 +407,11 @@ requestSecret context secretPath =
         $ setRequestSecure  (getOptionsValue oConnectTls cliOptions)
         $ defaultRequest
 
+    getSecret :: Retry.RetryStatus -> IO (Either VaultError VaultData)
+    getSecret _retryStatus = catch (doRequest secretPath request) httpErrorHandler
+
   in
-    doRequest secretPath request
-
--- | Determine whether a request that resulted in the given VaultError should be retried.
-shouldRetry :: Applicative f => Retry.RetryStatus -> VaultError -> f Bool
-shouldRetry _retryStatus res = pure $ case res of
-  ServerError _ -> True
-  ServerUnavailable _ -> True
-  ServerUnreachable _ -> True
-  Unspecified _ _ -> True
-  BadJSONResp _ -> True
-
-  -- Errors where we don't retry
-  BadRequest _ -> False
-  Forbidden -> False
-  InvalidUrl _ -> False
-  SecretNotFound _ -> False
-
-  -- Errors that cannot occur at this point, but we list for
-  -- exhaustiveness checking.
-  KeyNotFound _ -> False
-  DuplicateVar _ -> False
-  SecretFileError _ -> False
+    doWithRetries retryPolicy getSecret
 
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in

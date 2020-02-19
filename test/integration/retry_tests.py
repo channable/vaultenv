@@ -20,6 +20,26 @@ import tap
 
 
 def main() -> None:
+    """
+    Test whether the retry behaviour in Vaultenv works as expected.
+
+    We do this by:
+      - Starting two Vaultenv processes (one for each version of the secrets file
+        format) and letting them run for 5 seconds (during which they should retry)
+      - Suspending the Vaultenv processes with the SIGSTOP signal
+      - Setting up a Vault server process with the appropriate secrets
+      - Resuming the Vaultenv processes with the SIGCONT signal
+      - Checking whether the Vaultenv processes exited with code 0 and got the right
+        secrets (by having them run /usr/bin/env)
+      - Killing the Vault server
+
+    We do this twice, once for version 1 of Vault's KV secret store API and once for
+    version 2 of the API.
+
+    The SIGSTOP/SIGCONT signals are necessary to prevent the Vaultenv processes from
+    contacting the Vault server while it is up, but does not yet contain the right
+    secrets (which causes a non-retryable error by design).
+    """
     v1_secrets_file = Path(os.environ["VAULT_SEEDS"])
     v2_secrets_file = Path(os.environ["VAULT_SEEDS_V2"])
 
@@ -78,7 +98,7 @@ def run_vaultenv(secrets_file: Path) -> subprocess.Popen:
     """
     Run Vaultenv with the secrets file from the given path.
 
-    Return a subprocess.Popen-handle to the running process.
+    Return a subprocess.Popen-handle to the running Vaultenv process.
     """
     return subprocess.Popen(
         [
@@ -143,7 +163,6 @@ def check_vaultenv_result(
     if not expected_env <= actual_env:
         missing = ", ".join(expected_env - actual_env)
         tap.not_ok(f"{description} missing vars {missing}")
-        breakpoint()
         return
 
     tap.ok(description)
@@ -151,7 +170,10 @@ def check_vaultenv_result(
 
 def run_vault_server() -> subprocess.Popen:
     """
-    Run the Vault dev server and seed it with a known set of secrets.
+    Run the Vault dev server and seed it with the same set of secrets as in
+    test_integration.sh.
+
+    Return a handle to the Vault server process.
     """
     env = {
         "VAULT_TOKEN": "integration",

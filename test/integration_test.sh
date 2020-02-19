@@ -88,3 +88,5 @@ fi
 
 # Cleanup the vault dev server
 kill %%
+
+PYTHONUNBUFFERED=1 prove --comments integration/retry_tests.py

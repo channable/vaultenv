@@ -1,8 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 import Control.Applicative    ((<|>))
+import Control.Exception      (catch)
 import Control.Monad          (forM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
@@ -22,8 +24,6 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                getResponseStatusCode)
 import System.Environment     (getEnvironment)
 import System.Posix.Process   (executeFile)
-import Control.Monad.Except   (ExceptT (..), MonadError, runExceptT, mapExceptT,
-                               throwError, liftEither, withExceptT)
 
 import qualified Control.Concurrent.Async   as Async
 import qualified Control.Retry              as Retry
@@ -38,7 +38,7 @@ import qualified System.Exit                as Exit
 import Config (Options(..), parseOptions, unMilliSeconds,
                LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
                Validated, Completed)
-import SecretsFile (Secret(..), SFError(..), readSecretList)
+import SecretsFile (Secret(..), SFError(..), readSecretsFile)
 
 -- | Make a HTTP URL path from a secret. This is the path that Vault expects.
 secretRequestPath :: MountInfo -> Secret -> String
@@ -138,7 +138,7 @@ instance FromJSON VaultData where
 instance FromJSON MountInfo where
   parseJSON =
     let
-      getType = Aeson.withObject "MountSpec" $ \o -> do
+      getType = Aeson.withObject "MountSpec" $ \o ->
         o .: "type" >>= (Aeson.withText "mount type" $ (\case
           "kv" -> do
             options <- o .: "options"
@@ -150,7 +150,7 @@ instance FromJSON MountInfo where
                 _ -> fail "unknown version number") options
           _ -> fail "expected a KV type"))
     in
-      Aeson.withObject "MountResp" $ \obj -> do
+      Aeson.withObject "MountResp" $ \obj ->
         pure $ MountInfo (mapMaybe (\v -> parseMaybe getType v) obj)
 
 -- | Error modes of this program.
@@ -171,6 +171,22 @@ data VaultError
   | InvalidUrl String
   | DuplicateVar String
   | Unspecified Int LBS.ByteString
+  deriving Show
+
+-- | "Handle" a HttpException by wrapping it in a Left VaultError.
+-- We also edit the Request contained in the exception to remove the
+-- Vault token, as it would otherwise get printed to stderr if we error
+-- out.
+httpErrorHandler :: HttpException -> IO (Either VaultError b)
+httpErrorHandler (e :: HttpException) = case e of
+  (HttpExceptionRequest request reason) ->
+    let sanitizedRequest = sanitizeRequest request
+    in pure $ Left $ ServerUnreachable (HttpExceptionRequest sanitizedRequest reason)
+  (InvalidUrlException url _reason) -> pure $ Left $ InvalidUrl url
+
+  where
+    sanitizeRequest :: Request -> Request
+    sanitizeRequest = setRequestHeader "x-vault-token" ["**removed**"]
 
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
@@ -182,6 +198,34 @@ vaultRetryPolicy opts = Retry.fullJitterBackoff (unMilliSeconds
                      <> Retry.limitRetries (
                           getOptionsValue oRetryAttempts opts
                         )
+
+-- | Perform the given action according to our retry policy.
+doWithRetries :: Retry.RetryPolicyM IO -> (Retry.RetryStatus -> IO (Either VaultError a)) -> IO (Either VaultError a)
+doWithRetries retryPolicy = Retry.retrying retryPolicy isRetryableFailure
+  where
+    -- | Indicator function for retrying to retry on VaultErrors (Lefts) that
+    -- shouldRetry thinks we should retry on. Needs to be in IO because the
+    -- actions to perform are in IO as well.
+    isRetryableFailure :: Retry.RetryStatus -> Either VaultError a -> IO Bool
+    isRetryableFailure _retryStatus (Right _) = pure False
+    isRetryableFailure _retryStatus (Left err) = pure $ case err of
+      ServerError _ -> True
+      ServerUnavailable _ -> True
+      ServerUnreachable _ -> True
+      Unspecified _ _ -> True
+      BadJSONResp _ -> True
+
+      -- Errors where we don't retry
+      BadRequest _ -> False
+      Forbidden -> False
+      InvalidUrl _ -> False
+      SecretNotFound _ -> False
+
+      -- Errors that cannot occur at this point, but we list for
+      -- exhaustiveness checking.
+      KeyNotFound _ -> False
+      DuplicateVar _ -> False
+      SecretFileError _ -> False
 
 --
 -- IO
@@ -208,7 +252,7 @@ main = do
                         , cHttpManager = httpManager
                         }
 
-  runExceptT (vaultEnv context) >>= \case
+  vaultEnv context >>= \case
     Left err -> Exit.die (vaultErrorLogMessage err)
     Right newEnv -> runCommand cliAndEnvAndEnvFileOptions newEnv
 
@@ -229,25 +273,42 @@ getHttpManager opts = newManager managerSettings
                 , settingUseServerName = True
                 }
 
--- | Main logic of our application. Reads a list of secrets, fetches
--- each of them from Vault, checks for duplicates, and then yields
--- the list of environment variables to make available to the process
--- we want to run eventually. It either scrubs the environment that
--- already existed or keeps it.
+-- | Main logic of our application.
 --
--- Signals failure through a value of type VaultError, but can also
--- throw HTTP exceptions.
-vaultEnv :: Context -> ExceptT VaultError IO [EnvVar]
-vaultEnv context = do
-  mountInfo <- requestMountInfo context
-  secrets <- mapExceptT (fmap $ first SecretFileError) $ readSecretList secretFile
-  secretEnv <- requestSecrets context mountInfo secrets
-  checkNoDuplicates (buildEnv secretEnv)
+-- We first retrieve the mount information from Vault, as this is needed to
+-- construct the URLs of the secrets to fetch.
+-- With this information we fetch the secrets from Vault, check for duplicates,
+-- and then yield the list of environment variables to make available to the
+-- process we want to run eventually.
+-- Based on the settings in the context we either scrub the environment that
+-- already existed or keep it (applying the inheritance blacklist if it exists).
+--
+-- Signals failure through a value of type VaultError.
+vaultEnv :: Context -> IO (Either VaultError [EnvVar])
+vaultEnv context =
+  doWithRetries retryPolicy getMountInfo >>= \case
+    Left vaultError -> pure $ Left vaultError
+    Right mountInfo ->
+      readSecretsFile secretFile >>= \case
+        Left sfError -> pure $ Left $ SecretFileError sfError
+        Right secrets ->
+          requestSecrets context mountInfo secrets >>= \case
+            Left vaultError -> pure $ Left vaultError
+            Right secretEnv -> pure $ checkNoDuplicates (buildEnv secretEnv)
     where
+      retryPolicy = vaultRetryPolicy (cCliOptions context)
+
+      getMountInfo :: Retry.RetryStatus -> IO (Either VaultError MountInfo)
+      getMountInfo _retryStatus = catch (requestMountInfo context) httpErrorHandler
+
       secretFile = getOptionsValue oSecretFile (cCliOptions context)
-      checkNoDuplicates :: MonadError VaultError m => [EnvVar] -> m [EnvVar]
-      checkNoDuplicates e =
-        either (throwError . DuplicateVar) (return . const e) $ dups (map fst e)
+
+      -- | Check that the given list of EnvVars contains no duplicate
+      -- variables, return a DuplicateVar error if it does.
+      checkNoDuplicates :: [EnvVar] -> Either VaultError [EnvVar]
+      checkNoDuplicates vars = case dups (map fst vars) of
+        Right () -> Right vars
+        Left var -> Left $ DuplicateVar var
 
       -- We need to check duplicates in the environment and fail if
       -- there are any. `dups` runs in O(n^2),
@@ -262,6 +323,11 @@ vaultEnv context = do
 
       isDup x = foldr (\y acc -> acc || x == y) False
 
+      -- | Build the resulting environment for the process to start, given the
+      -- list of environment variables that were retrieved from Vault.  Return
+      -- either only the retrieved secrets (if --no-inherit-env is used), or
+      -- merge the retrieved variables with the environment where Vaultenv was
+      -- called and apply the blacklist.
       buildEnv :: [EnvVar] -> [EnvVar]
       buildEnv secretsEnv =
         if getOptionsValue oInheritEnv . cCliOptions $ context
@@ -286,7 +352,7 @@ runCommand options env =
     executeFile command searchPath args env'
 
 -- | Look up what mounts are available and what type they have.
-requestMountInfo :: Context -> ExceptT VaultError IO MountInfo
+requestMountInfo :: Context -> IO (Either VaultError MountInfo)
 requestMountInfo context =
   let
     cliOptions = cCliOptions context
@@ -305,14 +371,24 @@ requestMountInfo context =
               (getOptionsValue  oConnectTls cliOptions)
         $ defaultRequest
   in do
-    resp <- withExceptT ServerUnreachable (httpLBS request)
-    withExceptT BadJSONResp (liftEither $ Aeson.eitherDecode' (getResponseBody resp))
+    -- 'httpLBS' throws an IO Exception ('HttpException') if it fails to complete the request.
+    -- We intentionally don't capture this here, but handle it with the retries in 'vaultEnv' instead.
+    resp <- httpLBS request
+    let decodeResult = Aeson.eitherDecode' (getResponseBody resp) :: Either String MountInfo
+
+    case decodeResult of
+      Left errorMsg -> pure $ Left $ BadJSONResp errorMsg
+      Right result -> pure $ Right result
 
 -- | Request all the data associated with a secret from the vault.
-requestSecret :: Context -> String -> ExceptT VaultError IO VaultData
+--
+-- This function automatically retries the request if it fails according to the
+-- retryPolicy set in the given context.
+requestSecret :: Context -> String -> IO (Either VaultError VaultData)
 requestSecret context secretPath =
   let
     cliOptions = cCliOptions context
+    retryPolicy = vaultRetryPolicy (cCliOptions context)
     request
         = setRequestManager
             (cHttpManager context)
@@ -323,58 +399,20 @@ requestSecret context secretPath =
         $ setRequestSecure  (getOptionsValue oConnectTls cliOptions)
         $ defaultRequest
 
-    -- Only retry on connection related failures
-    shouldRetry :: Applicative f => Retry.RetryStatus -> VaultError -> f Bool
-    --shouldRetry _retryStatus _ =I--
-    shouldRetry _retryStatus res = pure $ case res of
-      ServerError _ -> True
-      ServerUnavailable _ -> True
-      ServerUnreachable _ -> True
-      Unspecified _ _ -> True
-      BadJSONResp _ -> True
+    getSecret :: Retry.RetryStatus -> IO (Either VaultError VaultData)
+    getSecret _retryStatus = catch (doRequest secretPath request) httpErrorHandler
 
-      -- Errors where we don't retry
-      BadRequest _ -> False
-      Forbidden -> False
-      InvalidUrl _ -> False
-      SecretNotFound _ -> False
-
-
-      -- Errors that cannot occur at this point, but we list for
-      -- exhaustiveness checking.
-      KeyNotFound _ -> False
-      DuplicateVar _ -> False
-      SecretFileError _ -> False
-
-    retryAction :: Retry.RetryStatus -> ExceptT VaultError IO VaultData
-    retryAction _retryStatus = doRequest secretPath request
   in
-    retryingExceptT (vaultRetryPolicy cliOptions) shouldRetry retryAction
-
--- |
--- Like 'Retry.retrying', but using 'ExceptT' instead of return values. The
--- predicate also only gets the error, not the return value.
-retryingExceptT
-  :: MonadIO m
-  => Retry.RetryPolicyM m
-  -> (Retry.RetryStatus -> e -> m Bool)
-  -> (Retry.RetryStatus -> ExceptT e m a)
-  -> ExceptT e m a
-retryingExceptT policy predicate action =
-  ExceptT $ Retry.retrying policy predicate' action'
-  where
-    predicate' _ (Right _) = pure False
-    predicate' s (Left e)  = predicate s e
-    action' = runExceptT . action
+    doWithRetries retryPolicy getSecret
 
 -- | Request all the supplied secrets from the vault, but just once, even if
 -- multiple keys are specified for a single secret. This is an optimization in
--- order to avoid unnecessary round trips and DNS requets.
-requestSecrets :: Context -> MountInfo -> [Secret] -> ExceptT VaultError IO [EnvVar]
+-- order to avoid unnecessary round trips and DNS requests.
+requestSecrets :: Context -> MountInfo -> [Secret] -> IO (Either VaultError [EnvVar])
 requestSecrets context mountInfo secrets = do
   let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap (secretRequestPath mountInfo) secrets
-  secretData <- liftIO (Async.mapConcurrently (runExceptT . (requestSecret context)) secretPaths)
-  either throwError return $ sequence secretData >>= lookupSecrets mountInfo secrets
+  secretData <- liftIO (Async.mapConcurrently (requestSecret context) secretPaths)
+  pure $ sequence secretData >>= lookupSecrets mountInfo secrets
 
 -- | Look for the requested keys in the secret data that has been previously fetched.
 lookupSecrets :: MountInfo -> [Secret] -> Map.Map String VaultData -> Either VaultError [EnvVar]
@@ -385,31 +423,29 @@ lookupSecrets mountInfo secrets vaultData = forM secrets $ \secret ->
   in maybe (Left $ KeyNotFound secret) (Right . toEnvVar) $ secretValue
 
 -- | Send a request for secrets to the vault and parse the response.
-doRequest :: String -> Request -> ExceptT VaultError IO VaultData
+doRequest :: String -> Request -> IO (Either VaultError VaultData)
 doRequest secretPath request = do
-  resp <- withExceptT exToErr (httpLBS request)
-  parseResponse secretPath resp
-  where
-    exToErr :: HttpException -> VaultError
-    exToErr e@(HttpExceptionRequest _ _) = ServerUnreachable e
-    exToErr (InvalidUrlException _ _) = InvalidUrl secretPath
+  -- As in 'requestMountInfo': 'httpLBS' throws a 'HttpException' in IO if it
+  -- fails to complete the request, this is handled in 'vaultEnv' by the retry logic.
+  resp <- httpLBS request
+  pure $ parseResponse secretPath resp
 
 --
 -- HTTP response handling
 --
 
-parseResponse :: (Monad m) => String -> Response LBS.ByteString -> ExceptT VaultError m VaultData
+parseResponse :: String -> Response LBS.ByteString -> Either VaultError VaultData
 parseResponse secretPath response =
   let
     responseBody = getResponseBody response
     statusCode = getResponseStatusCode response
   in case statusCode of
-    200 -> liftEither (parseSuccessResponse responseBody)
-    403 -> throwError Forbidden
-    404 -> throwError $ SecretNotFound secretPath
-    500 -> throwError $ ServerError responseBody
-    503 -> throwError $ ServerUnavailable responseBody
-    _   -> throwError $ Unspecified statusCode responseBody
+    200 -> parseSuccessResponse responseBody
+    403 -> Left Forbidden
+    404 -> Left $ SecretNotFound secretPath
+    500 -> Left $ ServerError responseBody
+    503 -> Left $ ServerUnavailable responseBody
+    _   -> Left $ Unspecified statusCode responseBody
 
 
 parseSuccessResponse :: LBS.ByteString -> Either VaultError VaultData

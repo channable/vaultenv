@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+# If upgrading from 0.13.0 or earlier the permissions on /etc/secrets.d and
+# /usr/bin/vaultenv will be messed up.
+# Fixing this is idempotent so do this here:
+echo "-- Fixing potentially wrong file mode, ownership of /etc/secrets.d, /usr/bin/vaultenv"
+chown root:root /usr/bin/vaultenv /etc/secrets.d
+chmod 0755 /usr/bin/vaultenv /etc/secrets.d
+
+exit 0

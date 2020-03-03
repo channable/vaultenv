@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2091,SC2103
 
 # This script builds a .deb package from the static binary build by Nix.
 #

@@ -5,3 +5,6 @@
 
 # auto-generated files
 *.cabal
+
+# Nix result symlinks
+result*

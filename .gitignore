@@ -1,10 +1,7 @@
 # Build output
-/.stack-work
+/dist-newstyle
 *.deb
 /package/vaultenv-*-linux-musl
-
-# auto-generated files
-*.cabal
 
 # Nix result symlinks
 result*

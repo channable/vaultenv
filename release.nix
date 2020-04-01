@@ -11,8 +11,44 @@ let
     integer-simple = false;
     approach = "pkgsMusl";
   };
+
+  mkDeb = version: drv:
+    pkgs.stdenv.mkDerivation {
+      pname = "vaultenv";
+      inherit version;
+
+      buildInputs = [pkgs.dpkg pkgs.fakeroot];
+
+      phases = ["buildPhase" "installPhase"];
+
+      buildPhase = ''
+        mkdir --parents vaultenv/{DEBIAN,usr/bin,etc/secrets.d}
+        cp --archive ${drv}/bin/vaultenv vaultenv/usr/bin/vaultenv
+
+        cat > vaultenv/DEBIAN/control <<EOF
+        Package: vaultenv
+        Version: ${version}
+        Priority: optional
+        Architecture: amd64
+        Maintainer: Channable DevOps <ops@channable.com>
+        Description: Launch processes with secrets from Vault
+        EOF
+
+        # Make files writable for root but for no one else.
+        chmod --recursive u+w vaultenv
+        chmod --recursive go-w vaultenv
+
+        # Files should be owned by root, not by nixbld.
+        fakeroot dpkg-deb --build vaultenv
+      '';
+
+      installPhase = ''
+        mkdir "$out"
+        mv vaultenv.deb "$out/vaultenv-${version}.deb"
+      '';
+    };
 in
-  {
+  rec {
     # Normal cabal build where Nix handles dependencies.
     vaultenv = pkgs.haskellPackages.callPackage ./nix/vaultenv.nix {};
 
@@ -48,5 +84,6 @@ in
       Cabal = static-gmp.haskellPackages.Cabal;
     });
 
+    vaultenv-static-deb = mkDeb "0.13.1" vaultenv-static;
+    vaultenv-static-gmp-deb = mkDeb "0.13.1" vaultenv-static-gmp;
   }
-

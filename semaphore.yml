@@ -1,0 +1,65 @@
+---
+version: "v1.0"
+name: "Vaultenv"
+
+agent:
+  machine:
+    type: "e1-standard-4"
+    os_image: "ubuntu1804"
+
+blocks:
+  - name: "linux: build and test"
+    dependencies: []
+
+    task:
+      secrets:
+        # Contains CACHIX_SIGNING_KEY, which we need to upload new cache
+        # entries to Cachix, the Nix cache as a service.
+        - name: "cachix-channable-public"
+      jobs:
+        - name: "linux: build and test"
+          commands:
+            # Get the code.
+            - "checkout"
+
+            # Before we can restore the Semaphore cache, we need to create /nix.
+            # Otherwise the cache restore command will fail.
+            - "sudo mkdir /nix"
+            - "sudo chown -R semaphore:semaphore /nix"
+
+            # Restore Semaphore's Nix store cache, prefering recent cache entries
+            # over ones from longer ago.
+            - "cache restore nix-store-$(date +'%Y-%m-%d'),nix-store-$(date +'%Y-%m'),nix-store-$(date +'%Y'),nix-store-"
+
+            # Install Nix using the vendored installation script. Afterwards,
+            # everything can run through the Nix kmanaged environment as long
+            # as the commands are prefixed with `nix run -c`.
+            - "./nix/install-nix.sh"
+            - "source $HOME/.nix-profile/etc/profile.d/nix.sh"
+
+            # Use our own public Cachix cache. Everyone can see/download stuff
+            # from here. Take care with what you upload.
+            - "nix run -c cachix use static-haskell-nix"
+            - "nix run -c cachix use channable-public"
+
+            # Build the static binary. Upload the results to the cache. See
+            # `nix/vaultenv-static.nix` for documentation on this invocation
+            # and what the script does. The `| cachix upload` ensures that
+            # we upload all new artifacts to our Cachix cache after we're
+            # done.
+            - "nix-build -A vaultenv release.nix | nix run -c cachix push channable-public"
+
+            # Doesn't work yet.
+            # - "nix-build -A vaultenv-static release.nix | nix run -c cachix push channable-public"
+            # - "nix-build -A vaultenv-static-deb release.nix | nix run -c cachix push channable-public"
+
+            # Build this, but do not upload it to the cache. (Distribution
+            # is a LGPL violation.)
+            - "nix-build -A vaultenv-static-gmp release.nix"
+            - "nix-build -A vaultenv-static-gmp-deb release.nix"
+
+            # TODO: Run the integration tests.
+
+            # Also cache `/nix` to the Semaphore cache. This is faster to
+            # access than Cachix itself for the full nix store.
+            - "cache restore nix-store-$(date -Idate)"

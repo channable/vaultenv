@@ -9,7 +9,6 @@ haskellPackages:
       connection
       containers
       directory
-      directory
       dotenv
       hspec
       hspec-discover
@@ -18,11 +17,9 @@ haskellPackages:
       http-conduit
       megaparsec
       optparse-applicative
-      optparse-applicative
       parser-combinators
       retry
       text
       unix
       unordered-containers
-      utf8-string
     ]

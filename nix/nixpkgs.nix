@@ -1,13 +1,10 @@
-# Pin the version of nixpkgs to the one from `static-haskell-nix`.
-# This ensures that we only have a single version of nixpkgs. This
-# makes reasoning about the environment a lot easier. We don't want
-# to maintain our own nixpkgs distribution with the patches from the
-# `static-haskell-nix` project.
-#
-# Normally, we wouldn't do something like this, but in this instance
-# we really want a static binary.
 let
-  static-haskell-nix = import ./static-haskell-nix.nix;
-  pkgs = import "${static-haskell-nix}/nixpkgs.nix";
+  # Nixpkgs unstable on 2020-02-02. This is the same Nixpkgs as the one that
+  # static-haskell-nix uses. We use the same one to get cache hits.
+  rev = "0c960262d159d3a884dadc3d4e4b131557dad116";
+  tarball = fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs/archive/${rev}.tar.gz";
+    sha256 = "sha256:0d7ms4dxbxvd6f8zrgymr6njvka54fppph1mrjjlcan7y0dhi5rb";
+  };
 in
-  pkgs
+  import tarball

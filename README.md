@@ -319,6 +319,7 @@ due to the `http://` scheme, and a port of `42`.
 Other errors than the mismatch address error that can happen during parsing are:
 - A non-numeric port in the address, like `http://localhost:my_port`
 - A non-supported scheme in the address, like `ftp://example.com:42`
+
 ## Allowed characters in environment variables
 
 We disallow the following in any path to keep the parser and format simple and
@@ -347,54 +348,57 @@ as `PRODUCTION_THIRD_PARTY_API_KEY`.
 
 ## Building
 
-Vaultenv is written in Haskell and builds with [Stack][stack]:
-
-    stack setup
-    stack build
-
-The binary can then be found at `$(stack path
---local-install-root)/bin/vaultenv`.  You can also run it directly
-with `stack exec`:
+Vaultenv is written in Haskell and builds with [cabal][cabal]:
 
 ```
-stack exec vaultenv -- --token SECRET --secrets-file foo.env /usr/bin/env
+$ cabal build
+
+# Nix users can use:
+$ nix run -c cabal build
 ```
 
-It is possible to `stack build` with `--split-objs` to produce a smaller binary.
-To take full advantage of this, the Stackage snapshot has to be rebuilt.
+If you're using a recent cabal version, the binary can then be found in the
+`dist-newstyle/` directory tree.
+
+You can also run vaultenv directly with `cabal run`:
+
+```
+cabal run vaultenv -- --token SECRET --secrets-file foo.env /usr/bin/env
+```
+
+It is possible to `cabal build` with `--enable-split-objs` to produce a smaller
+binary. To take full advantage of this, all dependencies need to be rebuilt.
 
 If you want a fully static executable without a runtime dependency on `libc`
 and run GNU/Linux, you can install [Nix](https://nixos.org/nix/) and run:
 
 ```
-$ $(nix-build --no-link -A full-build-script nix/vaultenv-static.nix)
+$ nix-build release.nix -A vaultenv-static
 ```
 
-This has not been tested on any other platform.
+This has only been tested on Linux.
 
-That will build vaultenv (and a bunch of dependencies). The final line of the
-output should be a path in `/nix/store` which contains the final vaultenv
-binary.
+The Nix build will build vaultenv (and a bunch of dependencies). The final line
+of the output should be a path in `/nix/store` which contains the final
+vaultenv binary.
 
 It is possible to speed up the compilation process by copying some dependencies
 from a Nix cache, to not have to recompile all of Haskell and its dependencies.
 To set up the cache, execute these commands once before building:
 
 ```console
-$ nix run -c cachix use static-haskell-nix
 $ nix run -c cachix use channable-public
-```
 
-Note that the build process via Nix is not (yet) reproducible, which means that
-different builds of the same source code may result in different Nix derivation
-hashes.
+# Only required for the static binary.
+$ nix run -c cachix use static-haskell-nix
+```
 
 ## Development
 
 If you want a convenient way to gather the development dependencies of
 `vaultenv`, you can use `nix`.
 
-The repository contains a `default.nix` which will get you `stack` and `vault`.
+The repository contains a `default.nix` which will get you `cabal` and `vault`.
 You can then use this to get a shell with the tools in scope to work on and
 test `vaultenv`.
 
@@ -404,18 +408,12 @@ Get this shell with:
 $ nix run
 ```
 
-## Future work
-
- - Support DNS `SRV` record lookups, so users only need to specify the host
-   Vault runs on. This integrates `vaultenv` nicely with Vaults HA setup.
- - Certificate pinning/validation
-
 ## License
 
 3-clause BSD. See `LICENSE` for details.
 
   [HashiCorp Vault]: https://www.vaultproject.io/
   [envconsul]: https://github.com/hashicorp/envconsul
-  [stack]: https://haskellstack.org
+  [cabal]: https://www.haskell.org/cabal/
   [build-vaultenv]:#building
   [download-vaultenv]:https://github.com/channable/vaultenv/releases

@@ -1,9 +1,10 @@
-# Pin static-haskell-nix version.
 let
-  static-haskell-nix-rev = "ff7715e0e13fb3f615e64a8d8c2e43faa4429b0f";
-  static-haskell-nix = builtins.fetchTarball {
-    url = "https://github.com/nh2/static-haskell-nix/archive/${static-haskell-nix-rev}.tar.gz";
-    sha256 = "sha256:17ir87i7sah9nixvh25qhzh19bqv3vgnfg4nfy4wv631q4gfj7fb";
+  # `master` on 2020-02-02.
+  rev = "c360f2a15f6947b411ecbd7ebaea925f6dbd68df";
+  tarball = fetchTarball {
+    url = "https://github.com/nh2/static-haskell-nix/archive/${rev}.tar.gz";
+    sha256 = "sha256:0y6ppiagh6dbvdhhnrq572xnw2yzn6d0gcmajrfdgdfwhsl21g95";
   };
 in
-  static-haskell-nix
+  # The logic we care about lives in this Nix file.
+  import "${tarball}/survey/default.nix"

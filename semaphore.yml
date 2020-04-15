@@ -62,4 +62,4 @@ blocks:
 
             # Also cache `/nix` to the Semaphore cache. This is faster to
             # access than Cachix itself for the full nix store.
-            - "cache store nix-store-$(date -Idate)"
+            - "cache store nix-store-$(date -Idate) /nix"

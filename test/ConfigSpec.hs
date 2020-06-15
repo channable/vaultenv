@@ -45,6 +45,18 @@ spec =
           addr = "http://" ++ host ++ ":" ++ port
         in ':' `notElem` port ==> splitAddress addr `shouldBe` (Just "http://", host, port)
       )
+    it "should parse addr without explicit port" $
+      property (\host ->
+        let
+          httpAddr :: String
+          httpAddr = "http://" ++ host
+
+          httpsAddr :: String
+          httpsAddr = "https://" ++ host
+        in ':' `notElem` host
+             ==>  (splitAddress httpAddr `shouldBe` (Just "http://", host, "80"))
+             .&&. (splitAddress httpsAddr `shouldBe` (Just "https://", host, "443"))
+      )
     it "should accept the default configuration" $
       isRight (validateCopyAddr "" $ castOptions defaultOptions)
     it "should reject mismatched port" $

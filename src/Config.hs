@@ -24,7 +24,7 @@ import Control.Monad(when, unless)
 import Data.List (intercalate, isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
 import Data.Monoid ((<>))
-import Data.Char (isDigit)
+import Data.Char (isDigit, toLower)
 import Data.Either (lefts, rights, isLeft)
 import Data.Version (showVersion)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
@@ -293,6 +293,19 @@ type Scheme     = String
 splitAddress :: String -> (Maybe Scheme, Host, StringPort)
 splitAddress addr =
   let
+    lowerAddr = map toLower addr
+    scheme
+      | "https://" `isPrefixOf` lowerAddr = Just "https://"
+      | "http://" `isPrefixOf` lowerAddr = Just "http://"
+      | otherwise = Nothing
+
+    schemePort = case scheme of
+        Just "https://" -> "443"
+        Just "http://" -> "80"
+        _ -> ""
+
+    hostPort = drop (length $ fromMaybe "" scheme) addr
+
     -- | Split the string on the last colon
     splitOnLastColon :: String -> (String, String)
     splitOnLastColon = splitOnLastColonHelper "" ""
@@ -307,13 +320,12 @@ splitAddress addr =
                           (lastAfter ++ ":" ++ oneButLast) "" cs
       | otherwise = splitOnLastColonHelper
                           oneButLast (c : lastAfter) cs
-    (schemeHost, port) = splitOnLastColon addr
-    (scheme, host)
-      | isPrefixOf "http://" schemeHost =
-            (Just "http://", drop (length "http://") schemeHost)
-      | isPrefixOf "https://" schemeHost =
-            (Just "https://", drop (length "https://") schemeHost)
-      | otherwise = (Nothing, schemeHost)
+
+    -- Special case: use default port when there is no colon.
+    (host, port) = if ':' `elem` hostPort
+      then splitOnLastColon hostPort
+      else (hostPort, schemePort)
+
   in (scheme, host, port)
 
 

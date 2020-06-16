@@ -14,19 +14,22 @@ module Config
   , parseOptions
   , LogLevel(..)
   , readConfigFromEnvFiles
+  , OptionsError
+  , ValidScheme(..)
   , defaultOptions, isOptionsComplete, castOptions
   , splitAddress, validateCopyAddr, mergeOptions, getOptionsValue
   , Validated(), Completed()
   ) where
 
 import Control.Applicative ((<*>), (<|>))
-import Control.Monad(when, unless)
-import Data.List (intercalate, isPrefixOf)
+import Control.Monad(when)
+import Data.List (intercalate)
 import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
 import Data.Monoid ((<>))
-import Data.Char (isDigit, toLower)
+import Data.Char (isDigit)
 import Data.Either (lefts, rights, isLeft)
 import Data.Version (showVersion)
+import Network.URI (URI(..), URIAuth(..), parseURI)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
                             str, argument, many)
 -- Cabal generates the @Paths_vaultenv_real@ module, which contains a @version@
@@ -35,6 +38,7 @@ import Options.Applicative (value, long, auto, option, metavar, help, flag,
 import Paths_vaultenv_real (version)
 import System.IO.Error (catchIOError)
 import System.Exit (die)
+import Text.Read (readMaybe)
 
 import qualified Configuration.Dotenv as DotEnv
 import qualified Options.Applicative as OptParse
@@ -52,7 +56,7 @@ newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
 data Options validated completed = Options
   { oVaultHost       :: Maybe String
   , oVaultPort       :: Maybe Int
-  , oVaultAddr       :: Maybe String
+  , oVaultAddr       :: Maybe URI
   , oVaultToken      :: Maybe String
   , oSecretFile      :: Maybe FilePath
   , oCmd             :: Maybe String
@@ -89,7 +93,7 @@ defaultOptions :: Options Validated UnCompleted
 defaultOptions = Options
   { oVaultHost      = Just "localhost"
   , oVaultPort      = Just 8200
-  , oVaultAddr      = Just "https://localhost:8200"
+  , oVaultAddr      = parseURI "https://localhost:8200"
   , oVaultToken     = Nothing
   , oSecretFile     = Nothing
   , oCmd            = Nothing
@@ -129,7 +133,7 @@ instance Show (Options valid complete) where
   show opts = intercalate "\n"
     [ "Host:           " ++ showSpecifiedString (oVaultHost opts)
     , "Port:           " ++ showSpecified (oVaultPort opts)
-    , "Addr:           " ++ showSpecifiedString (oVaultAddr opts)
+    , "Addr:           " ++ showSpecified (oVaultAddr opts)
     , "Token:          " ++ maybe "Unspecified" (const "*****") (oVaultToken opts)
     , "Secret file:    " ++ showSpecifiedString (oSecretFile opts)
     , "Command:        " ++ showSpecifiedString (oCmd opts)
@@ -158,23 +162,23 @@ getOptionsValue f opts=
 -- | The possible errors that can occur in the construction of an Options datatype
 data OptionsError
   = UnspecifiedValue String -- ^ A value is missing and no default is specified
-  | UnknownScheme String -- ^ The scheme of the address is invalid, e.g. ftp://
+  | URIParseError URI -- ^ The URI could not be parsed
+  | UnknownScheme URI -- ^ The scheme of the address is invalid, e.g. ftp://
   | NonNumericPort String -- ^ The port of the address is not an valid integer
-  | HostPortSchemeAddrMismatch String (Maybe Bool) (Maybe String) (Maybe Int) (Maybe String)
+  | HostPortSchemeAddrMismatch String (Maybe Bool) (Maybe String) (Maybe Int) URI
       -- ^ The source, useTls, host, port and scheme do not match the provided address
-
-
-
+  deriving (Eq)
 
 instance Show OptionsError where
   show (UnspecifiedValue s) = "The option " ++ s ++ " is required but not specified"
-  show (UnknownScheme s)  = "The address " ++ s ++ " has no recognisable scheme, "
+  show (URIParseError uri) = "The address" ++ show uri ++ " could not be parsed properly. Maybe the schema is missing?"
+  show (UnknownScheme uri)  = "The address " ++ show uri ++ " has no recognisable scheme, "
       ++ " expected http:// or https:// at the beginning of the address."
   show (NonNumericPort s) = "The port " ++ s ++ " is not a valid int value"
   show (HostPortSchemeAddrMismatch source useTLs host port addr) =
     concat [
       "Confliciting configuration values in ", source, "\n",
-      "Vault address: ", maybe "Unspecified" show addr, "\n",
+      "Vault address: ", show addr, "\n",
       "Vault host: ",  maybe "Unspecified" show host, "\n",
       "Vault port: ",  maybe "Unspecified" show port, "\n",
       "Use TLS: ",  maybe "Unspecified" show useTLs, "\n",
@@ -185,42 +189,34 @@ instance Show OptionsError where
 -- | Validates for a set of options that any provided addr is valid and that either the
 -- scheme, host and port or that any given addr matches the other provided information.
 validateCopyAddr :: String -> Options UnValidated completed -> Either OptionsError (Options Validated completed)
-validateCopyAddr source opts
-  | isNothing (oVaultAddr opts) = Right (castOptions opts)
-  | otherwise = do
-    let addr = fromMaybe
-                (errorWithoutStackTrace "Addr not a Just in validation")
-                (oVaultAddr opts)
-        (mStrScheme, addrHost, addrStrPort) = splitAddress addr
-    unless (all isDigit addrStrPort && not (null addrStrPort))
-        (Left $ NonNumericPort addrStrPort)
-    unless (isJust mStrScheme)
-        (Left $ UnknownScheme addrHost)
+validateCopyAddr source opts = case oVaultAddr opts of
+  Nothing -> Right $ castOptions opts
+  Just addr -> do
+    (scheme, addrHost, addrPort) <- splitAddress addr
     let mHost = oVaultHost opts
         mPort = oVaultPort opts
         mUseTLS = oConnectTls opts
-        addrPort = read addrStrPort
-        addrTLS | mStrScheme == Just "http://" = Just False
-                | mStrScheme == Just "https://" = Just True
-                | otherwise = Nothing -- This should never occur!
+        addrTLS = case scheme of
+          HTTPS -> True
+          HTTP -> False
         doesAddrDiffer =
             (isJust mHost && Just addrHost /= mHost) -- Is the Host set and the same
             ||
             (isJust mPort && Just addrPort /= mPort) -- Is the Port set and the same
             ||
-            (isJust mUseTLS && addrTLS /= mUseTLS) -- Is the UseTLS set and the same
+            (isJust mUseTLS && Just addrTLS /= mUseTLS) -- Is the UseTLS set and the same
     when doesAddrDiffer
       (Left $ HostPortSchemeAddrMismatch
           source
           mUseTLS
           mHost
           mPort
-          (oVaultAddr opts)
+          addr
       )
     pure opts
       { oVaultHost = Just addrHost
       , oVaultPort = Just addrPort
-      , oConnectTls = addrTLS
+      , oConnectTls = Just addrTLS
       }
 
 -- | This functions merges two options, where every specific option in the
@@ -272,63 +268,49 @@ isOptionsComplete opts =
 
 -- | The host part of an address
 type Host       = String
--- | The port part of an address (without parsing to an integer)
-type StringPort = String
 -- | The scheme part of address
-type Scheme     = String
+data ValidScheme = HTTP | HTTPS deriving (Eq, Show)
 
--- | This function splits the address into three different parts. The first part,
--- is a Maybe Scheme, which menas that it is equal to either Just "http://", Just
--- "https://" or Nothing. The Host part of the return type is the part between the
--- scheme and the last colon in the address. The StringPort is the part after the
--- colon, which will hopefully be an integer that indicates the port. As this
--- function does not return any errors, the port is not yet converted to an Int.
+-- | This function splits the address into three different parts. The first
+-- part is a Scheme, which must be either http or https.
+-- The Host part of the return type is the part between the scheme and the
+-- last colon in the address. The port is the part after the colon.
 --
 -- Examples:
--- http://localhost:80 -> (Just "http://", "localhost", "80")
--- https://localhost:80 -> (Just "https://", "localhost", "80")
--- ftp://localhost:80 -> (Nothing, "ftp://localhost", "80")
--- localhost:80 -> (Nothing, "localhost", "80")
--- http://localhost:80/foo/bar -> (Just "http://","localhost","80/foo/bar")
-splitAddress :: String -> (Maybe Scheme, Host, StringPort)
-splitAddress addr =
+-- http://localhost:80 -> (HTTP, "localhost", "80")
+-- https://localhost:80 -> (HTTPS, "localhost", "80")
+-- ftp://localhost:80 -> Left $ UnknownScheme ftp://localhost:80
+-- localhost:80 -> Left $ URIParseError localhost:80
+-- http://localhost:80/foo/bar -> Right (HTTP, "localhost", "80")
+splitAddress :: URI -> Either OptionsError (ValidScheme, Host, Int)
+splitAddress addr = do
+  -- Demand uriAuthority not Nothing, as that means something didn't go
+  -- exactly right when parsing URIs
+  -- See https://github.com/haskell/network-uri/issues/19
+  uriAuth <- maybe (Left $ URIParseError addr) Right $ uriAuthority addr
+  scheme <- case uriScheme addr of
+    "https:" -> Right HTTPS
+    "http:" -> Right HTTP
+    _ -> Left $ UnknownScheme addr
+
   let
-    lowerAddr = map toLower addr
-    scheme
-      | "https://" `isPrefixOf` lowerAddr = Just "https://"
-      | "http://" `isPrefixOf` lowerAddr = Just "http://"
-      | otherwise = Nothing
+    host = uriRegName uriAuth
+    portSection = uriPort uriAuth
 
-    schemePort = case scheme of
-        Just "https://" -> "443"
-        Just "http://" -> "80"
-        _ -> ""
+  port <-
+    -- Default port from scheme when no port is given
+    if null portSection
+    then case scheme of
+      HTTPS -> Right 443
+      HTTP -> Right 80
+      -- Strip the leading colon before reading the value
+    else
+      -- The parseURI itself should reject non-numeric ports of its own, but
+      -- since they represent the port as a string one cannot be sure.
+      maybe (Left $ NonNumericPort portSection) Right $
+        readMaybe $ tail portSection
 
-    hostPort = drop (length $ fromMaybe "" scheme) addr
-
-    -- | Split the string on the last colon
-    splitOnLastColon :: String -> (String, String)
-    splitOnLastColon = splitOnLastColonHelper "" ""
-    -- | Helper that splits on the last colon, oneButLast contains
-    -- everything before the last colon lastAfter contains everything
-    -- after the last colon
-    splitOnLastColonHelper :: String -> String -> String -> (String, String)
-    splitOnLastColonHelper oneButLast lastAfter [] =
-      (drop 1 (reverse oneButLast), reverse lastAfter)
-    splitOnLastColonHelper oneButLast lastAfter (c:cs)
-      | c == ':'  = splitOnLastColonHelper
-                          (lastAfter ++ ":" ++ oneButLast) "" cs
-      | otherwise = splitOnLastColonHelper
-                          oneButLast (c : lastAfter) cs
-
-    -- Special case: use default port when there is no colon.
-    (host, port) = if ':' `elem` hostPort
-      then splitOnLastColon hostPort
-      else (hostPort, schemePort)
-
-  in (scheme, host, port)
-
-
+  pure (scheme, host, port)
 
 -- | LogLevel to run vaultenv under. Under @Error@, which is the default, we
 -- will print error messages in error cases. Examples: Vault gives 404s, our
@@ -374,7 +356,7 @@ parseEnvOptions envVars
   = Options
   { oVaultHost      = lookupEnvString   "VAULT_HOST"
   , oVaultPort      = lookupEnvInt      "VAULT_PORT"
-  , oVaultAddr      = lookupEnvString   "VAULT_ADDR"
+  , oVaultAddr      = lookupVaultAddr
   , oVaultToken     = lookupEnvString   "VAULT_TOKEN"
   , oSecretFile     = lookupEnvString   "VAULTENV_SECRETS_FILE"
   , oCmd            = lookupEnvString   "CMD"
@@ -416,6 +398,13 @@ parseEnvOptions envVars
         Just "error" -> Just Error
         Nothing -> Nothing
         _ -> err key
+    -- | Look up and parse VAULD_ADDR
+    lookupVaultAddr :: Maybe URI
+    lookupVaultAddr = do
+      addrString <- lookupEnvString "VAULT_ADDR"
+      pure $ fromMaybe
+        (errorWithoutStackTrace "[Error]: Invalid value for environment variable VAULT_ADDR") $
+        parseURI addrString
     -- | Lookup a boolean flag using ```lookupEnvString```
     lookupEnvFlag :: String -> Maybe Bool
     lookupEnvFlag key =
@@ -522,9 +511,8 @@ optionsParser = Options
       <> metavar "PORT"
       <> value Nothing
       <> help "Vault port. Defaults to 8200. Also configurable via VAULT_PORT."
-    addr =
-      maybeStrOption
-        $ long "addr"
+    addr = option (parseURI <$> str)
+        $  long "addr"
         <> metavar "ADDR"
         <> value Nothing
         <> help ("Vault address, the scheme, either http:// or https://, the ip-address or DNS name, " ++

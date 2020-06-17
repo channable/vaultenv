@@ -166,6 +166,7 @@ data OptionsError
   | UnknownScheme URI -- ^ The scheme of the address is invalid, e.g. ftp://
   | NonNumericPort String -- ^ The port of the address is not an valid integer
   | HostPortSchemeAddrMismatch String (Maybe Bool) (Maybe String) (Maybe Int) URI
+  | URIPathNotEmpty String -- ^ Disallow using non-empty path at the end of a URL
       -- ^ The source, useTls, host, port and scheme do not match the provided address
   deriving (Eq)
 
@@ -185,6 +186,7 @@ instance Show OptionsError where
       "Hint: This can happen when you provide a `addr` which ",
       "conflicts with `port`, `host`, or `[no-]connect-tls` in either the environment variables or the CLI.\n"
     ]
+  show (URIPathNotEmpty s) = "The address contains a non-empty path \"" ++ s ++ "\". This is not supported."
 
 -- | Validates for a set of options that any provided addr is valid and that either the
 -- scheme, host and port or that any given addr matches the other provided information.
@@ -288,6 +290,9 @@ splitAddress addr = do
   -- exactly right when parsing URIs
   -- See https://github.com/haskell/network-uri/issues/19
   uriAuth <- maybe (Left $ URIParseError addr) Right $ uriAuthority addr
+  when (uriPath addr `notElem` ["", "/"]) $
+    Left $ URIPathNotEmpty $ uriPath addr
+
   scheme <- case uriScheme addr of
     "https:" -> Right HTTPS
     "http:" -> Right HTTP

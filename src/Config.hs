@@ -303,11 +303,11 @@ splitAddress addr = do
     then case scheme of
       HTTPS -> Right 443
       HTTP -> Right 80
-      -- Strip the leading colon before reading the value
     else
       -- The parseURI itself should reject non-numeric ports of its own, but
       -- since they represent the port as a string one cannot be sure.
       maybe (Left $ NonNumericPort portSection) Right $
+        -- Strip the leading colon before reading the value
         readMaybe $ tail portSection
 
   pure (scheme, host, port)
@@ -398,7 +398,7 @@ parseEnvOptions envVars
         Just "error" -> Just Error
         Nothing -> Nothing
         _ -> err key
-    -- | Look up and parse VAULD_ADDR
+    -- | Look up and parse VAULT_ADDR
     lookupVaultAddr :: Maybe URI
     lookupVaultAddr = do
       addrString <- lookupEnvString "VAULT_ADDR"

@@ -95,3 +95,15 @@ spec =
           oVaultAddr = parseURI "ftp://localhost:8200"
         }
       in isLeft (validateCopyAddr "" $ castOptions options)
+    it "should accept URLs with trailing slash " $
+        let
+          options = defaultOptions{
+            oVaultAddr = parseURI "https://localhost:8200/"
+          }
+        in isRight (validateCopyAddr "" $ castOptions options)
+    it "should reject URLs with non-empty paths" $
+      let
+        options = defaultOptions{
+          oVaultAddr = parseURI "https://localhost:8200/foo"
+        }
+      in isLeft (validateCopyAddr "" $ castOptions options)

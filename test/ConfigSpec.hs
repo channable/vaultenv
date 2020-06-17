@@ -1,49 +1,73 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module ConfigSpec where
 
+import Data.Either(isRight, isLeft)
+import Data.Maybe(fromJust)
+import Network.URI (URI(..), parseURI, isUnescapedInURIComponent)
 import Test.Hspec
 import Test.QuickCheck
-import Data.Either(isRight, isLeft)
+
 import Config
 
-getHost :: (Maybe String, String, String) -> String
-getHost (_, host, _) = host
+getHost
+  :: Either OptionsError (ValidScheme, String, Int)
+  -> Either OptionsError String
+getHost = fmap $ \(_, host, _) -> host
 
-getScheme :: (Maybe String, String, String) -> Maybe String
-getScheme (mScheme, _, _) = mScheme
+getScheme
+  :: Either OptionsError (ValidScheme, String, Int)
+  -> Either OptionsError ValidScheme
+getScheme = fmap $ \(scheme, _, _) -> scheme
 
-getPort :: (Maybe String, String, String) -> String
-getPort (_, _, sPort) = sPort
+getPort
+  :: Either OptionsError (ValidScheme, String, Int)
+  -> Either OptionsError Int
+getPort = fmap $ \(_, _, port) -> port
+
+-- Generates strings that are valid as host parts of a URI
+genHost :: Gen String
+genHost = arbitrary `suchThat` all isUnescapedInURIComponent
+
+-- Valid hosts and ports
+genHostPort :: Gen (String, Int)
+genHostPort = (,) <$> genHost <*> (arbitrary `suchThat` (>=0))
 
 spec :: SpecWith ()
 spec =
   describe "Split addr" $ do
     it "should accept http schemes " $
-      getScheme (splitAddress "http://localhost:80") `shouldBe` Just "http://"
+      getScheme (splitAddress $ fromJust $ parseURI "http://localhost:80")
+        `shouldBe` Right HTTP
     it "should accept https schemes " $
-      getScheme (splitAddress "https://localhost:80") `shouldBe` Just "https://"
+      getScheme (splitAddress $ fromJust $ parseURI "https://localhost:80")
+        `shouldBe` Right HTTPS
     it "should reject any other scheme" $
-      property $ \scheme -> scheme `notElem` ["http", "https"]
-        ==> getScheme (splitAddress $ scheme ++ "://localhost:80") `shouldBe` Nothing
-    it "should parse any host" $
-      property (\host ->
+      property $ \scheme ->
+        let uri = parseURI $ scheme ++ "://localhost:80"
+        in scheme `notElem` ["http", "https"]
+        ==> maybe True (isLeft . splitAddress) uri
+    it "should split any valid addr properly" $
+      forAll genHostPort (\(host, port) ->
         let
-          addr :: String
-          addr = "http://" ++ (host :: String) ++ ":80"
-        in getHost (splitAddress addr) `shouldBe` host
+          httpAddr :: Maybe URI
+          httpAddr = parseURI $ "http://" ++ host ++ ":" ++ show port
+
+          httpsAddr :: Maybe URI
+          httpsAddr = parseURI $ "https://" ++ host ++ ":" ++ show port
+        in
+               (splitAddress <$> httpAddr `shouldBe` Just (Right (HTTP, host, port)))
+          .&&. (splitAddress <$> httpsAddr `shouldBe` Just (Right (HTTPS, host, port)))
       )
-    it "should parse any port" $
-      property (\port ->
+    it "should parse addr without explicit port" $
+      forAll genHost (\host ->
         let
-          addr :: String
-          addr = "http://localhost:" ++ port
-        in ':' `notElem` port ==> getPort (splitAddress addr) `shouldBe` port
-      )
-    it "should parse any addr" $
-      property (\host port ->
-        let
-          addr :: String
-          addr = "http://" ++ host ++ ":" ++ port
-        in ':' `notElem` port ==> splitAddress addr `shouldBe` (Just "http://", host, port)
+          httpAddr :: Maybe URI
+          httpAddr = parseURI $ "http://" ++ host
+
+          httpsAddr :: Maybe URI
+          httpsAddr = parseURI $ "https://" ++ host
+        in      (splitAddress <$> httpAddr `shouldBe` Just (Right (HTTP, host, 80)))
+           .&&. (splitAddress <$> httpsAddr `shouldBe` Just (Right (HTTPS, host, 443)))
       )
     it "should accept the default configuration" $
       isRight (validateCopyAddr "" $ castOptions defaultOptions)
@@ -68,12 +92,18 @@ spec =
     it "should reject invalid schemes" $
       let
         options = defaultOptions{
-          oVaultAddr = Just "ftp://localhost:8200"
+          oVaultAddr = parseURI "ftp://localhost:8200"
         }
       in isLeft (validateCopyAddr "" $ castOptions options)
-    it "should reject non-numeric ports" $
+    it "should accept URLs with trailing slash " $
+        let
+          options = defaultOptions{
+            oVaultAddr = parseURI "https://localhost:8200/"
+          }
+        in isRight (validateCopyAddr "" $ castOptions options)
+    it "should reject URLs with non-empty paths" $
       let
         options = defaultOptions{
-          oVaultAddr = Just "https://localhost:myport"
+          oVaultAddr = parseURI "https://localhost:8200/foo"
         }
       in isLeft (validateCopyAddr "" $ castOptions options)

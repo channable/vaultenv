@@ -361,6 +361,7 @@ requestMountInfo context =
               (cHttpManager context)
         $ setRequestHeader "x-vault-token"
               [SBS.pack (getOptionsValue oVaultToken cliOptions)]
+        $ setRequestHeader "x-vault-request" [SBS.pack "true"]
         $ setRequestPath
               (SBS.pack "/v1/sys/mounts")
         $ setRequestPort
@@ -393,6 +394,7 @@ requestSecret context secretPath =
         = setRequestManager
             (cHttpManager context)
         $ setRequestHeader "x-vault-token" [SBS.pack (getOptionsValue oVaultToken cliOptions)]
+        $ setRequestHeader "x-vault-request" [SBS.pack "true"]
         $ setRequestPath    (SBS.pack secretPath)
         $ setRequestPort    (getOptionsValue oVaultPort cliOptions)
         $ setRequestHost    (SBS.pack (getOptionsValue oVaultHost cliOptions))

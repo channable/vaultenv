@@ -351,6 +351,19 @@ runCommand options env =
     -- replaces the current process with `command`. It does not return.
     executeFile command searchPath args env'
 
+
+-- | Add Vault authentication token to a request, if set in the options. If
+-- not, the request is returned unmodified.
+addVaultToken :: Options Validated Completed -> Request -> Request
+addVaultToken options request =
+  let
+    optToken = oVaultToken options
+  in
+    case optToken of
+      Just token -> setRequestHeader "x-vault-token" [SBS.pack token] request
+      Nothing -> request
+
+
 -- | Look up what mounts are available and what type they have.
 requestMountInfo :: Context -> IO (Either VaultError MountInfo)
 requestMountInfo context =
@@ -359,8 +372,8 @@ requestMountInfo context =
     request
         = setRequestManager
               (cHttpManager context)
-        $ setRequestHeader "x-vault-token"
-              [SBS.pack (getOptionsValue oVaultToken cliOptions)]
+        $ addVaultToken cliOptions
+        $ setRequestHeader "x-vault-request" [SBS.pack "true"]
         $ setRequestPath
               (SBS.pack "/v1/sys/mounts")
         $ setRequestPort
@@ -392,7 +405,8 @@ requestSecret context secretPath =
     request
         = setRequestManager
             (cHttpManager context)
-        $ setRequestHeader "x-vault-token" [SBS.pack (getOptionsValue oVaultToken cliOptions)]
+        $ addVaultToken     cliOptions
+        $ setRequestHeader "x-vault-request" [SBS.pack "true"]
         $ setRequestPath    (SBS.pack secretPath)
         $ setRequestPort    (getOptionsValue oVaultPort cliOptions)
         $ setRequestHost    (SBS.pack (getOptionsValue oVaultHost cliOptions))
@@ -441,6 +455,7 @@ parseResponse secretPath response =
     statusCode = getResponseStatusCode response
   in case statusCode of
     200 -> parseSuccessResponse responseBody
+    400 -> Left $ BadRequest responseBody
     403 -> Left Forbidden
     404 -> Left $ SecretNotFound secretPath
     500 -> Left $ ServerError responseBody

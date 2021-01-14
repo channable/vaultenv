@@ -258,12 +258,8 @@ mergeOptions opts1 opts2 = let
 isOptionsComplete :: Options Validated UnCompleted
                   -> Either [OptionsError] (Options Validated Completed)
 isOptionsComplete opts =
-      let errors = concat
-            [
-              [UnspecifiedValue "Token"       | isNothing (oVaultToken opts)]
-            , [UnspecifiedValue "Command"     | isNothing (oCmd opts)]
-            , [UnspecifiedValue "Secret file" | isNothing (oSecretFile opts)]
-            ]
+      let errors = [UnspecifiedValue "Command" | isNothing (oCmd opts)]
+            ++ [UnspecifiedValue "Secret file" | isNothing (oSecretFile opts)]
       in  if not (null errors)
           then Left errors
           else Right (castOptions opts)

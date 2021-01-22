@@ -2,6 +2,7 @@
 /.stack-work
 *.deb
 /package/vaultenv-*-linux-musl
+/result
 
 # auto-generated files
 *.cabal

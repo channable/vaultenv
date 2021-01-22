@@ -21,11 +21,10 @@ module Config
   , Validated(), Completed()
   ) where
 
-import Control.Applicative ((<*>), (<|>))
+import Control.Applicative ((<|>))
 import Control.Monad(when)
 import Data.List (intercalate)
 import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
-import Data.Monoid ((<>))
 import Data.Char (isDigit)
 import Data.Either (lefts, rights, isLeft)
 import Data.Version (showVersion)

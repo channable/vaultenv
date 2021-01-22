@@ -1,3 +1,12 @@
 # Also take care to update the compiler in default.nix to the
 # compiler used in this Stackage snapshot.
-resolver: lts-14.7
+resolver: ghc-8.8.4
+
+packages:
+  - "."
+
+# This makes stack pick up our nix environment for building by default.
+nix:
+  enable: true
+  shell-file: nix/stack-shell.nix
+  path: ["nixpkgs=./nix/nixpkgs-pinned.nix"]

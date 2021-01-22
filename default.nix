@@ -1,12 +1,12 @@
-let
-  pkgs = import ./nix/nixpkgs.nix;
-in
-  pkgs.buildEnv {
+{ pkgs ? import ./nix/nixpkgs-pinned.nix {}
+}:
+  with pkgs; buildEnv {
     name = "vaultenv-devenv";
     paths = [
-      pkgs.stack
-      pkgs.vault
-	  pkgs.cachix
+      stack
+      vault
+      cachix
+
+      niv
     ];
   }
-

@@ -1,7 +1,6 @@
-# This file wires up the different vaultenv releases that are available.
-rec {
+let
   pkgs = import ./nixpkgs-pinned.nix {};
-
+in {
   # Normal cabal build where Nix handles dependencies.
   vaultenv = pkgs.haskellPackages.callPackage ../vaultenv.nix {};
 }

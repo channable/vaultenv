@@ -1,6 +1,8 @@
 # Also take care to update the compiler in default.nix to the
 # compiler used in this Stackage snapshot.
-resolver: ghc-8.8.4
+# This value has a companion file named `stack-static-build.yaml`, used for static builds.
+# When updating this resolver, update that file as well.
+resolver: ghc-8.6.5
 
 packages:
   - "."

@@ -6,7 +6,6 @@
       stack
       vault
       cachix
-
       niv
     ];
   }

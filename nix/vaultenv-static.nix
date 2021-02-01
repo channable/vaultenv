@@ -38,7 +38,8 @@ let
   compiler = "ghc865";
 
   # Pin versions of static-haskell-nix and nixpkgs.
-  static-haskell-nix = import ./static-haskell-nix.nix;
+  sources = import ./sources.nix;
+  static-haskell-nix = sources.static-haskell-nix;
   pkgs = import ./nixpkgs-pinned.nix {};
 
   # Generate a stack2nix script which will download a Stackage + Hackage

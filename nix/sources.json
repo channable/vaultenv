@@ -22,5 +22,5 @@
         "type": "tarball",
         "url": "https://github.com/nh2/static-haskell-nix/archive/ff7715e0e13fb3f615e64a8d8c2e43faa4429b0f.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-}
+    }
 }

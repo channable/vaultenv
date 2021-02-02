@@ -10,5 +10,17 @@
         "type": "tarball",
         "url": "https://github.com/NixOS/nixpkgs/archive/65f4c39a40e6ed4343dd94017c3ed81f416cd3b4.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
+    },
+    "static-haskell-nix": {
+        "branch": "master",
+        "description": "easily build most Haskell programs into fully static Linux executables",
+        "homepage": "",
+        "owner": "nh2",
+        "repo": "static-haskell-nix",
+        "rev": "ff7715e0e13fb3f615e64a8d8c2e43faa4429b0f",
+        "sha256": "17ir87i7sah9nixvh25qhzh19bqv3vgnfg4nfy4wv631q4gfj7fb",
+        "type": "tarball",
+        "url": "https://github.com/nh2/static-haskell-nix/archive/ff7715e0e13fb3f615e64a8d8c2e43faa4429b0f.tar.gz",
+        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

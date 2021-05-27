@@ -12,7 +12,7 @@ import Data.Aeson.Types       (parseMaybe)
 import Data.Bifunctor         (first)
 import Data.HashMap.Strict    (HashMap, lookupDefault, mapMaybe)
 import Data.List              (nubBy)
-import Data.Text              (Text, pack)
+import Data.Text              (Text, pack, unpack)
 import Network.Connection     (TLSSettings(..))
 import Network.HTTP.Client    (defaultManagerSettings)
 import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
@@ -32,6 +32,7 @@ import qualified Data.ByteString.Lazy       as LBS hiding (unpack)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Foldable              as Foldable
 import qualified Data.Map                   as Map
+import qualified Data.HashMap.Strict        as HM
 import qualified System.Exit                as Exit
 
 import Config (Options(..), parseOptions, unMilliSeconds,
@@ -63,7 +64,7 @@ data Context
 data EngineType = KV1 | KV2
   deriving (Show)
 
-data VaultData = VaultData (Map.Map String String)
+data VaultData = VaultData (HashMap String String)
 
 -- Vault has two versions of the Key/Value backend. We try to parse both
 -- response formats here and return the one which we can parse correctly.
@@ -108,14 +109,16 @@ data VaultData = VaultData (Map.Map String String)
 instance FromJSON VaultData where
   parseJSON =
     let
+      onlyStrings (Aeson.String t) = Just (unpack t)
+      onlyStrings _ = Nothing
       parseV1 obj = do
         keyValuePairs <- obj .: "data"
-        VaultData <$> Aeson.parseJSON keyValuePairs
+        (VaultData . (mapMaybe onlyStrings)) <$> Aeson.parseJSON keyValuePairs
       parseV2 obj = do
         nested <- obj .: "data"
         flip (Aeson.withObject "nested") nested $ \obj' -> do
           keyValuePairs <- obj' .: "data"
-          VaultData <$> Aeson.parseJSON keyValuePairs
+          (VaultData . (mapMaybe onlyStrings)) <$> Aeson.parseJSON keyValuePairs
     in Aeson.withObject "object" $ \obj -> parseV1 obj <|> parseV2 obj
 
 -- Parses a very mixed type of response that Vault gives back when you
@@ -431,7 +434,7 @@ requestSecrets context mountInfo secrets = do
 lookupSecrets :: MountInfo -> [Secret] -> Map.Map String VaultData -> Either VaultError [EnvVar]
 lookupSecrets mountInfo secrets vaultData = forM secrets $ \secret ->
   let secretData = Map.lookup (secretRequestPath mountInfo secret) vaultData
-      secretValue = secretData >>= (\(VaultData vd) -> Map.lookup (sKey secret) vd)
+      secretValue = secretData >>= (\(VaultData vd) -> HM.lookup (sKey secret) vd)
       toEnvVar val = (sVarName secret, val)
   in maybe (Left $ KeyNotFound secret) (Right . toEnvVar) $ secretValue
 

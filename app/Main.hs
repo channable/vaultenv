@@ -64,7 +64,7 @@ data Context
 data EngineType = KV1 | KV2
   deriving (Show)
 
-data VaultData = VaultData (HashMap String String)
+data VaultData = VaultData (HashMap String Aeson.Value)
 
 -- Vault has two versions of the Key/Value backend. We try to parse both
 -- response formats here and return the one which we can parse correctly.
@@ -109,17 +109,15 @@ data VaultData = VaultData (HashMap String String)
 instance FromJSON VaultData where
   parseJSON =
     let
-      onlyStrings (Aeson.String t) = Just (unpack t)
-      onlyStrings _ = Nothing
       parseV1 obj = do
         keyValuePairs <- obj .: "data"
-        (VaultData . (mapMaybe onlyStrings)) <$> Aeson.parseJSON keyValuePairs
+        VaultData <$> Aeson.parseJSON keyValuePairs
       parseV2 obj = do
         nested <- obj .: "data"
         flip (Aeson.withObject "nested") nested $ \obj' -> do
           keyValuePairs <- obj' .: "data"
-          (VaultData . (mapMaybe onlyStrings)) <$> Aeson.parseJSON keyValuePairs
-    in Aeson.withObject "object" $ \obj -> parseV1 obj <|> parseV2 obj
+          VaultData <$> Aeson.parseJSON keyValuePairs
+    in Aeson.withObject "object" $ \obj -> parseV2 obj <|> parseV1 obj
 
 -- Parses a very mixed type of response that Vault gives back when you
 -- request /sys/mounts. It has a garbage format. We primarily care about
@@ -164,6 +162,7 @@ data VaultError
   = SecretNotFound String
   | SecretFileError SFError
   | KeyNotFound Secret
+  | WrongType Secret
   | BadRequest LBS.ByteString
   | Forbidden
   | BadJSONResp String
@@ -228,6 +227,7 @@ doWithRetries retryPolicy = Retry.retrying retryPolicy isRetryableFailure
       KeyNotFound _ -> False
       DuplicateVar _ -> False
       SecretFileError _ -> False
+      WrongType _ -> False
 
 --
 -- IO
@@ -435,8 +435,9 @@ lookupSecrets :: MountInfo -> [Secret] -> Map.Map String VaultData -> Either Vau
 lookupSecrets mountInfo secrets vaultData = forM secrets $ \secret ->
   let secretData = Map.lookup (secretRequestPath mountInfo secret) vaultData
       secretValue = secretData >>= (\(VaultData vd) -> HM.lookup (sKey secret) vd)
-      toEnvVar val = (sVarName secret, val)
-  in maybe (Left $ KeyNotFound secret) (Right . toEnvVar) $ secretValue
+      toEnvVar (Aeson.String val) = Right (sVarName secret, unpack val)
+      toEnvVar _                  = Left (WrongType secret)
+  in maybe (Left $ KeyNotFound secret) toEnvVar $ secretValue
 
 -- | Send a request for secrets to the vault and parse the response.
 doRequest :: String -> Request -> IO (Either VaultError VaultData)
@@ -481,6 +482,8 @@ vaultErrorLogMessage vaultError =
       SecretFileError sfe -> show sfe
       KeyNotFound secret ->
         "Key " <> (sKey secret) <> " not found for path " <> (sPath secret)
+      WrongType secret ->
+        "Key " <> (sKey secret) <> " in path " <> (sPath secret) <> " is not a String"
       DuplicateVar varName ->
         "Found duplicate environment variable \"" ++ varName ++ "\""
       BadRequest resp ->

@@ -117,7 +117,7 @@ instance FromJSON VaultData where
         flip (Aeson.withObject "nested") nested $ \obj' -> do
           keyValuePairs <- obj' .: "data"
           VaultData <$> Aeson.parseJSON keyValuePairs
-    in Aeson.withObject "object" $ \obj -> parseV2 obj <|> parseV1 obj
+    in Aeson.withObject "VaultData" $ \obj -> parseV2 obj <|> parseV1 obj
 
 -- Parses a very mixed type of response that Vault gives back when you
 -- request /sys/mounts. It has a garbage format. We primarily care about

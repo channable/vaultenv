@@ -1,5 +1,5 @@
 sudo: true
-language: generic
+language: nix
 
 notifications:
   email: false
@@ -17,18 +17,9 @@ env:
   global:
     - GITHUB_RELEASE_VERSION=1.2.4
 
-before_install:
-  - mkdir -p ~/.local/bin
-  - |
-    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-        travis_retry curl -sSL https://www.stackage.org/stack/osx-x86_64   | tar xz --strip-components=1 --include  '*/stack' -C ~/.local/bin
-    else
-        travis_retry curl -sSL https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-    fi
-
 install:
-  - stack setup --no-terminal
-  - stack build --only-dependencies --test --copy-bins
+  - nix run -c stack setup --no-terminal
+  - nix run -c stack build --only-dependencies --test
 
 script:
-  - stack test --copy-bins
+  - nix run -c stack test

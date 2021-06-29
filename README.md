@@ -99,15 +99,17 @@ of `tutorial.sh`.
 ## Usage
 
 ```
-vaultenv 0.11.0 - run programs with secrets from HashiCorp Vault
+vaultenv 0.13.2 - run programs with secrets from HashiCorp Vault
 
 Usage: vaultenv [--version] [--host HOST] [--port PORT] [--addr ADDR]
                 [--token TOKEN] [--secrets-file FILENAME] [CMD] [ARGS...]
-                ([--no-connect-tls] | [--connect-tls]) ([--no-validate-certs] |
-                [--validate-certs]) ([--no-inherit-env] | [--inherit-env])
+                [--no-connect-tls | --connect-tls]
+                [--no-validate-certs | --validate-certs]
+                [--no-inherit-env | --inherit-env]
                 [--inherit-env-blacklist COMMA_SEPARATED_NAMES]
                 [--retry-base-delay-milliseconds MILLISECONDS]
                 [--retry-attempts NUM] [--log-level error | info] [--use-path]
+                [--max-concurrent-requests NUM]
 
 Available options:
   -h,--help                Show this help text
@@ -161,6 +163,11 @@ Available options:
   --use-path               Use PATH for finding the executable that vaultenv
                            should call. Default: don't search PATH. Also
                            configurable via VAULTENV_USE_PATH.
+  --max-concurrent-requests NUM
+                           Maximum number of concurrent requests to vault.
+                           Defaults to 8. Pass 0 to disable the limit. Also
+                           configurable through
+                           VAULTENV_MAX_CONCURRENT_REQUESTS.
 ```
 
 ## Configuration
@@ -288,6 +295,7 @@ VAULTENV_RETRY_BASE_DELAY:      40
 VAULTENV_RETRY_ATTEMPTS:        9
 VAULTENV_LOG_LEVEL:             Error
 VAULTENV_USE_PATH:              True
+VAULTENV_MAX_CONCURRENT_REQUESTS: 8
 ```
 In cases where no default nor any value is specified, which is possible for `Token`, `Secret file` and
 `Command`, Vaultenv will give an error that it requires these values to operate.
@@ -319,6 +327,11 @@ due to the `http://` scheme, and a port of `42`.
 Other errors than the mismatch address error that can happen during parsing are:
 - A non-numeric port in the address, like `http://localhost:my_port`
 - A non-supported scheme in the address, like `ftp://example.com:42`
+
+By default, `vaultenv` will open at most 8 concurrent HTTP connections to the vault server.
+This limit can be changed using the `VAULTENV_MAX_CONCURRENT_REQUESTS` setting, and it can
+be disabled by choosing the limit `0`.
+
 ## Allowed characters in environment variables
 
 We disallow the following in any path to keep the parser and format simple and

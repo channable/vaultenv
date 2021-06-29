@@ -99,15 +99,17 @@ of `tutorial.sh`.
 ## Usage
 
 ```
-vaultenv 0.11.0 - run programs with secrets from HashiCorp Vault
+vaultenv 0.13.2 - run programs with secrets from HashiCorp Vault
 
 Usage: vaultenv [--version] [--host HOST] [--port PORT] [--addr ADDR]
                 [--token TOKEN] [--secrets-file FILENAME] [CMD] [ARGS...]
-                ([--no-connect-tls] | [--connect-tls]) ([--no-validate-certs] |
-                [--validate-certs]) ([--no-inherit-env] | [--inherit-env])
+                [--no-connect-tls | --connect-tls]
+                [--no-validate-certs | --validate-certs]
+                [--no-inherit-env | --inherit-env]
                 [--inherit-env-blacklist COMMA_SEPARATED_NAMES]
                 [--retry-base-delay-milliseconds MILLISECONDS]
                 [--retry-attempts NUM] [--log-level error | info] [--use-path]
+                [--max-concurrent-requests NUM]
 
 Available options:
   -h,--help                Show this help text
@@ -161,6 +163,11 @@ Available options:
   --use-path               Use PATH for finding the executable that vaultenv
                            should call. Default: don't search PATH. Also
                            configurable via VAULTENV_USE_PATH.
+  --max-concurrent-requests NUM
+                           Maximum number of concurrent requests to vault.
+                           Defaults to 8. Pass 0 to disable the limit. Also
+                           configurable through
+                           VAULTENV_MAX_CONCURRENT_REQUESTS.
 ```
 
 ## Configuration

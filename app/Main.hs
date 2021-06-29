@@ -15,7 +15,7 @@ import Data.HashMap.Strict    (HashMap, lookupDefault, mapMaybe)
 import Data.List              (nubBy)
 import Data.Text              (Text, pack, unpack)
 import Network.Connection     (TLSSettings(..))
-import Network.HTTP.Client    (defaultManagerSettings)
+import Network.HTTP.Client    (defaultManagerSettings, ManagerSettings (managerConnCount))
 import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
 import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                defaultRequest, setRequestHeader, setRequestPort,
@@ -264,9 +264,16 @@ main = do
 -- for HTTPS connections. If TLS is wanted, we also check if the
 -- user specified an option to disable the certificate check.
 getHttpManager :: Options Validated Completed -> IO Manager
-getHttpManager opts = newManager managerSettings
+getHttpManager opts = newManager $ applyConfig basicManagerSettings
   where
-    managerSettings = if getOptionsValue oConnectTls opts
+    maxConnections = getOptionsValue oMaxConcurrentRequests opts
+    applyConfig settings = settings
+      -- Allow the manager to keep as many connections live as were requested.
+      -- Unless we use the unlimited flag, in that case, use the default value.
+      { managerConnCount = if maxConnections > 0 then maxConnections else managerConnCount settings
+      }
+
+    basicManagerSettings = if getOptionsValue oConnectTls opts
                       then mkManagerSettings tlsSettings Nothing
                       else defaultManagerSettings
     tlsSettings = TLSSettingsSimple

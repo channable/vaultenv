@@ -4,7 +4,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 import Control.Applicative    ((<|>))
-import Control.Exception      (catch)
+import Control.Concurrent.QSem (newQSem, waitQSem, signalQSem)
+import Control.Exception      (bracket_, catch)
 import Control.Monad          (forM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
@@ -426,8 +427,18 @@ requestSecret context secretPath =
 -- order to avoid unnecessary round trips and DNS requests.
 requestSecrets :: Context -> MountInfo -> [Secret] -> IO (Either VaultError [EnvVar])
 requestSecrets context mountInfo secrets = do
-  let secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap (secretRequestPath mountInfo) secrets
-  secretData <- liftIO (Async.mapConcurrently (requestSecret context) secretPaths)
+  let
+    secretPaths = Foldable.foldMap (\x -> Map.singleton x x) $ fmap (secretRequestPath mountInfo) secrets
+    concurrentRequests = getOptionsValue oMaxConcurrentRequests (cCliOptions context)
+
+  -- Limit the number of concurrent requests with a semaphore
+  requestSemaphore <- newQSem concurrentRequests
+  let
+    withSemaphore
+      | concurrentRequests == 0 = id
+      | otherwise = bracket_ (waitQSem requestSemaphore) (signalQSem requestSemaphore)
+
+  secretData <- liftIO (Async.mapConcurrently (withSemaphore . requestSecret context) secretPaths)
   pure $ sequence secretData >>= lookupSecrets mountInfo secrets
 
 -- | Look for the requested keys in the secret data that has been previously fetched.

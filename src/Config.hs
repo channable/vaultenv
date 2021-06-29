@@ -68,6 +68,7 @@ data Options validated completed = Options
   , oRetryAttempts   :: Maybe Int
   , oLogLevel        :: Maybe LogLevel
   , oUsePath         :: Maybe Bool
+  , oMaxConcurrentRequests :: Maybe Int
   } deriving (Eq)
 
 -- | Phantom type that indicates that an option is
@@ -105,9 +106,10 @@ defaultOptions = Options
   , oRetryAttempts  = Just 9
   , oLogLevel       = Just Error
   , oUsePath        = Just True
+  , oMaxConcurrentRequests = Just 8
 }
 
--- | Casts one options structure into antoher, use only when certain that
+-- | Casts one options structure into another, use only when certain that
 -- the validated and completed options can be given to a options file.
 castOptions :: Options a b -> Options c d
 castOptions opts = Options
@@ -126,25 +128,27 @@ castOptions opts = Options
   , oRetryAttempts  = oRetryAttempts opts
   , oLogLevel       = oLogLevel opts
   , oUsePath        = oUsePath opts
+  , oMaxConcurrentRequests = oMaxConcurrentRequests opts
   }
 
 instance Show (Options valid complete) where
   show opts = intercalate "\n"
-    [ "Host:           " ++ showSpecifiedString (oVaultHost opts)
-    , "Port:           " ++ showSpecified (oVaultPort opts)
-    , "Addr:           " ++ showSpecified (oVaultAddr opts)
-    , "Token:          " ++ maybe "Unspecified" (const "*****") (oVaultToken opts)
-    , "Secret file:    " ++ showSpecifiedString (oSecretFile opts)
-    , "Command:        " ++ showSpecifiedString (oCmd opts)
-    , "Arguments:      " ++ showSpecified (oArgs opts)
-    , "Use TLS:        " ++ showSpecified (oConnectTls opts)
-    , "Validate certs: " ++ showSpecified (oValidateCerts opts)
-    , "Inherit env:    " ++ showSpecified (oInheritEnv opts)
+    [ "Host:                  " ++ showSpecifiedString (oVaultHost opts)
+    , "Port:                  " ++ showSpecified (oVaultPort opts)
+    , "Addr:                  " ++ showSpecified (oVaultAddr opts)
+    , "Token:                 " ++ maybe "Unspecified" (const "*****") (oVaultToken opts)
+    , "Secret file:           " ++ showSpecifiedString (oSecretFile opts)
+    , "Command:               " ++ showSpecifiedString (oCmd opts)
+    , "Arguments:             " ++ showSpecified (oArgs opts)
+    , "Use TLS:               " ++ showSpecified (oConnectTls opts)
+    , "Validate certs:        " ++ showSpecified (oValidateCerts opts)
+    , "Inherit env:           " ++ showSpecified (oInheritEnv opts)
     , "Inherit env blacklist: " ++ showSpecified (oInheritEnvBlacklist opts)
-    , "Base delay:     " ++ showSpecified (unMilliSeconds <$> oRetryBaseDelay opts)
-    , "Retry attempts: " ++ showSpecified (oRetryAttempts opts)
-    , "Log-level:      " ++ showSpecified (oLogLevel opts)
-    , "Use PATH:       " ++ showSpecified (oUsePath opts)
+    , "Base delay:            " ++ showSpecified (unMilliSeconds <$> oRetryBaseDelay opts)
+    , "Retry attempts:        " ++ showSpecified (oRetryAttempts opts)
+    , "Log-level:             " ++ showSpecified (oLogLevel opts)
+    , "Use PATH:              " ++ showSpecified (oUsePath opts)
+    , "Concurrent requests:   " ++ showSpecified (oMaxConcurrentRequests opts)
     ] where
       showSpecified :: Show a => Maybe a -> String
       showSpecified (Just x) = show x
@@ -247,6 +251,7 @@ mergeOptions opts1 opts2 = let
   , oRetryAttempts  = combine oRetryAttempts
   , oLogLevel       = combine oLogLevel
   , oUsePath        = combine oUsePath
+  , oMaxConcurrentRequests = combine oMaxConcurrentRequests
   }
 
 
@@ -369,6 +374,7 @@ parseEnvOptions envVars
   , oRetryAttempts  = lookupEnvInt      "VAULTENV_RETRY_ATTEMPTS"
   , oLogLevel       = lookupEnvLogLevel "VAULTENV_LOG_LEVEL"
   , oUsePath        = lookupEnvFlag     "VAULTENV_USE_PATH"
+  , oMaxConcurrentRequests = lookupEnvInt "VAULTENV_MAX_CONCURRENT_REQUESTS"
   }
   where
     -- | Throws an error for an invalid key
@@ -495,6 +501,7 @@ optionsParser = Options
     <*> retryAttempts
     <*> logLevel
     <*> usePath
+    <*> maxConcurrentRequests
   where
     maybeStr = Just <$> str
     maybeStrOption = option maybeStr
@@ -613,6 +620,14 @@ optionsParser = Options
       $  long "use-path"
       <> help ("Use PATH for finding the executable that vaultenv should call. Default: " ++
               "don't search PATH. Also configurable via VAULTENV_USE_PATH.")
+    maxConcurrentRequests
+      =  option (Just <$> auto)
+      $  long "max-concurrent-requests"
+      <> metavar "NUM"
+      <> value Nothing
+      <> help ("Maximum number of concurrent requests to vault. Defaults to 8. " ++
+               "Pass 0 to disable the limit. " ++
+               "Also configurable through VAULTENV_MAX_CONCURRENT_REQUESTS.")
 
 -- | Split a list of elements on the given separator, returning sublists without this
 -- separator item.

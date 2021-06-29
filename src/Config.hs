@@ -106,6 +106,10 @@ defaultOptions = Options
   , oRetryAttempts  = Just 9
   , oLogLevel       = Just Error
   , oUsePath        = Just True
+
+  -- Number of concurrent requests to send to the vault server.
+  -- The default has been chosen by doubling the limit in combination with a suitably large
+  -- secrets file until the gain in performance was insignificant.
   , oMaxConcurrentRequests = Just 8
 }
 

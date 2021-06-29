@@ -320,6 +320,11 @@ due to the `http://` scheme, and a port of `42`.
 Other errors than the mismatch address error that can happen during parsing are:
 - A non-numeric port in the address, like `http://localhost:my_port`
 - A non-supported scheme in the address, like `ftp://example.com:42`
+
+By default, `vaultenv` will open at most 8 concurrent HTTP connections to the vault server.
+This limit can be changed using the `VAULTENV_MAX_CONCURRENT_REQUESTS` setting, and it can
+be disabled by choosing the limit `0`.
+
 ## Allowed characters in environment variables
 
 We disallow the following in any path to keep the parser and format simple and

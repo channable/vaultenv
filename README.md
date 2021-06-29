@@ -288,6 +288,7 @@ VAULTENV_RETRY_BASE_DELAY:      40
 VAULTENV_RETRY_ATTEMPTS:        9
 VAULTENV_LOG_LEVEL:             Error
 VAULTENV_USE_PATH:              True
+VAULTENV_MAX_CONCURRENT_REQUESTS: 8
 ```
 In cases where no default nor any value is specified, which is possible for `Token`, `Secret file` and
 `Command`, Vaultenv will give an error that it requires these values to operate.

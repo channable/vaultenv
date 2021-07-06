@@ -99,7 +99,7 @@ of `tutorial.sh`.
 ## Usage
 
 ```
-vaultenv 0.13.2 - run programs with secrets from HashiCorp Vault
+vaultenv 0.13.3 - run programs with secrets from HashiCorp Vault
 
 Usage: vaultenv [--version] [--host HOST] [--port PORT] [--addr ADDR]
                 [--token TOKEN] [--secrets-file FILENAME] [CMD] [ARGS...]

@@ -1,6 +1,6 @@
 # vaultenv
 
-[![Build Status](https://travis-ci.com/channable/vaultenv.svg?branch=master)](https://travis-ci.com/channable/vaultenv)
+[![Build Status](https://channable.semaphoreci.com/badges/vaultenv/branches/master.svg?style=shields)](https://channable.semaphoreci.com/projects/vaultenv)
 
 Run processes with secrets from [HashiCorp Vault]. It:
 

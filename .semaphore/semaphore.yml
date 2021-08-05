@@ -1,0 +1,45 @@
+---
+version: "v1.0"
+name: "Vaultenv CI Pipeline"
+
+agent:
+  machine:
+    type: "e1-standard-2"
+    os_image: "ubuntu1804"
+
+blocks:
+  - name: "Run checks"
+    task:
+      secrets:
+        - name: "opsbot-github-key"
+
+      jobs:
+        - name: "Run tests"
+          commands:
+            # Change permissions of the shipping key to avoid SSH complaining
+            # about the default file permissions that Semaphore uses.
+            - "chmod 0600 ~/.ssh/id_ed25519"
+            - "ssh-add ~/.ssh/id_ed25519"
+
+            - "checkout"
+
+            # For some reason, Semaphore CI sets this variable, but it causes the nix installation to fail
+            - unset LD_LIBRARY_PATH
+
+            # Restore `/nix` cache. Create the directory first, otherwise we encounter
+            # permission errors. We do this because the Semaphore cache is faster than
+            # both Cachix and cache.nixos.org.
+            - "sudo mkdir /nix"
+            - "sudo chown -R semaphore:semaphore /nix"
+            - "cache restore nix-store-"
+
+            # Install Nix and source the shell configuration immediately.
+            - "./nix/install"
+            - ". $HOME/.nix-profile/etc/profile.d/nix.sh"
+
+            - "nix run -c stack build --only-dependencies --test"
+            - "nix run -c stack test"
+
+            # Store a copy of the nix store. This will be refreshed daily, which
+            # is more than sufficient for this repo.
+            - "cache store nix-store-$(date -u -Idate) /nix"

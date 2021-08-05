@@ -10,17 +10,9 @@ agent:
 blocks:
   - name: "Run checks"
     task:
-      secrets:
-        - name: "opsbot-github-key"
-
       jobs:
         - name: "Run tests"
           commands:
-            # Change permissions of the shipping key to avoid SSH complaining
-            # about the default file permissions that Semaphore uses.
-            - "chmod 0600 ~/.ssh/id_ed25519"
-            - "ssh-add ~/.ssh/id_ed25519"
-
             - "checkout"
 
             # For some reason, Semaphore CI sets this variable, but it causes the nix installation to fail

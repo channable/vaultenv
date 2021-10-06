@@ -9,7 +9,8 @@ variables.
 The main entry point is @parseOptions@.
 -}
 module Config
-  ( Options(..)
+  ( AuthMethod (..)
+  , Options(..)
   , MilliSeconds(..)
   , parseOptions
   , LogLevel(..)
@@ -50,13 +51,27 @@ type EnvVar = (String, String)
 newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
   deriving (Eq, Show)
 
+data AuthMethod
+  -- Note, these options are deliberately ordered from least specific to most
+  -- specific, so we can use `max` as a sensible merge operation.
+  = AuthNone
+    -- ^ Do not include an x-vault-token header at all.
+  | AuthKubernetes
+    -- ^ Use Vault's Kubernetes authentication [1] to obtain a Vault token, then
+    -- use that as the x-vault-token.
+    --
+    -- [1]: https://www.vaultproject.io/docs/auth/kubernetes)
+  | AuthVaultToken String
+    -- ^ Provide the x-vault-token header, with this value.
+  deriving (Eq, Ord, Show)
+
 -- | @Options@ contains all the configuration we support in vaultenv. It is
 -- used in our @Main@ module to specify behavior.
 data Options validated completed = Options
   { oVaultHost       :: Maybe String
   , oVaultPort       :: Maybe Int
   , oVaultAddr       :: Maybe URI
-  , oVaultToken      :: Maybe String
+  , oAuthMethod      :: AuthMethod
   , oSecretFile      :: Maybe FilePath
   , oCmd             :: Maybe String
   , oArgs            :: Maybe [String]
@@ -94,7 +109,7 @@ defaultOptions = Options
   { oVaultHost      = Just "localhost"
   , oVaultPort      = Just 8200
   , oVaultAddr      = parseURI "https://localhost:8200"
-  , oVaultToken     = Nothing
+  , oAuthMethod     = AuthNone
   , oSecretFile     = Nothing
   , oCmd            = Nothing
   , oArgs           = Just []
@@ -120,7 +135,7 @@ castOptions opts = Options
   { oVaultHost      = oVaultHost opts
   , oVaultPort      = oVaultPort opts
   , oVaultAddr      = oVaultAddr opts
-  , oVaultToken     = oVaultToken opts
+  , oAuthMethod     = oAuthMethod opts
   , oSecretFile     = oSecretFile opts
   , oCmd            = oCmd opts
   , oArgs           = oArgs opts
@@ -140,7 +155,10 @@ instance Show (Options valid complete) where
     [ "Host:                  " ++ showSpecifiedString (oVaultHost opts)
     , "Port:                  " ++ showSpecified (oVaultPort opts)
     , "Addr:                  " ++ showSpecified (oVaultAddr opts)
-    , "Token:                 " ++ maybe "Unspecified" (const "*****") (oVaultToken opts)
+    , "Authentication method: " ++ case oAuthMethod opts of
+        AuthVaultToken _ -> "Specified X-Vault-Token"
+        AuthKubernetes   -> "Kubernetes service account"
+        AuthNone         -> "None"
     , "Secret file:           " ++ showSpecifiedString (oSecretFile opts)
     , "Command:               " ++ showSpecifiedString (oCmd opts)
     , "Arguments:             " ++ showSpecified (oArgs opts)
@@ -243,7 +261,7 @@ mergeOptions opts1 opts2 = let
   { oVaultHost      = combine oVaultHost
   , oVaultPort      = combine oVaultPort
   , oVaultAddr      = combine oVaultAddr
-  , oVaultToken     = combine oVaultToken
+  , oAuthMethod     = max (oAuthMethod opts1) (oAuthMethod opts2)
   , oSecretFile     = combine oSecretFile
   , oCmd            = combine oCmd
   , oArgs           = combine oArgs
@@ -366,7 +384,9 @@ parseEnvOptions envVars
   { oVaultHost      = lookupEnvString   "VAULT_HOST"
   , oVaultPort      = lookupEnvInt      "VAULT_PORT"
   , oVaultAddr      = lookupVaultAddr
-  , oVaultToken     = lookupEnvString   "VAULT_TOKEN"
+  , oAuthMethod     = case lookupEnvString "VAULT_TOKEN" of
+      Just token -> AuthVaultToken token
+      Nothing    -> AuthNone
   , oSecretFile     = lookupEnvString   "VAULTENV_SECRETS_FILE"
   , oCmd            = lookupEnvString   "CMD"
   , oArgs           = lookupStringList  "ARGS..."
@@ -493,7 +513,7 @@ optionsParser = Options
     <$> host
     <*> port
     <*> addr
-    <*> token
+    <*> auth
     <*> secretsFile
     <*> cmd
     <*> cmdArgs
@@ -530,11 +550,18 @@ optionsParser = Options
             "followed by the port, separated with a ':'." ++
             " Cannot be combined with either VAULT_PORT or VAULT_HOST")
     token
-      =  maybeStrOption
+      =  option (AuthVaultToken <$> str)
       $  long "token"
       <> metavar "TOKEN"
-      <> value Nothing
       <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN."
+
+    authFallback
+      =  flag AuthNone AuthKubernetes
+      $  long "auth-kubernetes"
+      <> help "Authenticate using Kubernetes service account in /var/run/secrets/kubernetes.io."
+
+    auth = token <|> authFallback
+
     secretsFile
       =  maybeStrOption
       $  long "secrets-file"

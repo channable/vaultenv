@@ -37,7 +37,7 @@ import qualified Data.Map                   as Map
 import qualified Data.HashMap.Strict        as HM
 import qualified System.Exit                as Exit
 
-import Config (Options(..), parseOptions, unMilliSeconds,
+import Config (AuthMethod (..), Options(..), parseOptions, unMilliSeconds,
                LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
                Validated, Completed)
 import KeyMap (KeyMap)
@@ -378,13 +378,10 @@ runCommand options env =
 -- | Add Vault authentication token to a request, if set in the options. If
 -- not, the request is returned unmodified.
 addVaultToken :: Options Validated Completed -> Request -> Request
-addVaultToken options request =
-  let
-    optToken = oVaultToken options
-  in
-    case optToken of
-      Just token -> setRequestHeader "x-vault-token" [SBS.pack token] request
-      Nothing -> request
+addVaultToken options request = case oAuthMethod options of
+  AuthVaultToken token -> setRequestHeader "x-vault-token" [SBS.pack token] request
+  AuthKubernetes -> error "Auth method should have been resolved to token by now."
+  AuthNone -> request
 
 
 -- | Look up what mounts are available and what type they have.

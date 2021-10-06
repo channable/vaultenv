@@ -148,7 +148,9 @@ instance Show (Options valid complete) where
     , "Validate certs:        " ++ showSpecified (oValidateCerts opts)
     , "Inherit env:           " ++ showSpecified (oInheritEnv opts)
     , "Inherit env blacklist: " ++ showSpecified (oInheritEnvBlacklist opts)
-    , "Base delay:            " ++ showSpecified (unMilliSeconds <$> oRetryBaseDelay opts)
+    , "Base delay:            " ++ case oRetryBaseDelay opts of
+        Just (MilliSeconds ms) -> (show ms) ++ " ms"
+        Nothing -> "Unspecified"
     , "Retry attempts:        " ++ showSpecified (oRetryAttempts opts)
     , "Log-level:             " ++ showSpecified (oLogLevel opts)
     , "Use PATH:              " ++ showSpecified (oUsePath opts)

@@ -3,9 +3,11 @@
   with pkgs; buildEnv {
     name = "vaultenv-devenv";
     paths = [
-      stack
-      vault
       cachix
       niv
+      perl # For "prove"
+      python3
+      stack
+      vault
     ];
   }

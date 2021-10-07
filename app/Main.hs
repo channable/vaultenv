@@ -296,12 +296,12 @@ getHttpManager opts = newManager $ applyConfig basicManagerSettings
 -- Signals failure through a value of type VaultError.
 vaultEnv :: Context -> IO (Either VaultError [EnvVar])
 vaultEnv context =
-  doWithRetries retryPolicy getMountInfo >>= \case
-    Left vaultError -> pure $ Left vaultError
-    Right mountInfo ->
-      readSecretsFile secretFile >>= \case
-        Left sfError -> pure $ Left $ SecretFileError sfError
-        Right secrets ->
+  readSecretsFile secretFile >>= \case
+    Left sfError -> pure $ Left $ SecretFileError sfError
+    Right secrets ->
+      doWithRetries retryPolicy getMountInfo >>= \case
+        Left vaultError -> pure $ Left vaultError
+        Right mountInfo ->
           requestSecrets context mountInfo secrets >>= \case
             Left vaultError -> pure $ Left vaultError
             Right secretEnv -> pure $ checkNoDuplicates (buildEnv secretEnv)

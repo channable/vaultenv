@@ -3,9 +3,10 @@
   with pkgs; buildEnv {
     name = "vaultenv-devenv";
     paths = [
-      stack
-      vault
       cachix
+      glibcLocales  # So you can export LOCALE_ARCHIVE=$(nix path-info)/lib/locale/locale-archive.
       niv
+      perl # For "prove"
+      python3
     ];
   }

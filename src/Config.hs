@@ -58,9 +58,9 @@ data AuthMethod
   -- specific, so we can use `max` as a sensible merge operation.
   = AuthNone
     -- ^ Do not include an x-vault-token header at all.
-  | AuthKubernetes
+  | AuthKubernetes Text
     -- ^ Use Vault's Kubernetes authentication [1] to obtain a Vault token, then
-    -- use that as the x-vault-token.
+    -- use that as the x-vault-token. The value is the role to use.
     --
     -- [1]: https://www.vaultproject.io/docs/auth/kubernetes)
   | AuthVaultToken Text
@@ -158,9 +158,9 @@ instance Show (Options valid complete) where
     , "Port:                  " ++ showSpecified (oVaultPort opts)
     , "Addr:                  " ++ showSpecified (oVaultAddr opts)
     , "Authentication method: " ++ case oAuthMethod opts of
-        AuthVaultToken _ -> "Specified X-Vault-Token"
-        AuthKubernetes   -> "Kubernetes service account"
-        AuthNone         -> "None"
+        AuthVaultToken _    -> "Specified X-Vault-Token"
+        AuthKubernetes role -> "Kubernetes service account, role: " <> (Text.unpack role)
+        AuthNone            -> "None"
     , "Secret file:           " ++ showSpecifiedString (oSecretFile opts)
     , "Command:               " ++ showSpecifiedString (oCmd opts)
     , "Arguments:             " ++ showSpecified (oArgs opts)
@@ -390,7 +390,9 @@ parseEnvOptions envVars
   , oVaultAddr      = lookupVaultAddr
   , oAuthMethod     = case lookupEnvString "VAULT_TOKEN" of
       Just token -> AuthVaultToken (Text.pack token)
-      Nothing    -> AuthNone
+      Nothing    -> case lookupEnvString "VAULTENV_KUBERNETES_ROLE" of
+        Just role -> AuthKubernetes (Text.pack role)
+        Nothing   -> AuthNone
   , oSecretFile     = lookupEnvString   "VAULTENV_SECRETS_FILE"
   , oCmd            = lookupEnvString   "CMD"
   , oArgs           = lookupStringList  "ARGS..."
@@ -559,12 +561,14 @@ optionsParser = Options
       <> metavar "TOKEN"
       <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN."
 
-    authFallback
-      =  flag AuthNone AuthKubernetes
-      $  long "auth-kubernetes"
-      <> help "Authenticate using Kubernetes service account in /var/run/secrets/kubernetes.io."
+    kubernetesRole
+      =  option (AuthKubernetes  <$> str)
+      $  long "kubernetes-role"
+      <> metavar "ROLE"
+      <> help ("Authenticate using Kubernetes service account in /var/run/secrets/kubernetes.io, " ++
+          "with the given role. Also configurable via VAULTENV_KUBERNETES_ROLE.")
 
-    auth = token <|> authFallback
+    auth = token <|> kubernetesRole <|> pure AuthNone
 
     secretsFile
       =  maybeStrOption

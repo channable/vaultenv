@@ -339,8 +339,8 @@ vaultEnv originalContext =
         -- enabled, then we do that here and then fill out the token.
         AuthVaultToken _ -> pure $ Right context
         AuthNone -> pure $ Right context
-        AuthKubernetes ->
-          catch (requestKubernetesVaultToken context) httpErrorHandler >>= \case
+        AuthKubernetes role ->
+          catch (requestKubernetesVaultToken context role) httpErrorHandler >>= \case
             Left vaultError -> pure $ Left vaultError
             Right token -> pure $
               Right context
@@ -408,7 +408,7 @@ runCommand options env =
 addVaultToken :: Options Validated Completed -> Request -> Request
 addVaultToken options request = case oAuthMethod options of
   AuthVaultToken token -> setRequestHeader "x-vault-token" [Text.encodeUtf8 token] request
-  AuthKubernetes -> error "Auth method should have been resolved to token by now."
+  AuthKubernetes _ -> error "Kubernetes auth method should have been resolved to token by now."
   AuthNone -> request
 
 unauthenticatedVaultRequest :: Context -> String -> Request
@@ -441,8 +441,8 @@ readKubernetesJwt =
       ]
 
 -- | Authenticate using Kubernetes auth, see https://www.vaultproject.io/docs/auth/kubernetes.
-requestKubernetesVaultToken :: Context -> IO (Either VaultError Text)
-requestKubernetesVaultToken context = do
+requestKubernetesVaultToken :: Context -> Text -> IO (Either VaultError Text)
+requestKubernetesVaultToken context role = do
   jwtResult <- readKubernetesJwt
   case jwtResult of
     Left err -> pure $ Left err
@@ -450,7 +450,7 @@ requestKubernetesVaultToken context = do
       let
         bodyJson = Aeson.Object $ HashMap.fromList
           [ ("jwt", Aeson.String jwt)
-          , ("role", Aeson.String "TODO ROLE")
+          , ("role", Aeson.String role)
           ]
         request =
           setRequestBodyJSON bodyJson

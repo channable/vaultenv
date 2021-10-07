@@ -427,6 +427,15 @@ readKubernetesJwt =
       , Handler $ \(_ :: IOError) -> pure $ Left KubernetesJwtFailedRead
       ]
 
+-- | The "client_token" field from an /auth/kubernetes/login response.
+newtype ClientToken = ClientToken Text
+
+instance FromJSON ClientToken where
+  parseJSON = Aeson.withObject "AuthResponse" $ \obj -> do
+    auth <- obj .: "auth"
+    clientToken <- auth .: "client_token"
+    pure $ ClientToken clientToken
+
 -- | Authenticate using Kubernetes auth, see https://www.vaultproject.io/docs/auth/kubernetes.
 requestKubernetesVaultToken :: Context -> Text -> IO (Either VaultError Text)
 requestKubernetesVaultToken context role = do
@@ -444,8 +453,10 @@ requestKubernetesVaultToken context role = do
           $ setRequestMethod "POST"
           $ unauthenticatedVaultRequest context "/v1/auth/kubernetes/login"
       in do
-        _response <- httpLBS request
-        error "TODO"
+        response <- httpLBS request
+        case Aeson.eitherDecode' (getResponseBody response) of
+          Left err    -> pure $ Left $ BadJSONResp err
+          Right token -> pure $ Right token
 
 -- | Look up what mounts are available and what type they have.
 requestMountInfo :: Context -> IO (Either VaultError MountInfo)

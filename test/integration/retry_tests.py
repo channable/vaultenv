@@ -104,6 +104,7 @@ def run_vaultenv(secrets_file: Path) -> subprocess.Popen:
         [
             "stack",
             "run",
+            "--no-nix-pure",
             "--",
             "vaultenv",
             "--no-connect-tls",

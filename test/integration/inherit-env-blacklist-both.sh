@@ -5,7 +5,7 @@ set -euo pipefail
 echo "1..4"
 
 testing_keys_present() {
-    stack exec -- vaultenv \
+    stack exec --no-nix-pure -- vaultenv \
         --no-connect-tls \
         --host ${VAULT_HOST} \
         --port ${VAULT_PORT} \

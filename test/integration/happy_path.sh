@@ -18,7 +18,7 @@ test_env_contents() {
   #  $3 - Contents of (first line of) env var
   #  $4 - Secrets file path
 
-  OUTPUT=$(stack exec -- vaultenv \
+  OUTPUT=$(stack exec --no-nix-pure -- vaultenv \
     --no-connect-tls \
     --host ${VAULT_HOST} \
     --port ${VAULT_PORT} \
@@ -40,7 +40,7 @@ test_env_contents 6 "SECRET_TESTING_KEY" "testing42" ${VAULT_SEEDS_V2}
 
 # Also test the happy path with `--vault-addr`
 export VAULT_ADDR="http://${VAULT_HOST}:${VAULT_PORT}"
-stack exec -- vaultenv \
+stack exec --no-nix-pure -- vaultenv \
   --secrets-file ${VAULT_SEEDS} \
   -- \
   echo "ok 7 - Happy path from VAULT_ADDR"

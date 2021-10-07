@@ -24,10 +24,11 @@ module Config
 
 import Control.Applicative ((<|>))
 import Control.Monad(when)
-import Data.List (intercalate)
-import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
 import Data.Char (isDigit)
 import Data.Either (lefts, rights, isLeft)
+import Data.List (intercalate)
+import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
+import Data.Text (Text)
 import Data.Version (showVersion)
 import Network.URI (URI(..), URIAuth(..), parseURI)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
@@ -41,6 +42,7 @@ import System.Exit (die)
 import Text.Read (readMaybe)
 
 import qualified Configuration.Dotenv as DotEnv
+import qualified Data.Text as Text
 import qualified Options.Applicative as OptParse
 import qualified System.Directory as Dir
 
@@ -61,7 +63,7 @@ data AuthMethod
     -- use that as the x-vault-token.
     --
     -- [1]: https://www.vaultproject.io/docs/auth/kubernetes)
-  | AuthVaultToken String
+  | AuthVaultToken Text
     -- ^ Provide the x-vault-token header, with this value.
   deriving (Eq, Ord, Show)
 
@@ -387,7 +389,7 @@ parseEnvOptions envVars
   , oVaultPort      = lookupEnvInt      "VAULT_PORT"
   , oVaultAddr      = lookupVaultAddr
   , oAuthMethod     = case lookupEnvString "VAULT_TOKEN" of
-      Just token -> AuthVaultToken token
+      Just token -> AuthVaultToken (Text.pack token)
       Nothing    -> AuthNone
   , oSecretFile     = lookupEnvString   "VAULTENV_SECRETS_FILE"
   , oCmd            = lookupEnvString   "CMD"

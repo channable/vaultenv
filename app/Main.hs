@@ -5,7 +5,7 @@
 
 import Control.Applicative    ((<|>))
 import Control.Concurrent.QSem (newQSem, waitQSem, signalQSem)
-import Control.Exception      (bracket_, catch)
+import Control.Exception      (Handler (..), bracket_, catch, catches)
 import Control.Monad          (forM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
@@ -18,7 +18,8 @@ import Network.Connection     (TLSSettings(..))
 import Network.HTTP.Client    (defaultManagerSettings, ManagerSettings (managerConnCount))
 import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
 import Network.HTTP.Simple    (HttpException(..), Request, Response,
-                               defaultRequest, setRequestHeader, setRequestPort,
+                               defaultRequest, setRequestBodyJSON, setRequestHeader,
+                               setRequestMethod, setRequestPort,
                                setRequestPath, setRequestHost, setRequestManager,
                                setRequestSecure, httpLBS, getResponseBody,
                                getResponseStatusCode)
@@ -29,12 +30,15 @@ import System.Posix.Process   (executeFile)
 import qualified Control.Concurrent.Async   as Async
 import qualified Control.Retry              as Retry
 import qualified Data.Aeson                 as Aeson
+import qualified Data.ByteString            as ByteString
 import qualified Data.ByteString.Char8      as SBS
 import qualified Data.ByteString.Lazy       as LBS hiding (unpack)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Foldable              as Foldable
+import qualified Data.HashMap.Strict        as HashMap
 import qualified Data.Map                   as Map
-import qualified Data.HashMap.Strict        as HM
+import qualified Data.Text.Encoding         as Text
+import qualified Data.Text.Encoding.Error   as Text
 import qualified System.Exit                as Exit
 
 import Config (AuthMethod (..), Options(..), parseOptions, unMilliSeconds,
@@ -177,6 +181,8 @@ data VaultError
   | InvalidUrl String
   | DuplicateVar String
   | Unspecified Int LBS.ByteString
+  | KubernetesJwtInvalidUtf8
+  | KubernetesJwtFailedRead
   deriving Show
 
 -- | "Handle" a HttpException by wrapping it in a Left VaultError.
@@ -226,6 +232,8 @@ doWithRetries retryPolicy = Retry.retrying retryPolicy isRetryableFailure
       Forbidden -> False
       InvalidUrl _ -> False
       SecretNotFound _ -> False
+      KubernetesJwtInvalidUtf8 -> False
+      KubernetesJwtFailedRead -> False
 
       -- Errors that cannot occur at this point, but we list for
       -- exhaustiveness checking.
@@ -308,23 +316,43 @@ getHttpManager opts = newManager $ applyConfig basicManagerSettings
 --
 -- Signals failure through a value of type VaultError.
 vaultEnv :: Context -> IO (Either VaultError [EnvVar])
-vaultEnv context =
+vaultEnv originalContext =
   readSecretsFile secretFile >>= \case
     Left sfError -> pure $ Left $ SecretFileError sfError
     Right secrets ->
-      doWithRetries retryPolicy getMountInfo >>= \case
+      doWithRetries retryPolicy (authenticate originalContext) >>= \case
         Left vaultError -> pure $ Left vaultError
-        Right mountInfo ->
-          requestSecrets context mountInfo secrets >>= \case
+        Right authenticatedContext ->
+          doWithRetries retryPolicy (getMountInfo authenticatedContext) >>= \case
             Left vaultError -> pure $ Left vaultError
-            Right secretEnv -> pure $ checkNoDuplicates (buildEnv secretEnv)
+            Right mountInfo ->
+              requestSecrets authenticatedContext mountInfo secrets >>= \case
+                Left vaultError -> pure $ Left vaultError
+                Right secretEnv -> pure $ checkNoDuplicates (buildEnv secretEnv)
     where
-      retryPolicy = vaultRetryPolicy (cCliOptions context)
+      retryPolicy = vaultRetryPolicy (cCliOptions originalContext)
 
-      getMountInfo :: Retry.RetryStatus -> IO (Either VaultError MountInfo)
-      getMountInfo _retryStatus = catch (requestMountInfo context) httpErrorHandler
+      authenticate :: Context -> Retry.RetryStatus -> IO (Either VaultError Context)
+      authenticate context _retryStatus = case oAuthMethod (cCliOptions context) of
+        -- If we have a token already, or if we should not authenticate at all,
+        -- then there is nothing to be done here. But if Kubernetes auth is
+        -- enabled, then we do that here and then fill out the token.
+        AuthVaultToken _ -> pure $ Right context
+        AuthNone -> pure $ Right context
+        AuthKubernetes ->
+          catch (requestKubernetesVaultToken context) httpErrorHandler >>= \case
+            Left vaultError -> pure $ Left vaultError
+            Right token -> pure $
+              Right context
+                { cCliOptions = (cCliOptions context)
+                  { oAuthMethod = AuthVaultToken token
+                  }
+                }
 
-      secretFile = getOptionsValue oSecretFile (cCliOptions context)
+      getMountInfo :: Context -> Retry.RetryStatus -> IO (Either VaultError MountInfo)
+      getMountInfo context _retryStatus = catch (requestMountInfo context) httpErrorHandler
+
+      secretFile = getOptionsValue oSecretFile (cCliOptions originalContext)
 
       -- | Check that the given list of EnvVars contains no duplicate
       -- variables, return a DuplicateVar error if it does.
@@ -353,12 +381,12 @@ vaultEnv context =
       -- called and apply the blacklist.
       buildEnv :: [EnvVar] -> [EnvVar]
       buildEnv secretsEnv =
-        if getOptionsValue oInheritEnv . cCliOptions $ context
-        then removeBlacklistedVars $ secretsEnv ++ cLocalEnvVars context
+        if getOptionsValue oInheritEnv . cCliOptions $ originalContext
+        then removeBlacklistedVars $ secretsEnv ++ cLocalEnvVars originalContext
         else secretsEnv
 
         where
-          inheritEnvBlacklist = getOptionsValue oInheritEnvBlacklist . cCliOptions $ context
+          inheritEnvBlacklist = getOptionsValue oInheritEnvBlacklist . cCliOptions $ originalContext
           removeBlacklistedVars = filter (not . flip elem inheritEnvBlacklist . fst)
 
 
@@ -379,30 +407,65 @@ runCommand options env =
 -- not, the request is returned unmodified.
 addVaultToken :: Options Validated Completed -> Request -> Request
 addVaultToken options request = case oAuthMethod options of
-  AuthVaultToken token -> setRequestHeader "x-vault-token" [SBS.pack token] request
+  AuthVaultToken token -> setRequestHeader "x-vault-token" [Text.encodeUtf8 token] request
   AuthKubernetes -> error "Auth method should have been resolved to token by now."
   AuthNone -> request
 
+unauthenticatedVaultRequest :: Context -> String -> Request
+unauthenticatedVaultRequest context path =
+  let
+    cliOptions = cCliOptions context
+  in
+    setRequestManager (cHttpManager context)
+    $ setRequestHeader "x-vault-request" ["true"]
+    $ setRequestPath (SBS.pack path)
+    $ setRequestPort (getOptionsValue oVaultPort cliOptions)
+    $ setRequestHost (SBS.pack (getOptionsValue oVaultHost cliOptions))
+    $ setRequestSecure (getOptionsValue  oConnectTls cliOptions)
+    $ defaultRequest
+
+kubernetesJwtPath :: FilePath
+kubernetesJwtPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+
+-- | Read the contents of `/var/run/secrets/kubernetes.io/serviceaccount/token`.
+readKubernetesJwt :: IO (Either VaultError Text)
+readKubernetesJwt =
+  let
+    readJwtFile = do
+      contentsUtf8 <- ByteString.readFile kubernetesJwtPath
+      pure $ Right $ Text.decodeUtf8With Text.strictDecode contentsUtf8
+  in
+    readJwtFile `catches`
+      [ Handler $ \(_ :: Text.UnicodeException) -> pure $ Left KubernetesJwtInvalidUtf8
+      , Handler $ \(_ :: IOError) -> pure $ Left KubernetesJwtFailedRead
+      ]
+
+-- | Authenticate using Kubernetes auth, see https://www.vaultproject.io/docs/auth/kubernetes.
+requestKubernetesVaultToken :: Context -> IO (Either VaultError Text)
+requestKubernetesVaultToken context = do
+  jwtResult <- readKubernetesJwt
+  case jwtResult of
+    Left err -> pure $ Left err
+    Right jwt ->
+      let
+        bodyJson = Aeson.Object $ HashMap.fromList
+          [ ("jwt", Aeson.String jwt)
+          , ("role", Aeson.String "TODO ROLE")
+          ]
+        request =
+          setRequestBodyJSON bodyJson
+          $ setRequestMethod "POST"
+          $ unauthenticatedVaultRequest context "/v1/auth/kubernetes/login"
+      in do
+        _response <- httpLBS request
+        error "TODO"
 
 -- | Look up what mounts are available and what type they have.
 requestMountInfo :: Context -> IO (Either VaultError MountInfo)
 requestMountInfo context =
   let
     cliOptions = cCliOptions context
-    request
-        = setRequestManager
-              (cHttpManager context)
-        $ addVaultToken cliOptions
-        $ setRequestHeader "x-vault-request" ["true"]
-        $ setRequestPath
-              (SBS.pack "/v1/sys/mounts")
-        $ setRequestPort
-              (getOptionsValue oVaultPort cliOptions)
-        $ setRequestHost
-              (SBS.pack (getOptionsValue oVaultHost cliOptions))
-        $ setRequestSecure
-              (getOptionsValue  oConnectTls cliOptions)
-        $ defaultRequest
+    request = addVaultToken cliOptions $ unauthenticatedVaultRequest context "/v1/sys/mounts"
   in do
     -- 'httpLBS' throws an IO Exception ('HttpException') if it fails to complete the request.
     -- We intentionally don't capture this here, but handle it with the retries in 'vaultEnv' instead.
@@ -421,17 +484,8 @@ requestSecret :: Context -> String -> IO (Either VaultError VaultData)
 requestSecret context secretPath =
   let
     cliOptions = cCliOptions context
-    retryPolicy = vaultRetryPolicy (cCliOptions context)
-    request
-        = setRequestManager
-            (cHttpManager context)
-        $ addVaultToken     cliOptions
-        $ setRequestHeader "x-vault-request" ["true"]
-        $ setRequestPath    (SBS.pack secretPath)
-        $ setRequestPort    (getOptionsValue oVaultPort cliOptions)
-        $ setRequestHost    (SBS.pack (getOptionsValue oVaultHost cliOptions))
-        $ setRequestSecure  (getOptionsValue oConnectTls cliOptions)
-        $ defaultRequest
+    retryPolicy = vaultRetryPolicy cliOptions
+    request = addVaultToken cliOptions $ unauthenticatedVaultRequest context secretPath
 
     getSecret :: Retry.RetryStatus -> IO (Either VaultError VaultData)
     getSecret _retryStatus = catch (doRequest secretPath request) httpErrorHandler
@@ -462,7 +516,7 @@ requestSecrets context mountInfo secrets = do
 lookupSecrets :: MountInfo -> [Secret] -> Map.Map String VaultData -> Either VaultError [EnvVar]
 lookupSecrets mountInfo secrets vaultData = forM secrets $ \secret ->
   let secretData = Map.lookup (secretRequestPath mountInfo secret) vaultData
-      secretValue = secretData >>= (\(VaultData vd) -> HM.lookup (sKey secret) vd)
+      secretValue = secretData >>= (\(VaultData vd) -> HashMap.lookup (sKey secret) vd)
       toEnvVar (Aeson.String val) = Right (sVarName secret, unpack val)
       toEnvVar _                  = Left (WrongType secret)
   in maybe (Left $ KeyNotFound secret) toEnvVar $ secretValue
@@ -532,5 +586,9 @@ vaultErrorLogMessage vaultError =
       Unspecified status resp ->
         "Received an error that I don't know about (" <> show status
         <> "): " <> (LBS.unpack resp)
+      KubernetesJwtFailedRead ->
+        "Failed to read '" <> kubernetesJwtPath <> "'."
+      KubernetesJwtInvalidUtf8 ->
+        "Contents of '" <> kubernetesJwtPath <> "' is not valid UTF-8."
   in
     "[ERROR] " <> description

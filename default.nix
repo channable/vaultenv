@@ -6,7 +6,7 @@
       cachix
       glibcLocales  # So you can export LOCALE_ARCHIVE=$(nix path-info)/lib/locale/locale-archive.
       niv
-      perl # For "prove"
+      perl          # For "prove"
       python3
       stack
       vault

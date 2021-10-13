@@ -23,6 +23,7 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                setRequestSecure, httpLBS, getResponseBody,
                                getResponseStatusCode)
 import System.Environment     (getEnvironment)
+import System.IO              (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
 import System.Posix.Process   (executeFile)
 
 import qualified Control.Concurrent.Async   as Async
@@ -236,6 +237,15 @@ doWithRetries retryPolicy = Retry.retrying retryPolicy isRetryableFailure
 
 main :: IO ()
 main = do
+  -- When the runtime detects that stdout is not connected to a console, it
+  -- defaults to block buffering instead of line buffering. When running under
+  -- systemd or a container manager, this prevents log messages from showing up
+  -- until the buffer is flushed, and it breaks interleaving of stdout and
+  -- stderr print. Therefore, explicitly select line buffering, to enforce a
+  -- flush after every newline.
+  hSetBuffering stdout LineBuffering
+  hSetBuffering stderr LineBuffering
+
   localEnvVars <- getEnvironment
   envFileSettings <- readConfigFromEnvFiles
 

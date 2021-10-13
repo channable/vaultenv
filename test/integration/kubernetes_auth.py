@@ -223,9 +223,52 @@ def main() -> None:
         check=True,
     )
 
-    print("awaiting")
-    import sys
-    sys.stdin.readline()
+    # Wait up to 10 seconds for the pod to become ready.
+    print("# Waiting for pod to become ready ...")
+    for _ in range(20):
+        ready = kubectl(
+            "get", "pod", "vaultenv-test-pod", "--output", "jsonpath={.status.containerStatuses[].ready}",
+            stdout=subprocess.PIPE,
+            check=True,
+        ).stdout
+        if ready == b'true':
+            break
+        else:
+            sleep_seconds = 0.5
+            time.sleep(sleep_seconds)
+
+    # Then wait up to another 10 seconds for all logs to come in.
+    print("# Waiting for pod logs ...")
+    logs = []
+    for _ in range(20):
+        logs = kubectl(
+            "logs", "vaultenv-test-pod",
+            stdout=subprocess.PIPE,
+            check=True,
+            encoding="utf-8",
+        ).stdout.splitlines()
+
+        # Vaultenv in info mode prints 16 lines of config at the start. The next
+        # line will be an error or a result, so only after that line, we can
+        # continue.
+        if len(logs) > 16:
+            break
+        else:
+            sleep_seconds = 0.5
+            time.sleep(sleep_seconds)
+
+    expected_lines = [
+        "DATA_TESTAPP_CONFIG_USERNAME=vaultenvtestuser",
+        "DATA_TESTAPP_CONFIG_PASSWORD=hunter2",
+    ]
+    for line in expected_lines:
+        if line in logs:
+            tap.ok(f'{line} was retrieved')
+        else:
+            tap.not_ok(f'{line} was not retrieved')
+
+    # Clean up the pod now that the test is done.
+    kubectl("delete", "pod", "vaultenv-test-pod", check=False)
 
     # We need to kill and restart the server or the kernel will accept the TCP
     # connections while the Vault server is paused.

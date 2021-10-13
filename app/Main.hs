@@ -578,7 +578,7 @@ vaultErrorLogMessage vaultError =
       BadRequest resp ->
         "Made a bad request: " <> (LBS.unpack resp)
       Forbidden ->
-        "Invalid Vault token"
+        "Forbidden"
       InvalidUrl secretPath ->
         "Secret " <> secretPath <> " contains characters that are illegal in URLs"
       BadJSONResp body msg ->

@@ -44,6 +44,7 @@ import Config (AuthMethod (..), Options(..), parseOptions, unMilliSeconds,
                LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
                Validated, Completed)
 import SecretsFile (Secret(..), SFError(..), readSecretsFile)
+import Response (ClientToken (..))
 
 -- | Make a HTTP URL path from a secret. This is the path that Vault expects.
 secretRequestPath :: MountInfo -> Secret -> String
@@ -329,7 +330,7 @@ vaultEnv originalContext =
         AuthKubernetes role ->
           catch (requestKubernetesVaultToken context role) httpErrorHandler >>= \case
             Left vaultError -> pure $ Left vaultError
-            Right token -> pure $
+            Right (ClientToken token) -> pure $
               Right context
                 { cCliOptions = (cCliOptions context)
                   { oAuthMethod = AuthVaultToken token
@@ -427,17 +428,8 @@ readKubernetesJwt =
       , Handler $ \(_ :: IOError) -> pure $ Left KubernetesJwtFailedRead
       ]
 
--- | The "client_token" field from an /auth/kubernetes/login response.
-newtype ClientToken = ClientToken Text
-
-instance FromJSON ClientToken where
-  parseJSON = Aeson.withObject "AuthResponse" $ \obj -> do
-    auth <- obj .: "auth"
-    clientToken <- auth .: "client_token"
-    pure $ ClientToken clientToken
-
 -- | Authenticate using Kubernetes auth, see https://www.vaultproject.io/docs/auth/kubernetes.
-requestKubernetesVaultToken :: Context -> Text -> IO (Either VaultError Text)
+requestKubernetesVaultToken :: Context -> Text -> IO (Either VaultError ClientToken)
 requestKubernetesVaultToken context role = do
   jwtResult <- readKubernetesJwt
   case jwtResult of

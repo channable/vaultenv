@@ -21,9 +21,11 @@ import base64
 import subprocess
 import textwrap
 import time
+import json
 
 from typing import Any, Set
 from pathlib import Path
+from urllib.request import urlopen
 
 import tap
 
@@ -132,11 +134,31 @@ def main() -> None:
 
     kubernetes_host = kubectl(
         "config", "view", "--raw", "--minify", "--flatten", "--output",
-        "jsonpath={.clusters[].cluster.server}'",
+        "jsonpath={.clusters[].cluster.server}",
         capture_output=True,
         check=True,
         encoding='utf-8',
     ).stdout
+
+    # We need to tell Vault what the issuer of the JWT tokens is. But to figure
+    # out what the issuer is, we first need to enable issuer discovery. Then we
+    # can query the issuers through a "kubectl proxy" reverse proxy.
+    kubectl(
+        "create", "clusterrolebinding", "oidc-reviewer",
+        "--clusterrole=system:service-account-issuer-discovery",
+        "--group=system:unauthenticated",
+    )
+    kubectl_proxy = subprocess.Popen(
+        ["kubectl", "proxy", "--port", "8001"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+    )
+    sleep_seconds = 0.1
+    time.sleep(sleep_seconds)
+    openid_config_bytes = urlopen("http://127.0.0.1:8001/.well-known/openid-configuration")
+    openid_config_json = json.load(openid_config_bytes)
+    issuer = openid_config_json['issuer']
+    kubectl_proxy.terminate()
 
     vault("auth", "enable", "kubernetes", check=True)
     vault(
@@ -145,7 +167,7 @@ def main() -> None:
         f"token_reviewer_jwt={service_account_jwt}",
         f"kubernetes_host={kubernetes_host}",
         f"kubernetes_ca_cert={kubernetes_ca_cert}",
-        "issuer=https://kubernetes.default.svc.cluster.local",
+        f"issuer={issuer}",
         check=True,
     )
 

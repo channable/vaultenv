@@ -8,5 +8,7 @@
       niv
       perl          # For "prove"
       python3
+      stack
+      vault
     ];
   }

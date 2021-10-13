@@ -13,20 +13,6 @@ let
       '';
   };
 
-  # TODO: Is this needed?
-  hostsFile = pkgs.writeTextFile {
-    name = "hosts";
-    destination = "/etc/hosts";
-    text = "";
-  };
-
-  # TODO: Is this needed?
-  resolvConf = pkgs.writeTextFile {
-    name = "resolv.conf";
-    destination = "/etc/resolv.conf";
-    text = "";
-  };
-
   # When Vaultenv runs in the container in the pod, it needs to access Vault
   # that is running outside. When the pod is running in Minikube, Vaultenv can
   # reach the host network at host.minikube.internal. Its ip address is written
@@ -36,24 +22,7 @@ let
   nsswitch = pkgs.writeTextFile {
     name = "nsswitch.conf";
     destination = "/etc/nsswitch.conf";
-    text =
-      ''
-      # TODO: Are the non-hosts lines needed?
-      passwd:         files
-      group:          files
-      shadow:         files
-      gshadow:        files
-
-      hosts:          files dns
-      networks:       files
-
-      protocols:      db files
-      services:       db files
-      ethers:         db files
-      rpc:            db files
-
-      netgroup:       nis
-      '';
+    text = "hosts: files dns";
   };
 
   container = pkgs.dockerTools.buildLayeredImage {
@@ -62,8 +31,6 @@ let
     contents = [
       vaultenv
       secretsFile
-      hostsFile
-      resolvConf
       nsswitch
       pkgs.coreutils
       pkgs.bash

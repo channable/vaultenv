@@ -7,6 +7,12 @@ WARNING
 This script expects a (local) Kubernetes cluster to be running (tested with
 minikube) and it runs arbitrary `kubectl` commands. Do not run this with kubectl
 pointed at a production cluster!
+
+Before you can run this test, you need to build a container with Vaultenv and
+put it in Minikube's registry, as follows:
+
+    nix build --file kubernetes_auth_container.nix --out-link container.tar.gz
+    minikube image load container.tar.gz
 """
 
 import os
@@ -78,6 +84,9 @@ def main() -> None:
             path "secret/data/testapp/*" {
                 capabilities = ["read", "list"]
             }
+            path "secret/metadata/testapp/*" {
+                capabilities = ["list"]
+            }
             """
         ),
         encoding="utf-8",
@@ -89,7 +98,6 @@ def main() -> None:
         "secret/testapp/config",
         "username=vaultenvtestuser",
         "password=hunter2",
-        "ttl=30s",
         check=True,
     )
 
@@ -150,6 +158,52 @@ def main() -> None:
         "ttl=24h",
         check=True,
     )
+
+    # Delete the pod, in case it was left over from a previous test run.
+    kubectl("delete", "pod", "vaultenv-test-pod", check=False)
+
+    kubectl(
+        'apply', '--filename', '-',
+        input=textwrap.dedent(
+            """
+            apiVersion: v1
+            kind: Pod
+
+            metadata:
+              name: vaultenv-test-pod
+
+            spec:
+              containers:
+              - name: vaultenv-test
+                image: vaultenv/vaultenv:test
+                # Image should already be loaded into the registry before we
+                # start the test. It should be locally built, so we can't pull
+                # it from anywhere anyway.
+                imagePullPolicy: Never
+                args: [
+                  "/bin/vaultenv",
+                  "--log-level", "info",
+                  # Inside the container, Minikube adds an entry to /etc/hosts
+                  # that resolves to the IP of the host's network interface.
+                  "--addr", "http://host.minikube.internal:8200",
+                  "--kubernetes-role", "vaultenv-test-role",
+                  "--secrets-file", "/lib/test.secrets",
+                  "--",
+                  "/bin/env"
+                ]
+
+              # Allow host access, because the Vault server runs on the host network.
+              hostNetwork: true
+              dnsPolicy: Default
+              serviceAccount: test-vault-auth
+            """),
+        encoding='utf-8',
+        check=True,
+    )
+
+    print("awaiting")
+    import sys
+    sys.stdin.readline()
 
     # We need to kill and restart the server or the kernel will accept the TCP
     # connections while the Vault server is paused.
@@ -224,11 +278,13 @@ def run_vault_server() -> subprocess.Popen:
 
     Return a handle to the Vault server process.
     """
+    # Listen on 0.0.0.0, not just 127.0.0.1, such that the bridged Minikube
+    # network can also access it.
     env = {
         "VAULT_TOKEN": "integration",
-        "VAULT_HOST": "127.0.0.1",
+        "VAULT_HOST": "0.0.0.0",
         "VAULT_PORT": "8200",
-        "VAULT_ADDR": "http://127.0.0.1:8200",
+        "VAULT_ADDR": "http://0.0.0.0:8200",
         # Pass through the PATH, so we can locate the vault binary.
         "PATH": os.getenv("PATH"),
     }

@@ -8,8 +8,8 @@ let
     destination = "/lib/test.secrets";
     text =
       ''
-      testapp/config#username
-      testapp/config#password
+      data/testapp/config#username
+      data/testapp/config#password
       '';
   };
 

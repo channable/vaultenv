@@ -38,10 +38,21 @@ def vault(*args: str, **kwargs: Any) -> subprocess.CompletedProcess:
     return subprocess.run(['vault', *args], **kwargs)
 
 
+def tap_starts_with_success(status: str, haystack: str) -> None:
+    if haystack.startswith('Success!'):
+        tap.ok(status)
+    else:
+        tap.not_ok(status)
+
+
 def main() -> None:
     """
+    Start a Vault server, and enable Kubernetes authentication on it. Then start
+    a pod with the test image that runs Vaultenv to retrieve some secrets and
+    then runs "env". Then check the logs for that pod to see if we really
+    retrieved the secrets.
     """
-    tap.plan(4)
+    tap.plan(7)
 
     tap.diagnose("Setting up Kubernetes service account ...")
     kubectl(
@@ -79,7 +90,7 @@ def main() -> None:
     os.environ["VAULT_ADDR"] = "http://127.0.0.1:8200"
 
     tap.diagnose("Adding policy and test value to Vault ...")
-    vault(
+    output = vault(
         "policy", "write", "testapp-kv-ro", "-",
         input=textwrap.dedent(
             """\
@@ -92,8 +103,11 @@ def main() -> None:
             """
         ),
         encoding="utf-8",
+        stdout=subprocess.PIPE,
         check=True,
-    )
+    ).stdout
+    tap_starts_with_success('Created testapp-kv-ro policy', output)
+
     vault(
         "kv",
         "put",
@@ -160,8 +174,10 @@ def main() -> None:
     issuer = openid_config_json['issuer']
     kubectl_proxy.terminate()
 
-    vault("auth", "enable", "kubernetes", check=True)
-    vault(
+    output = vault("auth", "enable", "kubernetes", check=True, stdout=subprocess.PIPE, encoding='utf-8').stdout
+    tap_starts_with_success('Enabled Kubernetes auth in Vault', output)
+
+    output = vault(
         "write",
         "auth/kubernetes/config",
         f"token_reviewer_jwt={service_account_jwt}",
@@ -169,9 +185,12 @@ def main() -> None:
         f"kubernetes_ca_cert={kubernetes_ca_cert}",
         f"issuer={issuer}",
         check=True,
-    )
+        stdout=subprocess.PIPE,
+        encoding='utf-8',
+    ).stdout
+    tap_starts_with_success('Set Kubernetes auth config', output)
 
-    vault(
+    output = vault(
         "write",
         "auth/kubernetes/role/vaultenv-test-role",
         "bound_service_account_names=test-vault-auth",
@@ -179,7 +198,10 @@ def main() -> None:
         "policies=testapp-kv-ro",
         "ttl=24h",
         check=True,
-    )
+        stdout=subprocess.PIPE,
+        encoding='utf-8',
+    ).stdout
+    tap_starts_with_success('Bind service account role', output)
 
     # Delete the pod, in case it was left over from a previous test run.
     kubectl("delete", "pod", "vaultenv-test-pod", check=False)
@@ -277,66 +299,6 @@ def main() -> None:
     vault_server.wait(timeout=wait_seconds)
 
 
-def run_vaultenv(secrets_file: Path) -> subprocess.Popen:
-    """
-    Run Vaultenv with the secrets file from the given path.
-
-    Return a subprocess.Popen-handle to the running Vaultenv process.
-    """
-    return subprocess.Popen(
-        [
-            "stack",
-            "run",
-            "--no-nix-pure",
-            "--",
-            "vaultenv",
-            "--no-connect-tls",
-            "--host",
-            os.environ["VAULT_HOST"],
-            "--port",
-            os.environ["VAULT_PORT"],
-            "--secrets-file",
-            str(secrets_file),
-            "/usr/bin/env",
-        ],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=None,  # Inherit calling process's stderr
-        text=True,
-    )
-
-
-def run_minikube() -> subprocess.Popen:
-    """
-    Run a local Kubernetes cluster with Minikube.
-    """
-    minikube = subprocess.Popen(
-        [
-            "minikube",
-            "start",
-            # The KVM2 driver is the only one that I have been able to get
-            # running without root privileges. On Arch it requires the following
-            # packages:
-            # * libvirt
-            # * qemu
-            # * dnsmasq
-            # * ebtables
-            # Also, your user needs to be a member of the libvirt group, and the
-            # libvirtd systemd service must be running.
-            # Alternative backends that I could not get to work.
-            # * Docker (when your user is not part of the "docker" group, which
-            #   it should not be, because it is effectively root.
-            # * Podman
-            # * None
-            "--driver",
-            "kvm2",
-        ],
-        stdin=subprocess.DEVNULL,
-        #stdout=subprocess.DEVNULL,
-        #stderr=subprocess.DEVNULL,
-    )
-
-
 def run_vault_server() -> subprocess.Popen:
     """
     Run the Vault dev server with Kubernetes auth enabled.
@@ -354,9 +316,8 @@ def run_vault_server() -> subprocess.Popen:
             "-dev-listen-address", "0.0.0.0:8200",
         ],
         stdin=subprocess.DEVNULL,
-        # TODO: Enable after debug complete.
-        #stdout=subprocess.DEVNULL,
-        #stderr=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     sleep_seconds = 1
     time.sleep(sleep_seconds)

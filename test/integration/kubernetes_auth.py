@@ -278,19 +278,16 @@ def run_vault_server() -> subprocess.Popen:
 
     Return a handle to the Vault server process.
     """
-    # Listen on 0.0.0.0, not just 127.0.0.1, such that the bridged Minikube
-    # network can also access it.
-    env = {
-        "VAULT_TOKEN": "integration",
-        "VAULT_HOST": "0.0.0.0",
-        "VAULT_PORT": "8200",
-        "VAULT_ADDR": "http://0.0.0.0:8200",
-        # Pass through the PATH, so we can locate the vault binary.
-        "PATH": os.getenv("PATH"),
-    }
-
     vault_server = subprocess.Popen(
-        ["vault", "server", "-dev", "-dev-root-token-id=integration"],
+        [
+            "vault",
+            "server",
+            "-dev",
+            "-dev-root-token-id=integration",
+            # Listen on 0.0.0.0 so the birdged Minikube network can also reach
+            # the server.
+            "-dev-listen-address", "0.0.0.0:8200",
+        ],
         stdin=subprocess.DEVNULL,
         # TODO: Enable after debug complete.
         #stdout=subprocess.DEVNULL,

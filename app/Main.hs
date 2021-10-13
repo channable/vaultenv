@@ -170,7 +170,7 @@ data VaultError
   | WrongType Secret
   | BadRequest LBS.ByteString
   | Forbidden
-  | BadJSONResp String
+  | BadJSONResp LBS.ByteString String -- Body and error
   | ServerError LBS.ByteString
   | ServerUnavailable LBS.ByteString
   | ServerUnreachable HttpException
@@ -221,7 +221,7 @@ doWithRetries retryPolicy = Retry.retrying retryPolicy isRetryableFailure
       ServerUnavailable _ -> True
       ServerUnreachable _ -> True
       Unspecified _ _ -> True
-      BadJSONResp _ -> True
+      BadJSONResp _ _ -> True
 
       -- Errors where we don't retry
       BadRequest _ -> False
@@ -456,7 +456,7 @@ requestKubernetesVaultToken context role = do
         response <- httpLBS request
         case getResponseStatusCode response of
           200 -> case Aeson.eitherDecode' (getResponseBody response) of
-            Left err    -> pure $ Left $ BadJSONResp err
+            Left err    -> pure $ Left $ BadJSONResp (getResponseBody response) err
             Right token -> pure $ Right token
           _notOk -> pure $ Left $ ServerError $ getResponseBody response
 
@@ -473,7 +473,7 @@ requestMountInfo context =
     let decodeResult = Aeson.eitherDecode' (getResponseBody resp) :: Either String MountInfo
 
     case decodeResult of
-      Left errorMsg -> pure $ Left $ BadJSONResp errorMsg
+      Left errorMsg -> pure $ Left $ BadJSONResp (getResponseBody resp) errorMsg
       Right result -> pure $ Right result
 
 -- | Request all the data associated with a secret from the vault.
@@ -549,7 +549,9 @@ parseResponse secretPath response =
 
 
 parseSuccessResponse :: LBS.ByteString -> Either VaultError VaultData
-parseSuccessResponse responseBody = first BadJSONResp $ Aeson.eitherDecode' responseBody
+parseSuccessResponse responseBody = first
+  (BadJSONResp responseBody)
+  (Aeson.eitherDecode' responseBody)
 
 --
 -- Utility functions
@@ -574,8 +576,8 @@ vaultErrorLogMessage vaultError =
         "Invalid Vault token"
       InvalidUrl secretPath ->
         "Secret " <> secretPath <> " contains characters that are illegal in URLs"
-      BadJSONResp msg ->
-        "Received bad JSON from Vault: " <> msg
+      BadJSONResp body msg ->
+        "Received bad JSON from Vault: " <> msg <> ". Response was: " <> (LBS.unpack body)
       ServerError resp ->
         "Internal Vault error: " <> (LBS.unpack resp)
       ServerUnavailable resp ->

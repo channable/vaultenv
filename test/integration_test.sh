@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export VAULT_TOKEN="integration"
-export VAULT_HOST="localhost"
+export VAULT_HOST="127.0.0.1"
 export VAULT_PORT="8200"
 export VAULT_ADDR="http://${VAULT_HOST}:${VAULT_PORT}"
 

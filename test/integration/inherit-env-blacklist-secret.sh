@@ -6,7 +6,7 @@ echo "1..4"
 
 TEMP_RUN_DIRECTORY=$(mktemp -d)
 testing_key_present() {
-    stack exec --cwd $TEMP_RUN_DIRECTORY -- vaultenv \
+    stack exec --no-nix-pure --cwd $TEMP_RUN_DIRECTORY -- vaultenv \
         --no-connect-tls \
         --host ${VAULT_HOST} \
         --port ${VAULT_PORT} \

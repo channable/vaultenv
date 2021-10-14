@@ -1,4 +1,4 @@
-#!/usr/bin/python3.7
+#!/usr/bin/env python3
 """
 Tests whether the retry mechanism in Vaultenv works correctly by starting Vaultenv
 before the Vault server is ready. Runs after the rest of the tests in
@@ -104,6 +104,7 @@ def run_vaultenv(secrets_file: Path) -> subprocess.Popen:
         [
             "stack",
             "run",
+            "--no-nix-pure",
             "--",
             "vaultenv",
             "--no-connect-tls",
@@ -177,9 +178,11 @@ def run_vault_server() -> subprocess.Popen:
     """
     env = {
         "VAULT_TOKEN": "integration",
-        "VAULT_HOST": "localhost",
+        "VAULT_HOST": "127.0.0.1",
         "VAULT_PORT": "8200",
-        "VAULT_ADDR": "http://localhost:8200",
+        "VAULT_ADDR": "http://127.0.0.1:8200",
+        # Pass through the PATH, so we can locate the vault binary.
+        "PATH": os.getenv("PATH"),
     }
 
     vault_server = subprocess.Popen(

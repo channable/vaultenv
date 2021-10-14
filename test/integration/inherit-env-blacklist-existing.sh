@@ -6,7 +6,7 @@ echo "1..6"
 
 TEMP_RUN_DIRECTORY=$(mktemp -d)
 vault_token_present() {
-    stack exec --cwd $TEMP_RUN_DIRECTORY -- vaultenv \
+    stack exec --no-nix-pure --cwd $TEMP_RUN_DIRECTORY -- vaultenv \
         --no-connect-tls \
         --host ${VAULT_HOST} \
         --port ${VAULT_PORT} \
@@ -49,7 +49,7 @@ fi
 
 # Test that the blacklist from config can be disabled with the CLI
 vault_token_present_with_disabled_blacklist() {
-    stack exec --cwd $TEMP_RUN_DIRECTORY -- vaultenv \
+    stack exec --no-nix-pure --cwd $TEMP_RUN_DIRECTORY -- vaultenv \
         --no-connect-tls \
         --host ${VAULT_HOST} \
         --port ${VAULT_PORT} \

@@ -3,7 +3,7 @@
 echo "1..1"
 
 unset VAULT_TOKEN
-stack exec -- vaultenv \
+stack exec --no-nix-pure -- vaultenv \
            --no-connect-tls \
            --host ${VAULT_HOST} \
            --port ${VAULT_PORT} \

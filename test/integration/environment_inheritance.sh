@@ -3,7 +3,7 @@
 echo "1..2"
 
 export TEST_VAR="willbeset"
-stack exec -- vaultenv \
+stack exec --no-nix-pure -- vaultenv \
   --no-connect-tls \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
@@ -18,7 +18,7 @@ else
   echo "not ok 1 - vaultenv didn´t pass through test var"
 fi
 
-stack exec -- vaultenv \
+stack exec --no-nix-pure -- vaultenv \
   --no-connect-tls \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \

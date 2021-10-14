@@ -3,7 +3,7 @@
 echo "1..1"
 
 export VAULTENV_RETRY_ATTEMPTS=1
-stack exec -- vaultenv \
+stack exec --no-nix-pure -- vaultenv \
   --no-connect-tls \
   --token thiswillfail \
   --host ${VAULT_HOST} \

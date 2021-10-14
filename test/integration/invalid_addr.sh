@@ -3,7 +3,7 @@
 echo "1..5"
 
 #test if the addr is accepted when the same as the host, port and scheme (no tls)
-stack exec -- vaultenv \
+stack exec --no-nix-pure -- vaultenv \
   --no-connect-tls \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
@@ -16,7 +16,7 @@ if [ $? -ne 0 ]; then
 fi
 
 #test if the addr is rejected when the same as the host, port, but different form the scheme (use tls)
-stack exec -- vaultenv \
+stack exec --no-nix-pure -- vaultenv \
   --connect-tls \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
@@ -27,7 +27,7 @@ stack exec -- vaultenv \
 echo "ok 2 - vault rejected the scheme"
 
 #test if rejected with a different scheme (https vs no-tls)
-stack exec -- vaultenv \
+stack exec --no-nix-pure -- vaultenv \
   --no-connect-tls \
   --host ${VAULT_HOST} \
   --port ${VAULT_PORT} \
@@ -38,7 +38,7 @@ stack exec -- vaultenv \
 echo "ok 3 - vault rejected the scheme"
 
 #test if rejected with an invalid host
-stack exec -- vaultenv \
+stack exec --no-nix-pure -- vaultenv \
   --no-connect-tls \
   --host invalidhost \
   --port ${VAULT_PORT} \
@@ -49,7 +49,7 @@ stack exec -- vaultenv \
 echo "ok 4 - vault rejected the host"
 
 #test if rejected with an invalid port
-stack exec -- vaultenv \
+stack exec --no-nix-pure -- vaultenv \
   --no-connect-tls \
   --host ${VAULT_HOST} \
   --port 4321 \

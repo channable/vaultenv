@@ -31,8 +31,10 @@ let
           if spec ? branch then "refs/heads/${spec.branch}" else
             if spec ? tag then "refs/tags/${spec.tag}" else
               abort "In git source '${name}': Please specify `ref`, `tag` or `branch`!";
+      submodules = if spec ? submodules then spec.submodules else false;
     in
-      builtins.fetchGit { url = spec.repo; inherit (spec) rev; inherit ref; };
+      builtins.fetchGit { url = spec.repo; inherit (spec) rev; inherit ref; }
+      // (if builtins.compareVersions builtins.nixVersion "2.4" >= 0 then { inherit submodules; } else {});
 
   fetch_local = spec: spec.path;
 
@@ -98,7 +100,10 @@ let
       saneName = stringAsChars (c: if isNull (builtins.match "[a-zA-Z0-9]" c) then "_" else c) name;
       ersatz = builtins.getEnv "NIV_OVERRIDE_${saneName}";
     in
-      if ersatz == "" then drv else ersatz;
+      if ersatz == "" then drv else
+        # this turns the string into an actual Nix path (for both absolute and
+        # relative paths)
+        if builtins.substring 0 1 ersatz == "/" then /. + ersatz else /. + builtins.getEnv "PWD" + "/${ersatz}";
 
   # Ports of functions for older nix versions
 

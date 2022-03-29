@@ -35,7 +35,7 @@ let
   # This has to match the compiler used in the Stackage snapshot.
   # Update this when the Stackage snapshot changes the version of
   # GHC it uses.
-  compiler = "ghc865";
+  compiler = "ghc902";
 
   # Pin versions of static-haskell-nix and nixpkgs.
   sources = import ./sources.nix;

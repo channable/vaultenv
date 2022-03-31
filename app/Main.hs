@@ -11,9 +11,9 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
 import Data.Aeson.Types       (parseMaybe)
 import Data.Bifunctor         (first)
-import Data.HashMap.Strict    (HashMap, lookupDefault, mapMaybe)
+import Data.HashMap.Strict    (HashMap)
 import Data.List              (nubBy)
-import Data.Text              (Text, pack, unpack)
+import Data.Text              (unpack)
 import Network.Connection     (TLSSettings(..))
 import Network.HTTP.Client    (defaultManagerSettings, ManagerSettings (managerConnCount))
 import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
@@ -40,19 +40,22 @@ import qualified System.Exit                as Exit
 import Config (Options(..), parseOptions, unMilliSeconds,
                LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
                Validated, Completed)
+import KeyMap (KeyMap)
 import SecretsFile (Secret(..), SFError(..), readSecretsFile)
+
+import qualified KeyMap as KM
 
 -- | Make a HTTP URL path from a secret. This is the path that Vault expects.
 secretRequestPath :: MountInfo -> Secret -> String
 secretRequestPath (MountInfo mountInfo) secret = "/v1/" <> sMount secret <> foo <> sPath secret
   where
-    foo = case lookupDefault KV1 (pack $ sMount secret <> "/") mountInfo of
+    foo = case KM.lookupDefault KV1 (KM.fromString $ sMount secret <> "/") mountInfo of
       KV1 -> "/"
       KV2 -> "/data/"
 
 type EnvVar = (String, String)
 
-data MountInfo = MountInfo (HashMap Text EngineType)
+data MountInfo = MountInfo (KeyMap EngineType)
   deriving (Show)
 
 data Context
@@ -153,7 +156,7 @@ instance FromJSON MountInfo where
           _ -> fail "expected a KV type"))
     in
       Aeson.withObject "MountResp" $ \obj ->
-        pure $ MountInfo (mapMaybe (\v -> parseMaybe getType v) obj)
+        pure $ MountInfo (KM.mapMaybe (\v -> parseMaybe getType v) obj)
 
 -- | Error modes of this program.
 --

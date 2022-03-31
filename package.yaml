@@ -55,3 +55,4 @@ tests:
     - hspec-expectations
     - directory
     - QuickCheck
+    - quickcheck-instances

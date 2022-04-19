@@ -19,6 +19,7 @@ haskellPackages:
       megaparsec
       optparse-applicative
       parser-combinators
+      quickcheck-instances
       retry
       text
       unix

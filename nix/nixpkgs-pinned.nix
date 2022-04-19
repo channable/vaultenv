@@ -8,7 +8,7 @@ let
   sources = import ./sources.nix;
 
   nixpkgs = import sources.nixpkgs {
-    overlays = overlays;
+    overlays = [(import ./overlay.nix)] ++ overlays;
     config = {
       imports = [ config ];
     };

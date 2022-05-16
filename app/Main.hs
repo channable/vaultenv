@@ -13,7 +13,7 @@ import Data.Aeson.Types       (parseMaybe)
 import Data.Bifunctor         (first)
 import Data.HashMap.Strict    (HashMap)
 import Data.List              (nubBy)
-import Data.Text              (unpack)
+import Data.Text              (Text, unpack)
 import Network.Connection     (TLSSettings(..))
 import Network.HTTP.Client    (defaultManagerSettings, ManagerSettings (managerConnCount))
 import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
@@ -449,7 +449,7 @@ requestKubernetesVaultToken context role = do
     Left err -> pure $ Left err
     Right jwt ->
       let
-        bodyJson = Aeson.Object $ HashMap.fromList
+        bodyJson = Aeson.Object $ KM.fromList
           [ ("jwt", Aeson.String jwt)
           , ("role", Aeson.String role)
           ]

@@ -58,6 +58,12 @@ data AuthMethod
   -- specific, so we can use `max` as a sensible merge operation.
   = AuthNone
     -- ^ Do not include an x-vault-token header at all.
+  | AuthGitHub Text
+    -- ^ Use Vault's Github authentication [1] to obtain a Vault token, then
+    -- use that as the x-vault-token. The value is the github personal access
+    -- token to use.
+    --
+    -- [1]: https://www.vaultproject.io/docs/auth/github)
   | AuthKubernetes Text
     -- ^ Use Vault's Kubernetes authentication [1] to obtain a Vault token, then
     -- use that as the x-vault-token. The value is the role to use.
@@ -159,6 +165,7 @@ instance Show (Options valid complete) where
     , "Addr:                  " ++ showSpecified (oVaultAddr opts)
     , "Authentication method: " ++ case oAuthMethod opts of
         AuthVaultToken _    -> "Specified X-Vault-Token"
+        AuthGitHub _        -> "Specified GitHub personal access token"
         AuthKubernetes role -> "Kubernetes service account, role: " <> (Text.unpack role)
         AuthNone            -> "None"
     , "Secret file:           " ++ showSpecifiedString (oSecretFile opts)
@@ -392,7 +399,9 @@ parseEnvOptions envVars
       Just token -> AuthVaultToken (Text.pack token)
       Nothing    -> case lookupEnvString "VAULTENV_KUBERNETES_ROLE" of
         Just role -> AuthKubernetes (Text.pack role)
-        Nothing   -> AuthNone
+        Nothing   -> case lookupEnvString "VAULTENV_GITHUB_TOKEN" of
+          Just token -> AuthGitHub (Text.pack token)
+          Nothing    -> AuthNone
   , oSecretFile     = lookupEnvString   "VAULTENV_SECRETS_FILE"
   , oCmd            = lookupEnvString   "CMD"
   , oArgs           = lookupStringList  "ARGS..."
@@ -561,6 +570,13 @@ optionsParser = Options
       <> metavar "TOKEN"
       <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN."
 
+    githubToken
+      =  option (AuthGitHub <$> str)
+      $  long "github-token"
+      <> metavar "TOKEN"
+      <> help ("Authenticate using a GitHub personal access token." ++
+          "Also configurable via VAULTENV_GITHUB_TOKEN.")
+
     kubernetesRole
       =  option (AuthKubernetes  <$> str)
       $  long "kubernetes-role"
@@ -568,7 +584,7 @@ optionsParser = Options
       <> help ("Authenticate using Kubernetes service account in /var/run/secrets/kubernetes.io, " ++
           "with the given role. Also configurable via VAULTENV_KUBERNETES_ROLE.")
 
-    auth = token <|> kubernetesRole <|> pure AuthNone
+    auth = token <|> kubernetesRole <|> githubToken <|> pure AuthNone
 
     secretsFile
       =  maybeStrOption

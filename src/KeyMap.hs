@@ -6,6 +6,7 @@ module KeyMap
   , mapMaybe
   , fromList
   , toList
+  , singleton
 
   , Key
   , fromText
@@ -15,7 +16,7 @@ module KeyMap
   ) where
 
 import Data.Aeson.Key    (Key, fromText, toText, fromString, toString)
-import Data.Aeson.KeyMap (KeyMap, mapMaybe, fromList, toList)
+import Data.Aeson.KeyMap (KeyMap, mapMaybe, fromList, toList, singleton)
 import Data.Maybe (fromMaybe)
 
 import qualified Data.Aeson.KeyMap as KM

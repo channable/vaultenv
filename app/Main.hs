@@ -336,19 +336,23 @@ vaultEnv originalContext =
       authenticate :: Context -> Retry.RetryStatus -> IO (Either VaultError Context)
       authenticate context _retryStatus = case oAuthMethod (cCliOptions context) of
         -- If we have a token already, or if we should not authenticate at all,
-        -- then there is nothing to be done here. But if Kubernetes auth is
-        -- enabled, then we do that here and then fill out the token.
+        -- then there is nothing to be done here. But if Kubernetes or Github
+        -- auth is enabled, then we do that here and then fill out the token.
         AuthVaultToken _ -> pure $ Right context
         AuthNone -> pure $ Right context
-        AuthKubernetes role ->
-          catch (requestKubernetesVaultToken context role) httpErrorHandler >>= \case
-            Left vaultError -> pure $ Left vaultError
-            Right (ClientToken token) -> pure $
-              Right context
-                { cCliOptions = (cCliOptions context)
-                  { oAuthMethod = AuthVaultToken token
-                  }
+        AuthGitHub token -> handleVaultAuthResponse context (requestGitHubVaultToken context token)
+        AuthKubernetes role -> handleVaultAuthResponse context (requestKubernetesVaultToken context role)
+
+      handleVaultAuthResponse :: Context -> IO (Either VaultError ClientToken) -> IO (Either VaultError Context)
+      handleVaultAuthResponse context f =
+        catch f httpErrorHandler >>= \case
+          Left vaultError -> pure $ Left vaultError
+          Right (ClientToken token) -> pure $
+            Right context
+              { cCliOptions = (cCliOptions context)
+                { oAuthMethod = AuthVaultToken token
                 }
+              }
 
       getMountInfo :: Context -> Retry.RetryStatus -> IO (Either VaultError MountInfo)
       getMountInfo context _retryStatus = catch (requestMountInfo context) httpErrorHandler
@@ -409,6 +413,7 @@ runCommand options env =
 addVaultToken :: Options Validated Completed -> Request -> Request
 addVaultToken options request = case oAuthMethod options of
   AuthVaultToken token -> setRequestHeader "x-vault-token" [Text.encodeUtf8 token] request
+  AuthGitHub _ -> error "GitHub auth method should have been resolved to token by now."
   AuthKubernetes _ -> error "Kubernetes auth method should have been resolved to token by now."
   AuthNone -> request
 
@@ -441,6 +446,15 @@ readKubernetesJwt =
       , Handler $ \(_ :: IOError) -> pure $ Left KubernetesJwtFailedRead
       ]
 
+-- | Authenticate using GitHub auth, see https://www.vaultproject.io/docs/auth/github.
+requestGitHubVaultToken :: Context -> Text -> IO (Either VaultError ClientToken)
+requestGitHubVaultToken context ghtoken = let
+  bodyJson = Aeson.Object $ KM.singleton "token" (Aeson.String ghtoken)
+  request = setRequestBodyJSON bodyJson
+    $ setRequestMethod "POST"
+    $ unauthenticatedVaultRequest context "/v1/auth/github/login"
+  in decodeVaultAuthResponse <$> httpLBS request
+
 -- | Authenticate using Kubernetes auth, see https://www.vaultproject.io/docs/auth/kubernetes.
 requestKubernetesVaultToken :: Context -> Text -> IO (Either VaultError ClientToken)
 requestKubernetesVaultToken context role = do
@@ -457,13 +471,15 @@ requestKubernetesVaultToken context role = do
           setRequestBodyJSON bodyJson
           $ setRequestMethod "POST"
           $ unauthenticatedVaultRequest context "/v1/auth/kubernetes/login"
-      in do
-        response <- httpLBS request
-        case getResponseStatusCode response of
-          200 -> case Aeson.eitherDecode' (getResponseBody response) of
-            Left err    -> pure $ Left $ BadJSONResp (getResponseBody response) err
-            Right token -> pure $ Right token
-          _notOk -> pure $ Left $ ServerError $ getResponseBody response
+      in decodeVaultAuthResponse <$> httpLBS request
+
+decodeVaultAuthResponse :: Response LBS.ByteString -> Either VaultError ClientToken
+decodeVaultAuthResponse response =
+  case getResponseStatusCode response of
+    200 -> case Aeson.eitherDecode' (getResponseBody response) of
+      Left err    -> Left $ BadJSONResp (getResponseBody response) err
+      Right token -> Right token
+    _notOk -> Left $ ServerError $ getResponseBody response
 
 -- | Look up what mounts are available and what type they have.
 requestMountInfo :: Context -> IO (Either VaultError MountInfo)

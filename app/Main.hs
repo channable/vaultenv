@@ -594,7 +594,9 @@ vaultErrorLogMessage vaultError =
       BadRequest resp ->
         "Made a bad request: " <> (LBS.unpack resp)
       Forbidden ->
-        "Forbidden"
+        "Forbidden: The provided token is not valid or expired. If you're not \
+        \explictely passing a token, check if the configured token in \
+        \`~/.config/vaultenv/vaultenv.conf` is still valid"
       InvalidUrl secretPath ->
         "Secret " <> secretPath <> " contains characters that are illegal in URLs"
       BadJSONResp body msg ->

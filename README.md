@@ -99,10 +99,11 @@ of `tutorial.sh`.
 ## Usage
 
 ```
-vaultenv 0.13.3 - run programs with secrets from HashiCorp Vault
+vaultenv 0.14.0 - run programs with secrets from HashiCorp Vault
 
 Usage: vaultenv [--version] [--host HOST] [--port PORT] [--addr ADDR]
-                [--token TOKEN] [--secrets-file FILENAME] [CMD] [ARGS...]
+                [--token TOKEN | --github-token TOKEN | --kubernetes-role ROLE]
+                [--secrets-file FILENAME] [CMD] [ARGS...]
                 [--no-connect-tls | --connect-tls]
                 [--no-validate-certs | --validate-certs]
                 [--no-inherit-env | --inherit-env]
@@ -125,6 +126,11 @@ Available options:
                            either VAULT_PORT or VAULT_HOST
   --token TOKEN            Token to authenticate to Vault with. Also
                            configurable via VAULT_TOKEN.
+  --github-token TOKEN     Authenticate using a GitHub personal access
+                           token. Also configurable via VAULTENV_GITHUB_TOKEN.
+  --kubernetes-role ROLE   Authenticate using Kubernetes service account in
+                           /var/run/secrets/kubernetes.io, with the given role.
+                           Also configurable via VAULTENV_KUBERNETES_ROLE.
   --secrets-file FILENAME  Config file specifying which secrets to request. Also
                            configurable via VAULTENV_SECRETS_FILE.
   CMD                      command to run after fetching secrets
@@ -232,6 +238,33 @@ Vaultenv will make the following environment variables available:
  - `FOOBAR` with the contents of the `foobar` field of the secret at
    `production/third-party`.
 
+## Authentication
+
+Vaultenv fetches these secrets from Hashicorp Vault.
+Vaultenv supports multiple ways to authenticate to Vault:
+
+- Token-based authentication
+- Kubernetes authentication
+- GitHub authentication
+
+The token-based authentication relies on the root token, and passing this to
+vaultenv in either the `--token` flag or the `VAULTENV_TOKEN` environment
+variable.
+
+The Kubernetes authentication is useful when running Vaultenv in a Kubernetes
+cluster. In order to use this method, it should be enabled in Vault:
+https://www.vaultproject.io/docs/auth/kubernetes The role should be specified
+with either the `kubernetes-role` flag or the `VAULTENV_KUBERNETES_ROLE`
+environment variable. The Kubernetes authentication token is read from
+`/var/run/secrets/kubernetes.io/serviceaccount/token`
+
+The GitHub authentication is recommended when running Vaultenv on a development
+machine. In order to use this method, it should be enabled in Vault:
+https://www.vaultproject.io/docs/auth/github The user should create a GitHub
+personal access token with the `read:org` scope on the configured organization.
+This token can then be supplied to either the `github-token` flag or the
+`VAULTENV_GITHUB_TOKEN` environment variable.
+
 ### Behavior configuration
 
 Vaultenv supports loading behavior configuration from files (in addition to the
@@ -284,6 +317,8 @@ VAULT_HOST:                     localhost
 VAULT_PORT:                     8200
 VAULT_ADDR:                     https://localhost:8200
 VAULT_TOKEN:                    Unspecified
+VAULTENV_GITHUB_TOKEN:          Unspecified
+VAULTENV_KUBERNETES_ROLE:       Unspecified
 VAULTENV_SECRETS_FILE:          Unspecified
 CMD:                            Unspecified
 ARGS:                           []

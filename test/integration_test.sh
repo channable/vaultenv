@@ -89,4 +89,19 @@ fi
 # Cleanup the vault dev server
 kill %%
 
-PYTHONUNBUFFERED=1 prove --comments integration/retry_tests.py
+# TODO: fix and enable the kubernetes tests.
+# Run the kubernetes auth tests
+# This tests run their own Vault
+# nix build --file integration/kubernetes_auth_container.nix --out-link container.tar.gz
+# minikube start
+# minikube image load container.tar.gz
+# prove --comments integration/kubernetes_auth.py
+# minikube stop
+
+# The retry tests work locally, but not in CI.
+# This is due to the SIGSTOP signal to the vaultenv processes not coming through,
+# which is probably due to implementation specifics of Semaphore CI.
+if [[ ${CI:-"false"} == "false" ]];
+then
+  PYTHONUNBUFFERED=1 prove --comments integration/retry_tests.py
+fi

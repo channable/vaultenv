@@ -36,6 +36,9 @@ blocks:
             - "nix run -c stack build --only-dependencies --test"
             - "nix run -c stack test"
 
+            # Run the integration tests
+            - "cd test && nix run -c ./integration_test.sh"
+
             # Store a copy of the nix store. This will be refreshed daily, which
             # is more than sufficient for this repo.
             - "cache store nix-store-$(date -u -Idate) /nix"

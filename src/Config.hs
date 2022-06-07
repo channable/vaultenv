@@ -9,7 +9,8 @@ variables.
 The main entry point is @parseOptions@.
 -}
 module Config
-  ( Options(..)
+  ( AuthMethod (..)
+  , Options(..)
   , MilliSeconds(..)
   , parseOptions
   , LogLevel(..)
@@ -23,10 +24,11 @@ module Config
 
 import Control.Applicative ((<|>))
 import Control.Monad(when)
-import Data.List (intercalate)
-import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
 import Data.Char (isDigit)
 import Data.Either (lefts, rights, isLeft)
+import Data.List (intercalate)
+import Data.Maybe (fromJust, fromMaybe, isNothing, isJust)
+import Data.Text (Text)
 import Data.Version (showVersion)
 import Network.URI (URI(..), URIAuth(..), parseURI)
 import Options.Applicative (value, long, auto, option, metavar, help, flag,
@@ -40,6 +42,7 @@ import System.Exit (die)
 import Text.Read (readMaybe)
 
 import qualified Configuration.Dotenv as DotEnv
+import qualified Data.Text as Text
 import qualified Options.Applicative as OptParse
 import qualified System.Directory as Dir
 
@@ -50,13 +53,33 @@ type EnvVar = (String, String)
 newtype MilliSeconds = MilliSeconds { unMilliSeconds :: Int }
   deriving (Eq, Show)
 
+data AuthMethod
+  -- Note, these options are deliberately ordered from least specific to most
+  -- specific, so we can use `max` as a sensible merge operation.
+  = AuthNone
+    -- ^ Do not include an x-vault-token header at all.
+  | AuthGitHub Text
+    -- ^ Use Vault's Github authentication [1] to obtain a Vault token, then
+    -- use that as the x-vault-token. The value is the github personal access
+    -- token to use.
+    --
+    -- [1]: https://www.vaultproject.io/docs/auth/github)
+  | AuthKubernetes Text
+    -- ^ Use Vault's Kubernetes authentication [1] to obtain a Vault token, then
+    -- use that as the x-vault-token. The value is the role to use.
+    --
+    -- [1]: https://www.vaultproject.io/docs/auth/kubernetes)
+  | AuthVaultToken Text
+    -- ^ Provide the x-vault-token header, with this value.
+  deriving (Eq, Ord, Show)
+
 -- | @Options@ contains all the configuration we support in vaultenv. It is
 -- used in our @Main@ module to specify behavior.
 data Options validated completed = Options
   { oVaultHost       :: Maybe String
   , oVaultPort       :: Maybe Int
   , oVaultAddr       :: Maybe URI
-  , oVaultToken      :: Maybe String
+  , oAuthMethod      :: AuthMethod
   , oSecretFile      :: Maybe FilePath
   , oCmd             :: Maybe String
   , oArgs            :: Maybe [String]
@@ -94,7 +117,7 @@ defaultOptions = Options
   { oVaultHost      = Just "localhost"
   , oVaultPort      = Just 8200
   , oVaultAddr      = parseURI "https://localhost:8200"
-  , oVaultToken     = Nothing
+  , oAuthMethod     = AuthNone
   , oSecretFile     = Nothing
   , oCmd            = Nothing
   , oArgs           = Just []
@@ -120,7 +143,7 @@ castOptions opts = Options
   { oVaultHost      = oVaultHost opts
   , oVaultPort      = oVaultPort opts
   , oVaultAddr      = oVaultAddr opts
-  , oVaultToken     = oVaultToken opts
+  , oAuthMethod     = oAuthMethod opts
   , oSecretFile     = oSecretFile opts
   , oCmd            = oCmd opts
   , oArgs           = oArgs opts
@@ -140,7 +163,11 @@ instance Show (Options valid complete) where
     [ "Host:                  " ++ showSpecifiedString (oVaultHost opts)
     , "Port:                  " ++ showSpecified (oVaultPort opts)
     , "Addr:                  " ++ showSpecified (oVaultAddr opts)
-    , "Token:                 " ++ maybe "Unspecified" (const "*****") (oVaultToken opts)
+    , "Authentication method: " ++ case oAuthMethod opts of
+        AuthVaultToken _    -> "Specified X-Vault-Token"
+        AuthGitHub _        -> "Specified GitHub personal access token"
+        AuthKubernetes role -> "Kubernetes service account, role: " <> (Text.unpack role)
+        AuthNone            -> "None"
     , "Secret file:           " ++ showSpecifiedString (oSecretFile opts)
     , "Command:               " ++ showSpecifiedString (oCmd opts)
     , "Arguments:             " ++ showSpecified (oArgs opts)
@@ -245,7 +272,7 @@ mergeOptions opts1 opts2 = let
   { oVaultHost      = combine oVaultHost
   , oVaultPort      = combine oVaultPort
   , oVaultAddr      = combine oVaultAddr
-  , oVaultToken     = combine oVaultToken
+  , oAuthMethod     = max (oAuthMethod opts1) (oAuthMethod opts2)
   , oSecretFile     = combine oSecretFile
   , oCmd            = combine oCmd
   , oArgs           = combine oArgs
@@ -368,7 +395,13 @@ parseEnvOptions envVars
   { oVaultHost      = lookupEnvString   "VAULT_HOST"
   , oVaultPort      = lookupEnvInt      "VAULT_PORT"
   , oVaultAddr      = lookupVaultAddr
-  , oVaultToken     = lookupEnvString   "VAULT_TOKEN"
+  , oAuthMethod     = case lookupEnvString "VAULT_TOKEN" of
+      Just token -> AuthVaultToken (Text.pack token)
+      Nothing    -> case lookupEnvString "VAULTENV_KUBERNETES_ROLE" of
+        Just role -> AuthKubernetes (Text.pack role)
+        Nothing   -> case lookupEnvString "VAULTENV_GITHUB_TOKEN" of
+          Just token -> AuthGitHub (Text.pack token)
+          Nothing    -> AuthNone
   , oSecretFile     = lookupEnvString   "VAULTENV_SECRETS_FILE"
   , oCmd            = lookupEnvString   "CMD"
   , oArgs           = lookupStringList  "ARGS..."
@@ -495,7 +528,7 @@ optionsParser = Options
     <$> host
     <*> port
     <*> addr
-    <*> token
+    <*> auth
     <*> secretsFile
     <*> cmd
     <*> cmdArgs
@@ -532,11 +565,27 @@ optionsParser = Options
             "followed by the port, separated with a ':'." ++
             " Cannot be combined with either VAULT_PORT or VAULT_HOST")
     token
-      =  maybeStrOption
+      =  option (AuthVaultToken <$> str)
       $  long "token"
       <> metavar "TOKEN"
-      <> value Nothing
       <> help "Token to authenticate to Vault with. Also configurable via VAULT_TOKEN."
+
+    githubToken
+      =  option (AuthGitHub <$> str)
+      $  long "github-token"
+      <> metavar "TOKEN"
+      <> help ("Authenticate using a GitHub personal access token." ++
+          "Also configurable via VAULTENV_GITHUB_TOKEN.")
+
+    kubernetesRole
+      =  option (AuthKubernetes  <$> str)
+      $  long "kubernetes-role"
+      <> metavar "ROLE"
+      <> help ("Authenticate using Kubernetes service account in /var/run/secrets/kubernetes.io, " ++
+          "with the given role. Also configurable via VAULTENV_KUBERNETES_ROLE.")
+
+    auth = token <|> kubernetesRole <|> githubToken <|> pure AuthNone
+
     secretsFile
       =  maybeStrOption
       $  long "secrets-file"

@@ -46,7 +46,7 @@ let
   # snapshot and convert it to Nix derivations for use in our final build
   # script.
   stack2nix-script = import "${static-haskell-nix}/static-stack2nix-builder/stack2nix-script.nix" {
-    inherit pkgs;
+    inherit pkgs compiler;
     stack-project-dir = toString ../.;
     # Also pin the Hackage snapshot to a certain time for extra-deps without
     # hashes or revisions. Vaultenv doesn't have any, but it's there if it

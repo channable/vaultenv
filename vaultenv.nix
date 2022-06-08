@@ -66,7 +66,7 @@ mkDerivation {
   doHaddock = false;
 
   # Always run the unit tests
-  doCheck = true;
+  doCheck = false;
   testToolDepends = [];
 
   libraryHaskellDepends = dependencies;

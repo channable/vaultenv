@@ -10,6 +10,10 @@ agent:
 blocks:
   - name: "Run checks"
     task:
+      secrets:
+        # Keys needed to access our cachix cache.
+        - name: "cachix-channable-public"
+
       jobs:
         - name: "Run tests"
           commands:
@@ -33,13 +37,21 @@ blocks:
             - "sh ./install-nix-2.3.15 --no-daemon"
             - ". $HOME/.nix-profile/etc/profile.d/nix.sh"
 
+            # Install Cachix and use the Channable cache
+            - "nix-env -iA nixpkgs.cachix"
+            - "cachix use channable-public"
+
+            # Build the devenv and the static package and upload to Cachix
+            - "nix-build --no-out-link default.nix nix/release.nix | cachix push channable-public"
+
+            # Run the build and tests with Stack
             - "nix run -c stack build --only-dependencies --test"
             - "nix run -c stack test"
 
             # Run the integration tests
             - "cd test && nix run -c ./integration_test.sh"
 
-            # Build the static version of the package
+            # Build the Debian package
             - "cd package && ./build_package.sh"
 
             # Store a copy of the nix store. This will be refreshed daily, which

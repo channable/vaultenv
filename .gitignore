@@ -1,7 +1,7 @@
 # Build output
 /.stack-work
 *.deb
-/package/vaultenv-*-linux-musl
+/vaultenv-*-linux-musl
 /result
 
 # auto-generated files

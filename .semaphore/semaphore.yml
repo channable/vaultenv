@@ -41,8 +41,11 @@ blocks:
             - "nix-env -iA nixpkgs.cachix"
             - "cachix use channable-public"
 
-            # Build the devenv and the static package and upload to Cachix
-            - "nix-build --no-out-link default.nix nix/release.nix | cachix push channable-public"
+            # Build the devenv and the static package
+            - "nix-build --no-out-link default.nix nix/release.nix > nix-store-locations"
+
+            # push the result to Cachix.
+            - "cat nix-store-locations | cachix push channable-public"
 
             # Run the build and tests with Stack
             - "nix run -c stack build --only-dependencies --test"
@@ -52,7 +55,7 @@ blocks:
             - "(cd test && nix run -c ./integration_test.sh)"
 
             # Build the Debian package
-            - "(cd package && ./build_package.sh)"
+            - "nix run -c ./package/build_package.sh"
 
             # Store a copy of the nix store. This will be refreshed daily, which
             # is more than sufficient for this repo.

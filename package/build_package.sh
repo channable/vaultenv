@@ -14,15 +14,13 @@ set -euf -o pipefail
 
 # Get the package version from Stack, eliminate the single quotes.
 # Exported, because it is used with envsubst to write the control file.
-cd ..
 VERSION=$(stack query locals vaultenv-real version | sed -e "s/^'//" -e "s/'$//")
 export VERSION
-cd -
 
 # The name of the .deb file to create
 PKGNAME="vaultenv-${VERSION}"
 
-VAULTENV_NIX_PATH=$(nix-build --no-out-link ../nix/release.nix -A vaultenvStatic)
+VAULTENV_NIX_PATH=$(nix-build --no-out-link ./nix/release.nix -A vaultenvStatic)
 
 cp --no-preserve=mode,ownership "${VAULTENV_NIX_PATH}/bin/vaultenv" "vaultenv-${VERSION}-linux-musl"
 
@@ -44,9 +42,9 @@ fakeroot -- bash <<-EOFAKEROOT
 
   # Write the package metadata file, substituting environment variables in the
   # template file.
-  cat deb_control | envsubst > "$PKGNAME/DEBIAN/control"
+  cat package/deb_control | envsubst > "$PKGNAME/DEBIAN/control"
 
-  cp deb_postinst "$PKGNAME/DEBIAN/postinst"
+  cp package/deb_postinst "$PKGNAME/DEBIAN/postinst"
   chmod 0755 "$PKGNAME/DEBIAN/postinst"
 
   # Copy the built binary from the Nix store to the target directory

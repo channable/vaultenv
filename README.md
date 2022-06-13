@@ -415,7 +415,7 @@ If you want a fully static executable without a runtime dependency on `libc`
 and run GNU/Linux, you can install [Nix](https://nixos.org/nix/) and run:
 
 ```
-$ $(nix-build --no-link -A full-build-script nix/vaultenv-static.nix)
+nix-build --no-out-link nix/release.nix -A vaultenvStatic
 ```
 
 This has not been tested on any other platform.

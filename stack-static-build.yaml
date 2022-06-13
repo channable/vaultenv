@@ -1,6 +1,0 @@
-# Also take care to update the compiler in default.nix to the
-# compiler used in this Stackage snapshot.
-resolver: lts-19.10
-
-packages:
-  - "."

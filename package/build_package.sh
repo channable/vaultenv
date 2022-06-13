@@ -20,7 +20,7 @@ export VERSION
 # The name of the .deb file to create
 PKGNAME="vaultenv-${VERSION}"
 
-VAULTENV_NIX_PATH=$($(nix-build --no-link -A full-build-script nix/vaultenv-static.nix) | tail -n1)
+VAULTENV_NIX_PATH=$(nix-build --no-out-link ../nix/release.nix -A vaultenvStatic)
 
 cp --no-preserve=mode,ownership "${VAULTENV_NIX_PATH}/bin/vaultenv" "vaultenv-${VERSION}-linux-musl"
 

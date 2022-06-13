@@ -14,8 +14,10 @@ set -euf -o pipefail
 
 # Get the package version from Stack, eliminate the single quotes.
 # Exported, because it is used with envsubst to write the control file.
+cd ..
 VERSION=$(stack query locals vaultenv-real version | sed -e "s/^'//" -e "s/'$//")
 export VERSION
+cd -
 
 # The name of the .deb file to create
 PKGNAME="vaultenv-${VERSION}"

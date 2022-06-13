@@ -49,10 +49,10 @@ blocks:
             - "nix run -c stack test"
 
             # Run the integration tests
-            - "cd test && nix run -c ./integration_test.sh"
+            - "(cd test && nix run -c ./integration_test.sh)"
 
             # Build the Debian package
-            - "cd package && ./build_package.sh"
+            - "(cd package && ./build_package.sh)"
 
             # Store a copy of the nix store. This will be refreshed daily, which
             # is more than sufficient for this repo.

@@ -3,6 +3,7 @@
 , lib
 , pkgs
 , glibcLocales
+, nix-gitignore
 }:
 let
   dependencies = import ./nix/haskell-dependencies.nix haskellPackages;
@@ -28,14 +29,27 @@ mkDerivation {
         src = lib.cleanSource ./.;
         filter = path: _type: lib.any (prefix: lib.hasPrefix prefix path) prefixWhitelist;
       };
-      blacklistedSrc = lib.cleanSourceWith {
+      rootGitignoredSrc = lib.cleanSourceWith {
         src = whitelistedSrc;
-        filter = path: type:
-          # Where we're going we don't need no documentation
-          ! lib.hasSuffix ".md" path;
+        filter =
+          let
+            gitignore = builtins.readFile ./.gitignore;
+            extraFilter = path: type:
+              # Where we're going we don't need no documentation
+              ! (lib.hasSuffix ".md" path);
+          in
+            nix-gitignore.gitignoreFilterPure extraFilter gitignore ./.;
+      };
+      testGitignoredSrc = lib.cleanSourceWith {
+        src = rootGitignoredSrc;
+        filter =
+          let
+            gitignore = builtins.readFile ./test/.gitignore;
+          in
+            nix-gitignore.gitignoreFilter gitignore ./test;
       };
     in
-      blacklistedSrc;
+      testGitignoredSrc;
 
   configureFlags = [
     # Do not print a wall of text before compiling

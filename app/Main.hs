@@ -68,6 +68,9 @@ data Context
   { cLocalEnvVars :: [EnvVar]
   , cCliOptions :: Options Validated Completed
   , cHttpManager :: Manager
+  , cExtraEnvVars :: [EnvVar]
+  -- ^ Variables we want to inject into the command's environment that were not
+  -- in the local environment when vaultenv was called, nor fetched via vault
   }
 
 -- | The different types of Engine that Vautlenv supports
@@ -275,6 +278,7 @@ main = do
   let context = Context { cLocalEnvVars = envAndEnvFileConfig
                         , cCliOptions = cliAndEnvAndEnvFileOptions
                         , cHttpManager = httpManager
+                        , cExtraEnvVars = []
                         }
 
   vaultEnv context >>= \case
@@ -329,7 +333,8 @@ vaultEnv originalContext =
             Right mountInfo ->
               requestSecrets authenticatedContext mountInfo secrets >>= \case
                 Left vaultError -> pure $ Left vaultError
-                Right secretEnv -> pure $ checkNoDuplicates (buildEnv secretEnv)
+                Right secretEnv -> pure $ checkNoDuplicates $
+                  buildEnv (cExtraEnvVars authenticatedContext ++ secretEnv)
     where
       retryPolicy = vaultRetryPolicy (cCliOptions originalContext)
 
@@ -352,6 +357,7 @@ vaultEnv originalContext =
               { cCliOptions = (cCliOptions context)
                 { oAuthMethod = AuthVaultToken token
                 }
+              , cExtraEnvVars = [("VAULT_TOKEN", unpack token)]
               }
 
       getMountInfo :: Context -> Retry.RetryStatus -> IO (Either VaultError MountInfo)

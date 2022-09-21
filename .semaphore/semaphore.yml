@@ -20,8 +20,8 @@ blocks:
             - "checkout"
 
             # Download and verify Nix installation script.
-            - curl -o install-nix-2.3.15 https://releases.nixos.org/nix/nix-2.3.15/install
-            - sha256sum --check .semaphore/install-nix-2.3.15.sha256
+            - curl -o install-nix-2.10.3 https://releases.nixos.org/nix/nix-2.10.3/install
+            - sha256sum --check .semaphore/install-nix.sha256
 
             # Restore `/nix` cache. Create the directory first, otherwise we encounter
             # permission errors. We do this because the Semaphore cache is faster than
@@ -34,7 +34,11 @@ blocks:
             - unset LD_LIBRARY_PATH
 
             # Install Nix and source the shell configuration immediately.
-            - "sh ./install-nix-2.3.15 --no-daemon"
+            - "sh ./install-nix-2.10.3 --no-daemon"
+            # Enable `nix-command` feature, which `nix build` needs to build
+            - "sudo mkdir /etc/nix"
+            - "echo 'experimental-features = nix-command' | sudo tee -a /etc/nix/nix.conf"
+
             - ". $HOME/.nix-profile/etc/profile.d/nix.sh"
 
             # Install Cachix and use the Channable cache
@@ -48,14 +52,14 @@ blocks:
             - "cat nix-store-locations | cachix push channable-public"
 
             # Run the build and tests with Stack
-            - "nix run -c stack build --only-dependencies --test"
-            - "nix run -c stack test"
+            - "nix shell -f default.nix -c stack build --only-dependencies --test"
+            - "nix shell -f default.nix -c stack test"
 
             # Run the integration tests
-            - "(cd test && nix run -c ./integration_test.sh)"
+            - "(cd test && nix shell -f default.nix -c ./integration_test.sh)"
 
             # Build the Debian package
-            - "nix run -c ./package/build_package.sh"
+            - "nix shell -f default.nix -c ./package/build_package.sh"
 
             # Store a copy of the nix store. This will be refreshed daily, which
             # is more than sufficient for this repo.

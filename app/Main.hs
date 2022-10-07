@@ -6,7 +6,7 @@
 import Control.Applicative    ((<|>))
 import Control.Concurrent.QSem (newQSem, waitQSem, signalQSem)
 import Control.Exception      (Handler (..), bracket_, catch, catches)
-import Control.Monad          (forM)
+import Control.Monad          (forM, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
 import Data.Aeson.Types       (parseMaybe)
@@ -352,8 +352,10 @@ vaultEnv originalContext =
       handleVaultAuthResponse context f =
         catch f httpErrorHandler >>= \case
           Left vaultError -> pure $ Left vaultError
-          Right (ClientToken token) -> pure $
-            Right context
+          Right (ClientToken token) -> do
+            when (getOptionsValue oLogLevel (cCliOptions context) <= Info) $
+              putStrLn "[INFO] Authentication successful, we have a VAULT_TOKEN now."
+            pure $ Right context
               { cCliOptions = (cCliOptions context)
                 { oAuthMethod = AuthVaultToken token
                 }
@@ -464,6 +466,8 @@ requestGitHubVaultToken context ghtoken = let
 -- | Authenticate using Kubernetes auth, see https://www.vaultproject.io/docs/auth/kubernetes.
 requestKubernetesVaultToken :: Context -> Text -> IO (Either VaultError ClientToken)
 requestKubernetesVaultToken context role = do
+  when (getOptionsValue oLogLevel (cCliOptions context) <= Info) $
+    putStrLn "[INFO] Authenticating with Kubernetes ..."
   jwtResult <- readKubernetesJwt
   case jwtResult of
     Left err -> pure $ Left err
@@ -517,7 +521,9 @@ requestSecret context secretPath =
     getSecret :: Retry.RetryStatus -> IO (Either VaultError VaultData)
     getSecret _retryStatus = catch (doRequest secretPath request) httpErrorHandler
 
-  in
+  in do
+    when (getOptionsValue oLogLevel (cCliOptions context) <= Info) $
+      putStrLn $ "[INFO] Getting " <> secretPath <> " ..."
     doWithRetries retryPolicy getSecret
 
 -- | Request all the supplied secrets from the vault, but just once, even if

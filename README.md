@@ -429,8 +429,8 @@ from a Nix cache, to not have to recompile all of Haskell and its dependencies.
 To set up the cache, execute these commands once before building:
 
 ```console
-$ nix run -c cachix use static-haskell-nix
-$ nix run -c cachix use channable-public
+$ nix shell --file default.nix -c cachix use static-haskell-nix
+$ nix shell --file default.nix -c cachix use channable-public
 ```
 
 Note that the build process via Nix is not (yet) reproducible, which means that
@@ -449,7 +449,7 @@ test `vaultenv`.
 Get this shell with:
 
 ```
-$ nix run
+$ nix shell --file default.nix
 ```
 
 ## Future work

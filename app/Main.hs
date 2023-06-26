@@ -43,7 +43,7 @@ import qualified System.Exit                as Exit
 
 import Config (AuthMethod (..), Options(..), parseOptions, unMilliSeconds,
                LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
-               Validated, Completed)
+               Validated, Completed, DuplicateVariableBehavior (..))
 import KeyMap (KeyMap)
 import SecretsFile (Secret(..), SFError(..), readSecretsFile)
 import Response (ClientToken (..))
@@ -333,7 +333,7 @@ vaultEnv originalContext =
             Right mountInfo ->
               requestSecrets authenticatedContext mountInfo secrets >>= \case
                 Left vaultError -> pure $ Left vaultError
-                Right secretEnv -> pure $ checkNoDuplicates $
+                Right secretEnv -> pure $ handleDuplicates $
                   buildEnv (cExtraEnvVars authenticatedContext ++ secretEnv)
     where
       retryPolicy = vaultRetryPolicy (cCliOptions originalContext)
@@ -367,12 +367,29 @@ vaultEnv originalContext =
 
       secretFile = getOptionsValue oSecretFile (cCliOptions originalContext)
 
+      allowDuplicates = getOptionsValue oDuplicateVariablesBehavior (cCliOptions originalContext)
+
+      -- Handle duplicates baseup
+      handleDuplicates = case allowDuplicates of
+        DuplicateError -> checkNoDuplicates
+        DuplicateKeep -> Right . preferLast
+        DuplicateOverwrite -> Right . preferFirst
+
       -- | Check that the given list of EnvVars contains no duplicate
       -- variables, return a DuplicateVar error if it does.
       checkNoDuplicates :: [EnvVar] -> Either VaultError [EnvVar]
       checkNoDuplicates vars = case dups (map fst vars) of
         Right () -> Right vars
         Left var -> Left $ DuplicateVar var
+
+      -- Prefer the last element in the list with environment variables. This
+      -- is a somewhat inefficient way, but the list here is small, so performance shouldn't
+      -- be a problem.
+      preferLast :: [EnvVar] -> [EnvVar]
+      preferLast = reverse . preferFirst . reverse
+
+      preferFirst :: [EnvVar] -> [EnvVar]
+      preferFirst = nubBy (\(x, _) (y, _) -> x == y)
 
       -- We need to check duplicates in the environment and fail if
       -- there are any. `dups` runs in O(n^2),

@@ -174,6 +174,14 @@ Available options:
                            Defaults to 8. Pass 0 to disable the limit. Also
                            configurable through
                            VAULTENV_MAX_CONCURRENT_REQUESTS.
+  --duplicate-variable-behavior error | keep | overwrite
+                           Changes the behavior of duplicate variables. 'error`
+                           produces an error for duplicate variables. 'keep'
+                           keeps the value already in the environment , ignoring
+                           the secret. 'overwrite' overwrite the environment
+                           variable in favor of the secret. Default to 'error'.
+                           Also configurable through
+                           VAULTENV_DUPLICATE_VARIABLE_BEHAVIOR.
 ```
 
 ## Configuration
@@ -331,6 +339,7 @@ VAULTENV_RETRY_ATTEMPTS:        9
 VAULTENV_LOG_LEVEL:             Error
 VAULTENV_USE_PATH:              True
 VAULTENV_MAX_CONCURRENT_REQUESTS: 8
+VAULTENV_DUPLICATE_VARIABLE_BEHAVIOR: error
 ```
 In cases where no default nor any value is specified, which is possible for `Token`, `Secret file` and
 `Command`, Vaultenv will give an error that it requires these values to operate.

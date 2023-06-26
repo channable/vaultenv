@@ -14,6 +14,7 @@ module Config
   , MilliSeconds(..)
   , parseOptions
   , LogLevel(..)
+  , DuplicateVariableBehavior(..)
   , readConfigFromEnvFiles
   , OptionsError
   , ValidScheme(..)
@@ -92,6 +93,7 @@ data Options validated completed = Options
   , oLogLevel        :: Maybe LogLevel
   , oUsePath         :: Maybe Bool
   , oMaxConcurrentRequests :: Maybe Int
+  , oDuplicateVariablesBehavior :: Maybe DuplicateVariableBehavior
   } deriving (Eq)
 
 -- | Phantom type that indicates that an option is
@@ -134,6 +136,7 @@ defaultOptions = Options
   -- The default has been chosen by doubling the limit in combination with a suitably large
   -- secrets file until the gain in performance was insignificant.
   , oMaxConcurrentRequests = Just 8
+  , oDuplicateVariablesBehavior = Just DuplicateError
 }
 
 -- | Casts one options structure into another, use only when certain that
@@ -156,6 +159,7 @@ castOptions opts = Options
   , oLogLevel       = oLogLevel opts
   , oUsePath        = oUsePath opts
   , oMaxConcurrentRequests = oMaxConcurrentRequests opts
+  , oDuplicateVariablesBehavior = oDuplicateVariablesBehavior opts
   }
 
 instance Show (Options valid complete) where
@@ -285,6 +289,7 @@ mergeOptions opts1 opts2 = let
   , oLogLevel       = combine oLogLevel
   , oUsePath        = combine oUsePath
   , oMaxConcurrentRequests = combine oMaxConcurrentRequests
+  , oDuplicateVariablesBehavior = combine oDuplicateVariablesBehavior
   }
 
 
@@ -366,6 +371,22 @@ instance Read LogLevel where
   readsPrec _ "info" = [(Info, "")]
   readsPrec _ _ = []
 
+-- | The behavior that we want to see for duplicate variables. The options are
+-- to error on duplicate variables, keep the existing variables or overwrite the variables,
+-- replacing them with the secrets.
+data DuplicateVariableBehavior
+  = DuplicateError
+  | DuplicateKeep
+  | DuplicateOverwrite
+  deriving (Eq, Ord, Show)
+
+instance Read DuplicateVariableBehavior where
+  readsPrec _ "error" = [(DuplicateError, "")]
+  readsPrec _ "keep" = [(DuplicateKeep, "")]
+  readsPrec _ "overwrite" = [(DuplicateOverwrite, "")]
+  readsPrec _ _ = []
+
+
 -- | Parse program options from the command line and the process environment.
 parseOptions :: [EnvVar] -> [[EnvVar]] -> IO (Options Validated Completed)
 parseOptions localEnvVars envFileSettings =
@@ -414,6 +435,7 @@ parseEnvOptions envVars
   , oLogLevel       = lookupEnvLogLevel "VAULTENV_LOG_LEVEL"
   , oUsePath        = lookupEnvFlag     "VAULTENV_USE_PATH"
   , oMaxConcurrentRequests = lookupEnvInt "VAULTENV_MAX_CONCURRENT_REQUESTS"
+  , oDuplicateVariablesBehavior = lookupDuplicateBehaviorFlag "VAULTENV_DUPLICATE_VARIABLE_BEHAVIOR"
   }
   where
     -- | Throws an error for an invalid key
@@ -443,6 +465,16 @@ parseEnvOptions envVars
         Just "error" -> Just Error
         Nothing -> Nothing
         _ -> err key
+
+    lookupDuplicateBehaviorFlag :: String -> Maybe DuplicateVariableBehavior
+    lookupDuplicateBehaviorFlag key =
+      case lookup key envVars of
+        Just "keep" -> Just DuplicateKeep
+        Just "error" -> Just DuplicateError
+        Just "overwrite" -> Just DuplicateOverwrite
+        Nothing -> Nothing
+        _ -> err key
+
     -- | Look up and parse VAULT_ADDR
     lookupVaultAddr :: Maybe URI
     lookupVaultAddr = do
@@ -541,6 +573,7 @@ optionsParser = Options
     <*> logLevel
     <*> usePath
     <*> maxConcurrentRequests
+    <*> duplicateVariableBehavior
   where
     maybeStr = Just <$> str
     maybeStrOption = option maybeStr
@@ -683,6 +716,17 @@ optionsParser = Options
       <> help ("Maximum number of concurrent requests to vault. Defaults to 8. " ++
                "Pass 0 to disable the limit. " ++
                "Also configurable through VAULTENV_MAX_CONCURRENT_REQUESTS.")
+
+    duplicateVariableBehavior
+      =  option (Just <$> auto)
+      $  long "duplicate-variable-behavior"
+      <> value Nothing
+      <> metavar "error | keep | overwrite"
+      <> help ("Changes the behavior of duplicate variables. 'error` produces an error" ++
+              " for duplicate variables. 'keep' keeps the value already in the environment" ++
+              " , ignoring the secret. 'overwrite' overwrite the environment variable in favor" ++
+              " of the secret. Default to 'error'." ++
+              " Also configurable through VAULTENV_DUPLICATE_VARIABLE_BEHAVIOR.")
 
 -- | Split a list of elements on the given separator, returning sublists without this
 -- separator item.

@@ -92,7 +92,7 @@ blocks:
             - unset LD_LIBRARY_PATH
 
             # Install Nix
-            - "yes | ./install-nix-2.10.3 --daemon-user-count 1"
+            - "yes | sudo ./install-nix-2.10.3 --daemon-user-count 1"
             - echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf
             - echo "max-jobs = auto" | sudo tee -a /etc/nix/nix.conf
             - echo "trusted-users = root semaphore" | sudo tee -a /etc/nix/nix.conf

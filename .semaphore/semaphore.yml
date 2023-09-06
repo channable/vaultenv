@@ -64,3 +64,55 @@ blocks:
             # Store a copy of the nix store. This will be refreshed daily, which
             # is more than sufficient for this repo.
             - "cache store nix-store-$(date -u -Idate) /nix"
+
+  - name: "Build - MacOS"
+    dependencies: []
+
+    # Disabled while testing this PR
+    # # Only applies to tags.
+    # run:
+    #   when: 'tag =~ "^v[[:digit:]]\.[[:digit:]]+\.[[:digit:]]$"'
+
+    task:
+      agent:
+        machine:
+          type: "a1-standard-4"  # MacOS cannot be used with any other machine type
+          os_image: "macos-xcode13"
+      prologue:
+        commands:
+            - "checkout"
+
+            # Download and verify Nix installation script.
+            - curl -o install-nix-2.10.3 https://releases.nixos.org/nix/nix-2.10.3/install
+            - sha256sum --check .semaphore/install-nix.sha256
+
+            # Restore `/nix` cache. Create the directory first, otherwise we encounter
+            # permission errors. We do this because the Semaphore cache is faster than
+            # both Cachix and cache.nixos.org.
+            - "sudo mkdir /nix"
+            - "sudo chown -R semaphore:semaphore /nix"
+            - "cache restore mac-nix-store-"
+
+            # For some reason, Semaphore CI sets this variable, but it causes the nix installation to fail
+            - unset LD_LIBRARY_PATH
+
+            # Install Nix
+            - "yes | ./install-nix-2.10.3 --daemon-user-count 1"
+            - echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf
+            - echo "max-jobs = auto" | sudo tee -a /etc/nix/nix.conf
+            - echo "trusted-users = root semaphore" | sudo tee -a /etc/nix/nix.conf
+            - sudo launchctl kickstart -k system/org.nixos.nix-daemon
+
+            # Ensure necessary environment variables are set
+            - ". /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+
+            # Install and configure Cachix.
+            - "nix profile install nixpkgs#cachix"
+            - "cachix use channable-public"
+
+            # Build the static package
+            - "nix-build --no-out-link nix/release.nix | cachix push channable-public"
+
+            # Store a copy of the nix store. This will be refreshed daily, which
+            # is more than sufficient for this repo.
+            - "cache store nix-store-$(date -u -Idate) /nix"

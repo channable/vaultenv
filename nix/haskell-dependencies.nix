@@ -15,6 +15,7 @@ haskellPackages:
       hspec-discover
       hspec-expectations
       http-client
+      http-client-openssl
       http-conduit
       megaparsec
       optparse-applicative

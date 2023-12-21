@@ -30,7 +30,7 @@ dependencies:
   - utf8-string
   - optparse-applicative
 
-ghc-options: -threaded -rtsopts -Wall -Werror
+ghc-options: -threaded -Wall -Werror
 
 library:
   source-dirs: src

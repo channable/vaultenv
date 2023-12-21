@@ -25,7 +25,8 @@ import Network.HTTP.Simple    (HttpException(..), Request, Response,
 import Network.HTTP.Client.OpenSSL (defaultMakeContext, defaultOpenSSLSettings,
                                      opensslManagerSettings, osslSettingsVerifyMode)
 import OpenSSL.Session        (contextSetDefaultVerifyPaths,
-                               VerificationMode (VerifyNone, VerifyPeer))
+                               VerificationMode (VerifyNone, VerifyPeer),
+                               vpFailIfNoPeerCert, vpClientOnce, vpCallback)
 import System.Environment     (getEnvironment)
 import System.IO              (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
 import System.Posix.Process   (executeFile)
@@ -313,9 +314,11 @@ getHttpManager opts = newManager $ applyConfig basicManagerSettings
             if not $ getOptionsValue oValidateCerts opts
             then VerifyNone
             else VerifyPeer
-                  True 
-                  True
-                  Nothing
+                  {
+                    vpFailIfNoPeerCert = True,
+                    vpClientOnce = True,
+                    vpCallback = Nothing
+                  }
       }
 
 -- | Main logic of our application.

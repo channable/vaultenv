@@ -15,8 +15,10 @@ dependencies:
   - containers
   - dotenv
   - directory
+  - HsOpenSSL
   - http-conduit
   - http-client
+  - http-client-openssl
   - megaparsec
   - network-uri
   - optparse-applicative
@@ -28,7 +30,7 @@ dependencies:
   - utf8-string
   - optparse-applicative
 
-ghc-options: -Wall -Werror
+ghc-options: -threaded -Wall -Werror
 
 library:
   source-dirs: src

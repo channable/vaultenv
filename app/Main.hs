@@ -14,15 +14,19 @@ import Data.Bifunctor         (first)
 import Data.HashMap.Strict    (HashMap)
 import Data.List              (nubBy)
 import Data.Text              (Text, unpack)
-import Network.Connection     (TLSSettings(..))
-import Network.HTTP.Client    (defaultManagerSettings, ManagerSettings (managerConnCount))
-import Network.HTTP.Conduit   (Manager, newManager, mkManagerSettings)
+import Network.HTTP.Client    (ManagerSettings (managerConnCount))
+import Network.HTTP.Conduit   (Manager, newManager)
 import Network.HTTP.Simple    (HttpException(..), Request, Response,
                                defaultRequest, setRequestBodyJSON, setRequestHeader,
                                setRequestMethod, setRequestPort,
                                setRequestPath, setRequestHost, setRequestManager,
                                setRequestSecure, httpLBS, getResponseBody,
                                getResponseStatusCode)
+import Network.HTTP.Client.OpenSSL (defaultMakeContext, defaultOpenSSLSettings,
+                                     opensslManagerSettings, osslSettingsVerifyMode)
+import OpenSSL.Session        (contextSetDefaultVerifyPaths,
+                               VerificationMode (VerifyNone, VerifyPeer),
+                               vpFailIfNoPeerCert, vpClientOnce, vpCallback)
 import System.Environment     (getEnvironment)
 import System.IO              (BufferMode (LineBuffering), hSetBuffering, stderr, stdout)
 import System.Posix.Process   (executeFile)
@@ -298,16 +302,24 @@ getHttpManager opts = newManager $ applyConfig basicManagerSettings
       -- Unless we use the unlimited flag, in that case, use the default value.
       { managerConnCount = if maxConnections > 0 then maxConnections else managerConnCount settings
       }
-
-    basicManagerSettings = if getOptionsValue oConnectTls opts
-                      then mkManagerSettings tlsSettings Nothing
-                      else defaultManagerSettings
-    tlsSettings = TLSSettingsSimple
-                { settingDisableCertificateValidation =
-                      not $ getOptionsValue oValidateCerts opts
-                , settingDisableSession = False
-                , settingUseServerName = True
-                }
+    basicManagerSettings =
+      (opensslManagerSettings makeContext)
+        { managerConnCount = maxConnections }
+    makeContext = do
+      context <- defaultMakeContext opensslSettings
+      contextSetDefaultVerifyPaths context
+      pure context
+    opensslSettings = defaultOpenSSLSettings
+      { osslSettingsVerifyMode =
+            if not $ getOptionsValue oValidateCerts opts
+            then VerifyNone
+            else VerifyPeer
+                  {
+                    vpFailIfNoPeerCert = True,
+                    vpClientOnce = True,
+                    vpCallback = Nothing
+                  }
+      }
 
 -- | Main logic of our application.
 --

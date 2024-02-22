@@ -3,7 +3,7 @@ module SecretFileSpec where
 import Test.Hspec
 
 import Data.Either (isRight, isLeft)
-
+import Control.Monad (forM_)
 
 import qualified SecretsFile
 import qualified System.Directory as Dir
@@ -11,17 +11,19 @@ import qualified System.Directory as Dir
 spec :: SpecWith ()
 spec = do
   describe "SecretFile.readSecretList" $ do
-    it "parses all golden tests succesfully" $ do
-      goldenTestContents <- Dir.listDirectory "test/golden"
-      let goldenTestFiles = map ("test/golden/" <>) goldenTestContents
-      parseResults <- mapM SecretsFile.readSecretsFile goldenTestFiles
-      parseResults `shouldSatisfy` (all isRight)
+    goldenTestContents <- runIO $ Dir.listDirectory "test/golden"
+    let goldenTestFiles = map ("test/golden/" <>) goldenTestContents
+    forM_ goldenTestFiles $ \fname ->
+      it ("parses " ++ fname ++ " correctly") $ do
+        parseResult <- SecretsFile.readSecretsFile fname
+        parseResult `shouldSatisfy` isRight
 
-    it "rejects all invalid examples succesfully" $ do
-      invalidTestContents <- Dir.listDirectory "test/invalid"
-      let invalidTestFiles = map ("test/invalid/" <>) invalidTestContents
-      parseResults <- mapM SecretsFile.readSecretsFile invalidTestFiles
-      parseResults `shouldSatisfy` (all isLeft)
+    invalidTestContents <- runIO $ Dir.listDirectory "test/invalid"
+    let invalidTestFiles = map ("test/invalid/" <>) invalidTestContents
+    forM_ invalidTestFiles $ \fname ->
+      it ("rejects " ++ fname) $ do
+        parseResult <- SecretsFile.readSecretsFile fname
+        parseResult `shouldSatisfy` isLeft
 
     it "parses all v2-comments.secrets as expected" $ do
       -- This is a regression test, Vaultenv 0.16.0 used to drop the second

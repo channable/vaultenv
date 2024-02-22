@@ -49,7 +49,7 @@ import Config (AuthMethod (..), Options(..), parseOptions, unMilliSeconds,
                LogLevel(..), readConfigFromEnvFiles, getOptionsValue,
                Validated, Completed, DuplicateVariableBehavior (..))
 import KeyMap (KeyMap)
-import SecretsFile (Secret(..), SFError(..), readSecretsFile)
+import SecretsFile (Secret(..), readSecretsFile)
 import Response (ClientToken (..))
 
 import qualified KeyMap as KM
@@ -177,7 +177,7 @@ instance FromJSON MountInfo where
 -- function which is responsible for printing an error message and exiting.
 data VaultError
   = SecretNotFound String
-  | SecretFileError SFError
+  | SecretFileError String
   | KeyNotFound Secret
   | WrongType Secret
   | BadRequest LBS.ByteString

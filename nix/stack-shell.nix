@@ -11,7 +11,7 @@ in
         # bundled with all the dependencies listed in `haskell-dependencies.nix`.
         # This allows us to have stack use the dependencies from nixpkgs,
         # instead of fetching them itself.
-        ghc = nixpkgs.Ghc902Packages.ghcWithPackages getDependencies;
+        ghc = nixpkgs.vaultenvHaskellPackages.ghcWithPackages getDependencies;
         buildInputs = with nixpkgs; [
           glibcLocales
         ];

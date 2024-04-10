@@ -36,7 +36,7 @@ import qualified Control.Retry              as Retry
 import qualified Data.Aeson                 as Aeson
 import qualified Data.ByteString            as ByteString
 import qualified Data.ByteString.Char8      as SBS
-import qualified Data.ByteString.Lazy       as LBS hiding (unpack, putStrLn)
+import qualified Data.ByteString.Lazy       as LBS hiding (unpack)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Foldable              as Foldable
 import qualified Data.HashMap.Strict        as HashMap

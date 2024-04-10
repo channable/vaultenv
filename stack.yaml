@@ -1,6 +1,6 @@
 # Also take care to update the compiler in default.nix to the
 # compiler used in this Stackage snapshot.
-resolver: ghc-9.0.2
+resolver: ghc-9.6.4
 
 packages:
   - "."

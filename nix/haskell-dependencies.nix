@@ -7,8 +7,8 @@ haskellPackages:
       async
       base
       bytestring
-      connection
       containers
+      crypton-connection
       directory
       dotenv
       hspec

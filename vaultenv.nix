@@ -10,7 +10,7 @@ let
 in
 mkDerivation {
   pname = "vaultenv";
-  version = "0.16.1";
+  version = "0.17.0";
 
   src =
     let

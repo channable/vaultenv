@@ -7,7 +7,7 @@ haskellPackages:
       async
       base
       bytestring
-      connection
+      crypton-connection
       containers
       directory
       dotenv

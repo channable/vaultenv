@@ -9,9 +9,7 @@ let
 
   nixpkgs = import sources.nixpkgs {
     overlays = [(import ./overlay.nix)] ++ overlays;
-    config = {
-      imports = [ config ];
-    };
+    inherit config;
   };
 in
 nixpkgs

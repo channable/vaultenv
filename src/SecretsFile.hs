@@ -21,7 +21,7 @@ If you are user, please see the README for more information.
 -}
 module SecretsFile where
 
-import Control.Applicative.Combinators (some, option, optional)
+import Control.Applicative.Combinators (some, many, option, optional)
 import Control.Exception (try, displayException)
 import Data.Char (toUpper, isSpace, isControl)
 import Data.Functor (void)
@@ -111,8 +111,8 @@ secretsFileP = do
   _ <- whitespace
   version <- versionP
   case version of
-    V1 -> some (secretP version "secret")
-    V2 -> concat <$> some secretBlockP
+    V1 -> many (secretP version "secret")
+    V2 -> concat <$> many secretBlockP
 
 -- | Parse the file version
 --
@@ -134,7 +134,7 @@ secretBlockP = do
   _ <- symbol "MOUNT"
   mountPath <- lexeme pathComponentP
   _ <- newlines
-  some (MP.try (lexeme (secretP V2 mountPath)))
+  many (MP.try (lexeme (secretP V2 mountPath)))
 
 -- | Parses legal Vault path components.
 --

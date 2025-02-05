@@ -21,15 +21,9 @@ If you are user, please see the README for more information.
 -}
 module SecretsFile where
 
-import Control.Applicative.Combinators (some, option, optional)
 import Control.Exception (try, displayException)
-import Data.Char (toUpper, isSpace, isControl)
-import Data.Functor (void)
-import Data.List (intercalate)
-import Data.Void (Void)
-import qualified Text.Megaparsec as MP
-import qualified Text.Megaparsec.Char as MPC
-import qualified Text.Megaparsec.Char.Lexer as MPL
+import Data.Char (toUpper, isSpace)
+import Data.List (elemIndex, intercalate, isPrefixOf)
 
 data Secret = Secret
   { sMount :: String
@@ -38,186 +32,92 @@ data Secret = Secret
   , sVarName :: String
   } deriving (Eq, Show)
 
-data SFVersion
-  = V1
-  | V2
-  deriving (Show)
-
-type Parser = MP.Parsec Void String
-
--- | Error modes of this module.
---
--- We either get IO errors because we cannot open the secrets file, or we
--- cannot parse it.
-data SFError = IOErr IOError | ParseErr (MP.ParseErrorBundle String Void)
-
-instance Show SFError where
-  show sfErr = case sfErr of
-    IOErr ioErr -> displayException ioErr
-    ParseErr pe -> MP.errorBundlePretty pe
-
--- | Read a list of secrets from a file
-readSecretsFile :: FilePath -> IO (Either SFError [Secret])
-readSecretsFile fp = do
-  contentsOrErr <- safeReadFile fp
-  case contentsOrErr of
-    Right c -> do
-      let parseResult = parseSecretsFile fp c
-      case parseResult of
-        Right res -> pure $ Right res
-        Left err -> pure $ Left (ParseErr err)
-    Left err -> pure $ Left (IOErr err)
-
 -- | Read a file, catching all IOError exceptions.
 safeReadFile :: FilePath -> IO (Either IOError String)
 safeReadFile fp = (try . readFile) fp
 
--- | Parse a String as a SecretsFile.
-parseSecretsFile :: FilePath -> String -> Either (MP.ParseErrorBundle String Void) [Secret]
-parseSecretsFile = MP.parse secretsFileP
+-- | Read a list of secrets from a file
+readSecretsFile :: FilePath -> IO (Either String [Secret])
+readSecretsFile fp = do
+  contentsOrErr <- safeReadFile fp
+  case contentsOrErr of
+    Right str -> pure $ parseSecretsFile str
+    Left err -> pure $ Left $ displayException err
 
--- | SpaceConsumer parser, which is responsible for stripping all whitespace.
---
--- Sometimes, we require explicit newlines, therefore, we don't handle those
--- here. @isSpace@ works on any unicode whitespace character. Megaparsec comes
--- with some helpers that would make this better, but here we need to roll our
--- own whitespace parser, because we want to preserve newlines.
-whitespace :: Parser ()
-whitespace = MPL.space whitespaceChars lineComment blockComment
+parseSecretsFile :: String -> Either String [Secret]
+parseSecretsFile str =
+  let
+    dataLines = id
+      -- Drop blank lines.
+      $ filter (not . all isSpace)
+      -- Drop comment lines that start with #.
+      $ filter (\line -> not $ "#" `isPrefixOf` line)
+      $ lines str
+  in
+    case dataLines of
+      [] -> Left "Secrets file must not be empty."
+      "VERSION 2" : linesV2 -> parseSecretsV2 linesV2
+      linesV1 -> mapM parseSecretV1 linesV1
+
+-- | V1 secrets use mount "secret" and have no prefix in the default variable name.
+parseSecretV1 :: String -> Either String Secret
+parseSecretV1 = parseSecret "secret" []
+
+parseSecretsV2 :: [String] -> Either String [Secret]
+parseSecretsV2 fileLines = go Nothing [] fileLines
   where
-    whitespaceChars = void $ MP.takeWhile1P (Just "whitespace") (\c -> isSpace c && c /= '\n')
-    lineComment = MP.empty
-    blockComment = MP.empty
+    -- We build the list in reverse while we parse the file, so reverse it
+    -- at the end, to avoid being accidentally quadratic.
+    go _mountOpt acc [] = Right $ reverse acc
+    go mountOpt acc (line : more) = case (mountOpt, words line) of
+      (_, ["MOUNT", mount]) -> go (Just mount) acc more
+      (Nothing, _) -> Left $ "Expected a 'MOUNT <mount>' line before secret definition."
+      (Just mount, _) -> do
+        secret <- parseSecret mount [mount] line
+        go mountOpt (secret : acc) more
 
--- | Parses one or multiple newlines separated by whitespace.
-newlines :: Parser ()
-newlines = void $ some $ lexeme $ MPC.char '\n'
+parseSecret :: String -> [String] -> String -> Either String Secret
+parseSecret mount mountPrefix = parseVar
+  where
+    parseVar line = case elemIndex '=' line of
+      Nothing -> parsePath line
+      Just i -> do
+        secret <- parsePath $ drop (i + 1) line
+        let varName = take i line
+        validateVariableName varName
+        pure $ secret { sVarName = varName }
 
--- | Helper which consumes all whitespace after a parser
-lexeme :: Parser a -> Parser a
-lexeme = MPL.lexeme whitespace
+    parsePath line = case elemIndex '#' line of
+      Nothing -> Left $ "Line must contain a '#' to indicate the key, on line: " ++ line
+      Just i -> do
+        let
+          key = drop (i + 1) line
+          path = take i line
+        validateKey key
+        pure $ Secret
+          { sKey = key
+          , sPath = path
+          , sMount = mount
+          , sVarName = getVarName mountPrefix path key
+          }
 
--- | Helper which looks for a string and consumes trailing whitespace.
-symbol :: String -> Parser String
-symbol = MPL.symbol whitespace
+validateKey :: String -> Either String ()
+validateKey key = if '#' `elem` key
+  then Left $ "Key must not contain '#': " ++ key
+  else Right ()
 
--- | Top level parser of the secrets file
---
--- Parses the magic version number and dispatches to the Mount block based
--- parser or the list based parser based on that.
-secretsFileP :: Parser [Secret]
-secretsFileP = do
-  _ <- optional newlines
-  _ <- whitespace
-  version <- versionP
-  case version of
-    V1 -> some (secretP version "secret")
-    V2 -> concat <$> some secretBlockP
-
--- | Parse the file version
---
--- We need @MP.try@ because we need to backtrack after reading VERSION. (As
--- some secrets could very well start with that path.
-versionP :: Parser SFVersion
-versionP = option V1 $ MP.try $ do
-  _ <- symbol "VERSION"
-  _ <- symbol "2"
-  _ <- newlines
-  pure V2
-
--- | Parse a secret block
---
--- Exclusive to V2 of the format. A secret block consists of a line describing
--- the mount location followed by secret specifications.
-secretBlockP :: Parser [Secret]
-secretBlockP = do
-  _ <- symbol "MOUNT"
-  mountPath <- lexeme pathComponentP
-  _ <- newlines
-  some (MP.try (lexeme (secretP V2 mountPath)))
-
--- | Parses legal Vault path components.
---
--- A Vault path allows a surprising amount of characters. Spaces, quotes and
--- whatnot are all allowed. We don't want to complicate the parser and
--- the format by specifying escaping for all kinds of things, so we impose the
--- following restrictions:
---
---  - We don't support mounts, paths and keys with whitespace in them.
---  - We don't support control characters (vault doesn't either)
---  - All other characters except @=@ and @#@ are allowed. Supporting paths
---    with these characters in them would lead to ambiguities when parsing
---    paths such as:
---
---        FOO=foo=bar/baz#quix
---
---    and
---
---        foo#bar/baz#quix
---
--- If this is undesired, have a compelling usecase, and a good proposal for
--- supporting this, please open a ticket.
-pathComponentP :: Parser String
-pathComponentP = MP.takeWhile1P (Just "path component") isAllowed
-  where isAllowed c = not (isSpace c) && c /= '#' && c /= '=' && not (isControl c)
-
--- | Parse a secret specification line
---
--- The version of the fileformat we're parsing determines the way we report
--- variable information. For V2, the mount point is part of the variable name,
--- to allow for disambiguation. For V1, this is not needed.
-secretP :: SFVersion -> String -> Parser Secret
-secretP version mount = do
-  secret <- lexeme $ do
-    varName <- optional $ MP.try secretVarP
-    path <- pathComponentP
-    _ <- symbol "#"
-    key <- pathComponentP
-
-    pure Secret { sMount = mount
-                , sPath = path
-                , sKey = key
-                , sVarName = maybe (getVarName version mount path key) id varName
-                }
-  _ <- newlines
-  pure secret
-
--- | Parses a secret variable.
---
--- We're restrictrive in the characters we allow in environment variables. We
--- don't allow special characters or whitespace. Environment variables have to
--- start with a letter or underscore which can be followed by letters
--- underscores and digits. This is similar to what Zsh and Bash allow in their
--- `export` statements. Even though the Unix process environment is technically
--- just a string and you can put all kinds of things in there, most programs
--- and standard libraries don't seem to support this.
---
--- Please open a ticket if you require looser restrictions.
-secretVarP :: Parser String
-secretVarP = do
-  -- Environment variables have to start with a letter or underscore and can be
-  -- followed by letters, underscores and digits.
-  varStart <- MP.oneOf asciiLettersUnderscore
-  varRest <- MP.many $ MP.oneOf (asciiLettersUnderscore ++ digits)
-  _ <- symbol "="
-  pure (varStart:varRest)
-
--- | Helper list for ASCII chars plus the underscore
-asciiLettersUnderscore :: [MP.Token String]
-asciiLettersUnderscore = ['a'..'z'] ++ ['A'..'Z'] ++ ['_']
-
--- | Helper list for ASCII digits
-digits :: [MP.Token String]
-digits = ['0'..'9']
+validateVariableName :: String -> Either String ()
+validateVariableName name = case name of
+  ch : _ | ch `elem` (['a'..'z'] ++ ['A'..'Z'] ++ ['_']) -> Right ()
+  [] -> Left "Variable name must not be empty."
+  _ -> Left $ "Variable name must start with _ or ASCII letter: " ++ name
 
 -- | Convert a secret name into the name of the environment variable that it
 -- will be available under.
-getVarName :: SFVersion -> String -> String -> String -> String
-getVarName version mount path key = fmap format $ intercalate "_" components
+getVarName :: [String] -> String -> String -> String
+getVarName mountPrefix path key = fmap format $ intercalate "_" components
   where underscore '/' = '_'
         underscore '-' = '_'
         underscore c   = c
         format         = toUpper . underscore
-        components = case version of
-          V1 -> [path, key]
-          V2 -> [mount, path, key]
+        components     = mountPrefix ++ [path, key]

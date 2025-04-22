@@ -101,16 +101,17 @@ of `tutorial.sh`.
 ```
 vaultenv 0.18.0 - run programs with secrets from HashiCorp Vault
 
-Usage: vaultenv [--version] [--host HOST] [--port PORT] [--addr ADDR]
-                [--token TOKEN | --github-token TOKEN | --kubernetes-role ROLE]
-                [--secrets-file FILENAME] [CMD] [ARGS...]
-                [--no-connect-tls | --connect-tls]
-                [--no-validate-certs | --validate-certs]
-                [--no-inherit-env | --inherit-env]
-                [--inherit-env-blacklist COMMA_SEPARATED_NAMES]
-                [--retry-base-delay-milliseconds MILLISECONDS]
-                [--retry-attempts NUM] [--log-level error | info] [--use-path]
-                [--max-concurrent-requests NUM]
+Usage: vaultenv [--version] [--host HOST] [--port PORT] [--addr ADDR] 
+                [--token TOKEN | --kubernetes-role ROLE | --github-token TOKEN] 
+                [--secrets-file FILENAME | --secret-file FILENAME] [CMD] 
+                [ARGS...] [--no-connect-tls | --connect-tls] 
+                [--no-validate-certs | --validate-certs] 
+                [--no-inherit-env | --inherit-env] 
+                [--inherit-env-blacklist COMMA_SEPARATED_NAMES] 
+                [--retry-base-delay-milliseconds MILLISECONDS] 
+                [--retry-attempts NUM] [--log-level error | info] [--use-path] 
+                [--max-concurrent-requests NUM] 
+                [--duplicate-variable-behavior error | keep | overwrite]
 
 Available options:
   -h,--help                Show this help text
@@ -126,13 +127,14 @@ Available options:
                            either VAULT_PORT or VAULT_HOST
   --token TOKEN            Token to authenticate to Vault with. Also
                            configurable via VAULT_TOKEN.
-  --github-token TOKEN     Authenticate using a GitHub personal access
-                           token. Also configurable via VAULTENV_GITHUB_TOKEN.
   --kubernetes-role ROLE   Authenticate using Kubernetes service account in
                            /var/run/secrets/kubernetes.io, with the given role.
                            Also configurable via VAULTENV_KUBERNETES_ROLE.
+  --github-token TOKEN     Authenticate using a GitHub personal access
+                           token.Also configurable via VAULTENV_GITHUB_TOKEN.
   --secrets-file FILENAME  Config file specifying which secrets to request. Also
                            configurable via VAULTENV_SECRETS_FILE.
+  --secret-file FILENAME   alias for `--secrets-file`
   CMD                      command to run after fetching secrets
   ARGS...                  Arguments to pass to CMD, defaults to nothing
   --no-connect-tls         Don't use TLS when connecting to Vault. Default: use

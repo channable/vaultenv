@@ -211,7 +211,7 @@ data OptionsError
   deriving (Eq)
 
 instance Show OptionsError where
-  show (UnspecifiedValue s) = "The option " ++ s ++ " is required but not specified"
+  show (UnspecifiedValue s) = "The option " ++ s ++ " is required but not specified. Run with --help for usage."
   show (URIParseError uri) = "The address" ++ show uri ++ " could not be parsed properly. Maybe the schema is missing?"
   show (UnknownScheme uri)  = "The address " ++ show uri ++ " has no recognisable scheme, "
       ++ " expected http:// or https:// at the beginning of the address."
@@ -300,8 +300,8 @@ mergeOptions opts1 opts2 = let
 isOptionsComplete :: Options Validated UnCompleted
                   -> Either [OptionsError] (Options Validated Completed)
 isOptionsComplete opts =
-      let errors = [UnspecifiedValue "Command" | isNothing (oCmd opts)]
-            ++ [UnspecifiedValue "Secret file" | isNothing (oSecretFile opts)]
+      let errors = [UnspecifiedValue "CMD" | isNothing (oCmd opts)]
+            ++ [UnspecifiedValue "--secrets-file" | isNothing (oSecretFile opts)]
       in  if not (null errors)
           then Left errors
           else Right (castOptions opts)
@@ -619,13 +619,22 @@ optionsParser = Options
 
     auth = token <|> kubernetesRole <|> githubToken <|> pure AuthNone
 
-    secretsFile
-      =  maybeStrOption
-      $  long "secrets-file"
-      <> metavar "FILENAME"
-      <> value Nothing
-      <> help ("Config file specifying which secrets to request. Also configurable " ++
-               "via VAULTENV_SECRETS_FILE." )
+    secretsFile = let
+        original
+          =  maybeStrOption
+          $  long "secrets-file"
+          <> metavar "FILENAME"
+          <> value Nothing
+          <> help ("Config file specifying which secrets to request. Also configurable " ++
+                   "via VAULTENV_SECRETS_FILE." )
+        alias
+          =  maybeStrOption
+          $  long "secret-file"
+          <> metavar "FILENAME"
+          <> value Nothing
+          <> help "alias for `--secrets-file`"
+      in original <|> alias
+
     cmd
       =  argument maybeStr
       $  metavar "CMD"

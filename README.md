@@ -101,16 +101,17 @@ of `tutorial.sh`.
 ```
 vaultenv 0.18.0 - run programs with secrets from HashiCorp Vault
 
-Usage: vaultenv [--version] [--host HOST] [--port PORT] [--addr ADDR] 
-                [--token TOKEN | --kubernetes-role ROLE | --github-token TOKEN] 
-                [--secrets-file FILENAME | --secret-file FILENAME] [CMD] 
-                [ARGS...] [--no-connect-tls | --connect-tls] 
-                [--no-validate-certs | --validate-certs] 
-                [--no-inherit-env | --inherit-env] 
-                [--inherit-env-blacklist COMMA_SEPARATED_NAMES] 
-                [--retry-base-delay-milliseconds MILLISECONDS] 
-                [--retry-attempts NUM] [--log-level error | info] [--use-path] 
-                [--max-concurrent-requests NUM] 
+Usage: vaultenv [--version] [--host HOST] [--port PORT] [--addr ADDR]
+                [--auth-backend AUTH_BACKEND]
+                [--token TOKEN | --kubernetes-role ROLE | --github-token TOKEN]
+                [--secrets-file FILENAME | --secret-file FILENAME] [CMD]
+                [ARGS...] [--no-connect-tls | --connect-tls]
+                [--no-validate-certs | --validate-certs]
+                [--no-inherit-env | --inherit-env]
+                [--inherit-env-blacklist COMMA_SEPARATED_NAMES]
+                [--retry-base-delay-milliseconds MILLISECONDS]
+                [--retry-attempts NUM] [--log-level error | info] [--use-path]
+                [--max-concurrent-requests NUM]
                 [--duplicate-variable-behavior error | keep | overwrite]
 
 Available options:
@@ -125,6 +126,11 @@ Available options:
                            https://, the ip-address or DNS name, followed by the
                            port, separated with a ':'. Cannot be combined with
                            either VAULT_PORT or VAULT_HOST
+  --auth-backend AUTH_BACKEND
+                           Name of Vault authentication backend. Defaults to
+                           'kubernetes' or 'github' depending on the type of the
+                           chosen authentication method. Also configurable via
+                           VAULT_AUTH_BACKEND.
   --token TOKEN            Token to authenticate to Vault with. Also
                            configurable via VAULT_TOKEN.
   --kubernetes-role ROLE   Authenticate using Kubernetes service account in
@@ -274,6 +280,12 @@ https://www.vaultproject.io/docs/auth/github The user should create a GitHub
 personal access token with the `read:org` scope on the configured organization.
 This token can then be supplied to either the `github-token` flag or the
 `VAULTENV_GITHUB_TOKEN` environment variable.
+
+Sometimes the name of the authentication backend configured in vault may be different
+than the default one. Vaultenv supports non-default auth backend names by using the
+`--auth-backend` parameter. For example if your kubernetes auth backend is called
+`k8s-dev` then you can run vaultenv with `--auth-backend k8s-dev` or set the
+`VAULT_AUTH_BACKEND` environment variable to `k8s-dev`.
 
 ### Behavior configuration
 

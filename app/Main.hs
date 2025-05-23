@@ -487,9 +487,11 @@ readKubernetesJwt =
 requestGitHubVaultToken :: Context -> Text -> IO (Either VaultError ClientToken)
 requestGitHubVaultToken context ghtoken = let
   bodyJson = Aeson.Object $ KM.singleton "token" (Aeson.String ghtoken)
+  backendName = getOptionsValue oVaultAuthBackend $ cCliOptions context
   request = setRequestBodyJSON bodyJson
     $ setRequestMethod "POST"
-    $ unauthenticatedVaultRequest context "/v1/auth/github/login"
+    $ unauthenticatedVaultRequest context
+    $ "/v1/auth/" ++ backendName ++ "/login"
   in decodeVaultAuthResponse <$> httpLBS request
 
 -- | Authenticate using Kubernetes auth, see https://www.vaultproject.io/docs/auth/kubernetes.
@@ -506,10 +508,12 @@ requestKubernetesVaultToken context role = do
           [ ("jwt", Aeson.String jwt)
           , ("role", Aeson.String role)
           ]
+        backendName = getOptionsValue oVaultAuthBackend $ cCliOptions context
         request =
           setRequestBodyJSON bodyJson
           $ setRequestMethod "POST"
-          $ unauthenticatedVaultRequest context "/v1/auth/kubernetes/login"
+          $ unauthenticatedVaultRequest context
+          $ "/v1/auth/" ++  backendName ++ "/login"
       in decodeVaultAuthResponse <$> httpLBS request
 
 decodeVaultAuthResponse :: Response LBS.ByteString -> Either VaultError ClientToken

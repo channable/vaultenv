@@ -80,6 +80,7 @@ data Options validated completed = Options
   { oVaultHost       :: Maybe String
   , oVaultPort       :: Maybe Int
   , oVaultAddr       :: Maybe URI
+  , oVaultAuthBackend :: Maybe String
   , oAuthMethod      :: AuthMethod
   , oSecretFile      :: Maybe FilePath
   , oCmd             :: Maybe String
@@ -119,6 +120,7 @@ defaultOptions = Options
   { oVaultHost      = Just "localhost"
   , oVaultPort      = Just 8200
   , oVaultAddr      = parseURI "https://localhost:8200"
+  , oVaultAuthBackend = Nothing
   , oAuthMethod     = AuthNone
   , oSecretFile     = Nothing
   , oCmd            = Nothing
@@ -146,6 +148,7 @@ castOptions opts = Options
   { oVaultHost      = oVaultHost opts
   , oVaultPort      = oVaultPort opts
   , oVaultAddr      = oVaultAddr opts
+  , oVaultAuthBackend = oVaultAuthBackend opts
   , oAuthMethod     = oAuthMethod opts
   , oSecretFile     = oSecretFile opts
   , oCmd            = oCmd opts
@@ -172,6 +175,7 @@ instance Show (Options valid complete) where
         AuthGitHub _        -> "Specified GitHub personal access token"
         AuthKubernetes role -> "Kubernetes service account, role: " <> (Text.unpack role)
         AuthNone            -> "None"
+    , "Auth backend:          " ++ showSpecifiedString (oVaultAuthBackend opts)
     , "Secret file:           " ++ showSpecifiedString (oSecretFile opts)
     , "Command:               " ++ showSpecifiedString (oCmd opts)
     , "Arguments:             " ++ showSpecified (oArgs opts)
@@ -276,6 +280,7 @@ mergeOptions opts1 opts2 = let
   { oVaultHost      = combine oVaultHost
   , oVaultPort      = combine oVaultPort
   , oVaultAddr      = combine oVaultAddr
+  , oVaultAuthBackend = combine oVaultAuthBackend
   , oAuthMethod     = max (oAuthMethod opts1) (oAuthMethod opts2)
   , oSecretFile     = combine oSecretFile
   , oCmd            = combine oCmd
@@ -386,6 +391,23 @@ instance Read DuplicateVariableBehavior where
   readsPrec _ "overwrite" = [(DuplicateOverwrite, "")]
   readsPrec _ _ = []
 
+-- | Updates the options with the final vault authentication backend that will be used.
+-- If none has been supplied then fallback to the default depending on the
+-- authentication method.
+getAuthBackend :: Options Validated UnCompleted -> Options Validated UnCompleted
+getAuthBackend opts =
+  opts { oVaultAuthBackend = newBackend }
+  where
+    newBackend :: Maybe String
+    newBackend = case oVaultAuthBackend opts of
+      Just b  -> Just b
+      Nothing -> defaultFromAuthMethod
+
+    defaultFromAuthMethod =
+      case oAuthMethod opts of
+        AuthKubernetes _ -> Just "kubernetes"
+        AuthGitHub   _   -> Just "github"
+        _                -> Nothing
 
 -- | Parse program options from the command line and the process environment.
 parseOptions :: [EnvVar] -> [[EnvVar]] -> IO (Options Validated Completed)
@@ -400,7 +422,8 @@ parseOptions localEnvVars envFileSettings =
     else
         let
           combined = foldl (flip mergeOptions) defaultOptions (rights results)
-          completed = isOptionsComplete combined
+          updated = getAuthBackend combined
+          completed = isOptionsComplete updated
           in either
                 (\ls -> die (unlines (map (("[ERROR] "++). show) ls)))
                 return
@@ -416,6 +439,7 @@ parseEnvOptions envVars
   { oVaultHost      = lookupEnvString   "VAULT_HOST"
   , oVaultPort      = lookupEnvInt      "VAULT_PORT"
   , oVaultAddr      = lookupVaultAddr
+  , oVaultAuthBackend = lookupEnvString "VAULT_AUTH_BACKEND"
   , oAuthMethod     = case lookupEnvString "VAULT_TOKEN" of
       Just token -> AuthVaultToken (Text.pack token)
       Nothing    -> case lookupEnvString "VAULTENV_KUBERNETES_ROLE" of
@@ -560,6 +584,7 @@ optionsParser = Options
     <$> host
     <*> port
     <*> addr
+    <*> authBackend
     <*> auth
     <*> secretsFile
     <*> cmd
@@ -597,6 +622,14 @@ optionsParser = Options
         <> help ("Vault address, the scheme, either http:// or https://, the ip-address or DNS name, " ++
             "followed by the port, separated with a ':'." ++
             " Cannot be combined with either VAULT_PORT or VAULT_HOST")
+    authBackend
+      = maybeStrOption
+      $ long "auth-backend"
+      <> metavar "AUTH_BACKEND"
+      <> value Nothing
+      <> help ("Name of Vault authentication backend. "
+      ++ "Defaults to 'kubernetes' or 'github' depending on the type of the "
+      ++ "chosen authentication method. Also configurable via VAULT_AUTH_BACKEND.")
     token
       =  option (AuthVaultToken <$> str)
       $  long "token"

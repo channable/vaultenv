@@ -1,7 +1,7 @@
 # Changed the name here because nixpkgs also includes a vaultenv and we haven't
 # figured out how to mask that when we build vaultenv with nix itself.
 name: vaultenv-real
-version: 0.18.0
+version: 0.19.0
 synopsis: Runs processes with secrets from HashiCorp Vault
 license: BSD3
 github: channable/vaultenv

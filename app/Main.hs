@@ -2,10 +2,11 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 import Control.Applicative    ((<|>))
 import Control.Concurrent.QSem (newQSem, waitQSem, signalQSem)
-import Control.Exception      (Handler (..), bracket_, catch, catches)
+import Control.Exception      (Handler (..), Exception(..), bracket_, catch, catches)
 import Control.Monad          (forM, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Aeson             (FromJSON, (.:))
@@ -14,6 +15,7 @@ import Data.Bifunctor         (first)
 import Data.HashMap.Strict    (HashMap)
 import Data.List              (nubBy)
 import Data.Text              (Text, unpack)
+import GHC.Conc               (getUncaughtExceptionHandler, setUncaughtExceptionHandler)
 import Network.HTTP.Client    (ManagerSettings (managerConnCount))
 import Network.HTTP.Conduit   (Manager, newManager)
 import Network.HTTP.Simple    (HttpException(..), Request, Response,
@@ -198,15 +200,21 @@ data VaultError
 -- Vault token, as it would otherwise get printed to stderr if we error
 -- out.
 httpErrorHandler :: HttpException -> IO (Either VaultError b)
-httpErrorHandler (e :: HttpException) = case e of
+httpErrorHandler (e :: HttpException) = case sanitizeHttpException e of
   (HttpExceptionRequest request reason) ->
-    let sanitizedRequest = sanitizeRequest request
-    in pure $ Left $ ServerUnreachable (HttpExceptionRequest sanitizedRequest reason)
+    pure $ Left $ ServerUnreachable (HttpExceptionRequest request reason)
   (InvalidUrlException url _reason) -> pure $ Left $ InvalidUrl url
 
-  where
-    sanitizeRequest :: Request -> Request
-    sanitizeRequest = setRequestHeader "x-vault-token" ["**removed**"]
+-- | Removes secrets from a 'HttpException'. Used in error handling.
+sanitizeHttpException :: HttpException -> HttpException
+sanitizeHttpException e = case e of
+  (HttpExceptionRequest request reason) ->
+    HttpExceptionRequest (sanitizeRequest request) reason
+  exception -> exception
+
+-- | Removes the secret from a request. Used in error handling.
+sanitizeRequest :: Request -> Request
+sanitizeRequest = setRequestHeader "x-vault-token" ["**removed**"]
 
 -- | Retry configuration to use for network requests to Vault.
 -- We use a limited exponential backoff with the policy
@@ -264,6 +272,15 @@ main = do
   -- flush after every newline.
   hSetBuffering stdout LineBuffering
   hSetBuffering stderr LineBuffering
+
+
+  -- If an HTTP exception is not caught by an error handler, it may bubble to the top of the
+  -- application, causing the default exception handler to possibly leak secrets. This is a last
+  -- ditch effort to sanitize such exceptions.
+  originalHandler <- getUncaughtExceptionHandler
+  setUncaughtExceptionHandler $ \someException -> case fromException @HttpException someException of
+    Just exc -> originalHandler $ toException $ sanitizeHttpException exc
+    _ -> originalHandler someException
 
   localEnvVars <- getEnvironment
   envFileSettings <- readConfigFromEnvFiles

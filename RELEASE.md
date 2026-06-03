@@ -10,3 +10,5 @@
  1. Go to https://github.com/channable/vaultenv/releases
  1. Click "Draft a new release". Add the binary from the Nix output and the
     .deb package.
+ 1. Go to the MacOS build in CI, copy the store path and `nix-store --realize` the path
+ 1. Upload the binary in this store path as `vaultenv-<version>-darwin`

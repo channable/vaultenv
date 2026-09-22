@@ -3,7 +3,7 @@ let
 in {
   # Normal cabal build where Nix handles dependencies.
   vaultenv = pkgs.haskellPackages.callPackage ../vaultenv.nix {};
-} // pkgs.lib.optionalAttrs (!pkgs.stdenv.isDarwin) {
+} // pkgs.lib.optionalAttrs (!pkgs.stdenv.hostPlatform.isDarwin) {
   # Static package build. This only works on Linux, musl doesn't support Darwin
   vaultenvStatic = (pkgs.pkgsStatic.haskellPackages.callPackage ../vaultenv.nix {
     # Use non-static version of glibc locales, as the static version fails to build.
